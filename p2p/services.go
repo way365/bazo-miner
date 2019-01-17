@@ -15,6 +15,9 @@ func peerService() {
 		case p := <-disconnect:
 			peers.delete(p)
 			close(p.ch)
+			if peers.contains(p.getIPPort(), PEERTYPE_MINER){
+				logger.Printf("CHANNEL: Closed channel to %v", p.getIPPort())
+			}
 		}
 	}
 }
@@ -26,11 +29,20 @@ func broadcastService() {
 		case msg := <-minerBrdcstMsg:
 			for p := range peers.minerConns {
 				//Write to the channel, which the peerBroadcast(*peer) running in a seperate goroutine consumes right away.
-				p.ch <- msg
+				if peers.contains(p.getIPPort(),PEERTYPE_MINER) {
+					logger.Printf("CHANNEL_MINER: Send through channel of %v", p.getIPPort())
+					p.ch <- msg
+				} else {
+					logger.Printf("CHANNEL_MINER: Wanted to send to %v, but %v is not in the peers.minerConns anymore", p.getIPPort(), p.getIPPort())
+				}
 			}
 		case msg := <-clientBrdcstMsg:
 			for p := range peers.clientConns {
-				p.ch <- msg
+				if peers.contains(p.getIPPort(),PEERTYPE_CLIENT) {
+					p.ch <- msg
+				} else {
+					logger.Printf("CHANNEL_CLIENT: Wanted to send to %v, but %v is not in the peers.minerConns anymore", p.getIPPort(), p.getIPPort())
+				}
 			}
 		}
 	}

@@ -129,7 +129,8 @@ func addTx(b *protocol.Block, tx protocol.Transaction) error {
 	case *protocol.FundsTx:
 		err := addFundsTx(b, tx.(*protocol.FundsTx))
 		if err != nil {
-			logger.Printf("Adding fundsTx (%x) failed (%v): %v\n",tx.Hash(), err, tx.(*protocol.FundsTx))
+			//logger.Printf("Adding fundsTx (%x) failed (%v): %v\n",tx.Hash(), err, tx.(*protocol.FundsTx))
+			logger.Printf("Adding fundsTx (%x) failed (%v)",tx.Hash(), err)
 			return err
 		}
 	case *protocol.ConfigTx:
@@ -241,7 +242,8 @@ func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
 
 	//Add the tx hash to the block header and write it to open storage (non-validated transactions).
 	b.FundsTxData = append(b.FundsTxData, tx.Hash())
-	logger.Printf("Added tx (%x) to the FundsTxData slice: %v", tx.Hash(), *tx)
+	//logger.Printf("Added tx (%x) to the FundsTxData slice: %v", tx.Hash(), *tx)
+	logger.Printf("Added tx (%x) to the FundsTxData slice", tx.Hash())
 	return nil
 }
 
@@ -540,7 +542,8 @@ func validate(b *protocol.Block, initialSetup bool) error {
 			if err := rollback(block); err != nil {
 				return err
 			}
-			logger.Printf("Rolled back block: %vState:\n%v", block, getState())
+			//logger.Printf("Rolled back block: %vState:\n%v", block, getState())
+			logger.Printf("Rolled back block: %v", block)
 		}
 		for _, block := range blocksToValidate {
 			//Fetching payload data from the txs (if necessary, ask other miners).
@@ -562,7 +565,8 @@ func validate(b *protocol.Block, initialSetup bool) error {
 			}
 
 			postValidate(blockDataMap[block.Hash], initialSetup)
-			logger.Printf("Validated block (after rollback): %x", block.Hash[0:8])
+			//logger.Printf("Validated block (after rollback): %x", block.Hash[0:8])
+			logger.Printf("Validated block (after rollback): %v", block)
 		}
 	}
 

@@ -23,6 +23,7 @@ func CheckAndChangeParameters(parameters *Parameters, configTxSlice *[]*protocol
 		case protocol.BLOCK_SIZE_ID:
 			if parameterBoundsChecking(protocol.BLOCK_SIZE_ID, tx.Payload) {
 				parameters.Block_size = tx.Payload
+				logger.Printf("BLOCK_SIZE: %v", parameters.Block_size)
 				change = true
 			}
 		case protocol.BLOCK_REWARD_ID:
