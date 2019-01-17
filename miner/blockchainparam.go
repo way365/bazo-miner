@@ -66,7 +66,7 @@ func collectStatistics(b *protocol.Block) {
 	globalBlockCount++
 	localBlockCount++
 
-	if localBlockCount == int64(activeParameters.Diff_interval) {
+	if localBlockCount >= int64(activeParameters.Diff_interval) {
 		currentTargetTime.last = b.Timestamp
 		//The genesis block has timestamp = 0. This simplifies certain things: Every miner can start with an already
 		//existing genesis block (because all fields are set to 0). The "find common ancestor" algorithm can then
@@ -75,6 +75,7 @@ func collectStatistics(b *protocol.Block) {
 			target = append(target, target[len(target)-1])
 		} else {
 			target = append(target, calculateNewDifficulty(currentTargetTime))
+			logger.Printf("TARGET_CHECK: Target changed, new target: %v", target)
 		}
 
 		targetTimes = append(targetTimes, *currentTargetTime)
