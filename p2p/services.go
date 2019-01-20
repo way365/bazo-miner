@@ -30,7 +30,6 @@ func broadcastService() {
 			for p := range peers.minerConns {
 				//Write to the channel, which the peerBroadcast(*peer) running in a seperate goroutine consumes right away.
 				if peers.contains(p.getIPPort(),PEERTYPE_MINER) {
-					logger.Printf("CHANNEL_MINER: Send through channel of %v", p.getIPPort())
 					p.ch <- msg
 				} else {
 					logger.Printf("CHANNEL_MINER: Wanted to send to %v, but %v is not in the peers.minerConns anymore", p.getIPPort(), p.getIPPort())

@@ -34,13 +34,13 @@ func CheckAndChangeParameters(parameters *Parameters, configTxSlice *[]*protocol
 		case protocol.DIFF_INTERVAL_ID:
 			if parameterBoundsChecking(protocol.DIFF_INTERVAL_ID, tx.Payload) {
 				parameters.Diff_interval = tx.Payload
-				logger.Printf("BLOCK_DIFF: %v", parameters.Block_size)
+				logger.Printf("BLOCK_DIFF: %v", parameters.Diff_interval)
 				change = true
 			}
 		case protocol.BLOCK_INTERVAL_ID:
 			if parameterBoundsChecking(protocol.BLOCK_INTERVAL_ID, tx.Payload) {
 				parameters.Block_interval = tx.Payload
-				logger.Printf("BLOCK_INVTERVAL: %v", parameters.Block_size)
+				logger.Printf("BLOCK_INVTERVAL: %v", parameters.Block_interval)
 				change = true
 			}
 		case protocol.STAKING_MINIMUM_ID:

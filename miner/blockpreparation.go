@@ -27,6 +27,7 @@ func prepareBlock(block *protocol.Block) {
 	for _, tx := range opentxs {
 		//Prevent block size to overflow.
 		if block.GetSize()+tx.Size() > activeParameters.Block_size {
+			logger.Printf("BLOCK_SIZE: (%x) block_size %v + tx_size %v = %v > %v",block.Hash[0:8], block.GetSize(), tx.Size(), block.GetSize()+tx.Size(), activeParameters.Block_size )
 			break
 		}
 

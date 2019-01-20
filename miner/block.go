@@ -243,7 +243,7 @@ func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
 	//Add the tx hash to the block header and write it to open storage (non-validated transactions).
 	b.FundsTxData = append(b.FundsTxData, tx.Hash())
 	//logger.Printf("Added tx (%x) to the FundsTxData slice: %v", tx.Hash(), *tx)
-	logger.Printf("Added tx (%x) to the FundsTxData slice", tx.Hash())
+	//logger.Printf("Added tx (%x) to the FundsTxData slice", tx.Hash())
 	return nil
 }
 
@@ -585,6 +585,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 
 	//Check block size.
 	if block.GetSize() > activeParameters.Block_size {
+		logger.Printf("BLOCK_SIZE: (%x) block_size %v ",block.Hash[0:8], block.GetSize())
 		return nil, nil, nil, nil, errors.New("Block size too large.")
 	}
 
