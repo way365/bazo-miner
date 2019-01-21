@@ -185,6 +185,11 @@ func initState() (initialBlock *protocol.Block, err error) {
 		}
 
 		logger.Printf("Validated block with height %v\n", blockToValidate.Height)
+		logger.Printf("Size of Block %x: %v Bytes. --> Header: %v Bytes, Body: %v Bytes " +
+			"--> Body includes %v Bytes of TxData\n",
+			blockToValidate.Hash[0:8], blockToValidate.GetSize(), blockToValidate.GetHeaderSize(), blockToValidate.GetBodySize(),
+			blockToValidate.GetTxDataSize())
+		CalculateBlockchainSize(blockToValidate.GetSize())
 
 		//Set the last validated block as the lastBlock
 		lastBlock = blockToValidate
