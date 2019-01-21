@@ -108,6 +108,7 @@ func postValidateRollback(data blockData) {
 		storage.DeleteClosedTx(tx)
 	}
 
+	CalculateBlockchainSize(-data.block.GetSize())
 	collectStatisticsRollback(data.block)
 
 	//For transactions we switch from closed to open. However, we do not write back blocks

@@ -788,6 +788,12 @@ func postValidate(data blockData, initialSetup bool) {
 			broadcastVerifiedTxs(data.fundsTxSlice)
 		}
 
+		logger.Printf("Size of Block %x: %v Bytes. --> Header: %v Bytes, Body: %v Bytes " +
+			"--> Body includes %v Bytes of TxData\n",
+			data.block.Hash[0:8], data.block.GetSize(), data.block.GetHeaderSize(), data.block.GetBodySize(),
+			data.block.GetTxDataSize())
+		CalculateBlockchainSize(data.block.GetSize())
+
 		//It might be that block is not in the openblock storage, but this doesn't matter.
 		storage.DeleteOpenBlock(data.block.Hash)
 		storage.WriteClosedBlock(data.block)

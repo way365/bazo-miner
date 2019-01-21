@@ -78,11 +78,6 @@ func mining(initialBlock *protocol.Block) {
 				//Only broadcast the block if it is valid.
 				broadcastBlock(currentBlock)
 				logger.Printf("Validated block (mined): %vState:\n%v", currentBlock, getState())
-				logger.Printf("Size of Block %x: %v Bytes. --> Header: %v Bytes, Body: %v Bytes " +
-					"--> Body includes %v Bytes of TxData\n",
-					currentBlock.Hash[0:8], currentBlock.GetSize(), currentBlock.GetHeaderSize(),
-					currentBlock.GetBodySize(), currentBlock.GetTxDataSize())
-				CalculateBlockchainSize(currentBlock.GetSize())
 			} else {
 				logger.Printf("Mined block (%x) could not be validated: %v\n", currentBlock.Hash[0:8], err)
 			}
