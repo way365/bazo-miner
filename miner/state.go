@@ -189,7 +189,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 			"--> Body includes %v Bytes of TxData\n",
 			blockToValidate.Hash[0:8], blockToValidate.GetSize(), blockToValidate.GetHeaderSize(), blockToValidate.GetBodySize(),
 			blockToValidate.GetTxDataSize())
-		CalculateBlockchainSize(blockToValidate.GetSize())
+		CalculateBlockchainSize(int(blockToValidate.GetSize()))
 
 		//Set the last validated block as the lastBlock
 		lastBlock = blockToValidate

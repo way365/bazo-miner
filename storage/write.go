@@ -42,6 +42,7 @@ func WriteLastClosedBlock(block *protocol.Block) (err error) {
 func WriteOpenTx(transaction protocol.Transaction) {
 
 	txMemPool[transaction.Hash()] = transaction
+	PrintMemPoolSize()
 }
 
 func WriteINVALIDOpenTx(transaction protocol.Transaction) {
@@ -90,7 +91,7 @@ func WriteClosedTx(transaction protocol.Transaction) (err error) {
 		err := b.Put(hash[:], transaction.Encode())
 		return err
 	})
-
-	PrintMemPoolSize()
+	nrClosedTransactions = nrClosedTransactions + 1
+	averageTxSize = (averageTxSize+float32(transaction.Size()))/nrClosedTransactions
 	return err
 }

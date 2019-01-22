@@ -545,7 +545,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 			}
 			//logger.Printf("Rolled back block: %vState:\n%v", block, getState())
 			logger.Printf("Rolled back block: %v", block)
-			logger.Printf("Total Transactions in this block: %v", -(uint16(block.NrFundsTx) + uint16(block.NrAccTx) + uint16(block.NrConfigTx) + uint16(block.NrStakeTx)))
+			logger.Printf("Total Transactions in this block: %v", -1*int(uint16(block.NrFundsTx) + uint16(block.NrAccTx) + uint16(block.NrConfigTx) + uint16(block.NrStakeTx)))
 		}
 		for _, block := range blocksToValidate {
 			//Fetching payload data from the txs (if necessary, ask other miners).
@@ -793,7 +793,8 @@ func postValidate(data blockData, initialSetup bool) {
 			"--> Body includes %v Bytes of TxData\n",
 			data.block.Hash[0:8], data.block.GetSize(), data.block.GetHeaderSize(), data.block.GetBodySize(),
 			data.block.GetTxDataSize())
-		CalculateBlockchainSize(data.block.GetSize())
+		CalculateBlockchainSize(int(data.block.GetSize()))
+		logger.Printf("AVERAGE_TX_SIZE: %f", storage.ReadAverageTxSize())
 
 		//It might be that block is not in the openblock storage, but this doesn't matter.
 		storage.DeleteOpenBlock(data.block.Hash)

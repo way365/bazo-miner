@@ -19,6 +19,8 @@ var (
 	receivedBlockStash = make([]*protocol.Block, 0)
 	AllClosedBlocksAsc []*protocol.Block
 	Bootstrap_Server   string
+	averageTxSize float32 = 0
+	nrClosedTransactions float32 = 0
 )
 
 const (
@@ -112,5 +114,5 @@ func TearDown() {
 }
 
 func PrintMemPoolSize(){
-	// logger.Printf("Number of transactions in the Mempool: %v \n", len(txMemPool))
+	logger.Printf("MEMPOOL_SIZE: %v\n", len(txMemPool))
 }

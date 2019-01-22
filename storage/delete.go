@@ -68,6 +68,9 @@ func DeleteClosedTx(transaction protocol.Transaction) {
 		err := b.Delete(hash[:])
 		return err
 	})
+
+	nrClosedTransactions = nrClosedTransactions - 1
+	averageTxSize = (averageTxSize-float32(transaction.Size()))/nrClosedTransactions
 }
 
 func DeleteAll() {

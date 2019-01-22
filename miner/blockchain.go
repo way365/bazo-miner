@@ -20,7 +20,7 @@ var (
 	validatorAccAddress 			[64]byte
 	multisigPubKey      			*ecdsa.PublicKey
 	commPrivKey, rootCommPrivKey	*rsa.PrivateKey
-	blockchainSize uint64			= 0
+	blockchainSize int			= 0
 )
 
 //Miner entry point
@@ -110,7 +110,7 @@ func initRootKey(rootKey *ecdsa.PublicKey) error {
 	return nil
 }
 
-func CalculateBlockchainSize(currentBlockSize uint64) {
+func CalculateBlockchainSize(currentBlockSize int) {
 	blockchainSize = blockchainSize + currentBlockSize
 	logger.Printf("Blockchain size is: %v bytes\n", blockchainSize)
 }

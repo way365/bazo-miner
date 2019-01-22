@@ -83,6 +83,12 @@ func ReadOpenTx(hash [32]byte) (transaction protocol.Transaction) {
 
 	return txMemPool[hash]
 }
+
+func ReadAverageTxSize() (float32) {
+
+	return averageTxSize
+}
+
 func ReadINVALIDOpenTx(hash [32]byte) (transaction protocol.Transaction) {
 
 	return txINVALIDMemPool[hash]
