@@ -20,6 +20,7 @@ var (
 	AllClosedBlocksAsc []*protocol.Block
 	Bootstrap_Server   string
 	averageTxSize float32 = 0
+	totalTransactionSize float32 = 0
 	nrClosedTransactions float32 = 0
 )
 

@@ -92,6 +92,7 @@ func WriteClosedTx(transaction protocol.Transaction) (err error) {
 		return err
 	})
 	nrClosedTransactions = nrClosedTransactions + 1
-	averageTxSize = (averageTxSize+float32(transaction.Size()))/nrClosedTransactions
+	totalTransactionSize = totalTransactionSize + float32(transaction.Size())
+	averageTxSize = totalTransactionSize/nrClosedTransactions
 	return err
 }
