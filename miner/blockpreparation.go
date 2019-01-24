@@ -51,6 +51,7 @@ func prepareBlock(block *protocol.Block) {
 			storage.DeleteOpenTx(tx)
 		}
 	}
+	logger.Printf( "BLOCK_SIZE OPENTX after addition: NO BREAK --> Block too large!!!", len(opentxs))
 	logger.Printf( "BLOCK_SIZE OPENTX after addition: %v", len(opentxs))
 }
 
