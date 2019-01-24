@@ -28,18 +28,12 @@ func prepareBlock(block *protocol.Block) {
 
 	for i, tx := range opentxs {
 		//Prevent block size to overflow.
-		if i == 10 || i == 100{
-			logger.Printf("BLOCK_SIZE I: i = 10 --> So If works.")
-			logger.Printf("BLOCK_SIZE I: (%x) block_size: %v + tx_size %v = %v > %v",block.Hash[0:8], block.GetSize(), tx.Size(), block.GetSize()+tx.Size(), activeParameters.Block_size )
-			logger.Printf("BLOCK_SIZE I: (%x) block_size: %v = %v + %v",block.Hash[0:8], block.GetSize(), 510, block.GetTxDataSize())
-		}
-		if int(block.GetSize())+(i*int(tx.Size())) > int(activeParameters.Block_size){
-			logger.Printf("BLOCK_SIZE IF: %v > %v ", int(block.GetSize())+(i*int(tx.Size())), int(activeParameters.Block_size))
-			logger.Printf("BLOCK_SIZE IF: It should break now")
-
-		}
 		if block.GetSize()+tx.Size() > activeParameters.Block_size {
-			logger.Printf("BLOCK_SIZE IF: (%x) block_size: %v + tx_size %v = %v > %v",block.Hash[0:8], block.GetSize(), tx.Size(), block.GetSize()+tx.Size(), activeParameters.Block_size )
+			break
+		}
+
+		if int(block.GetSize())+(i*int(tx.Size())) > int(activeParameters.Block_size){
+			logger.Printf("BLOCK_SIZE: %v + %v = %v > %v ",int(block.GetSize()), i*int(tx.Size()), int(block.GetSize())+(i*int(tx.Size())), int(activeParameters.Block_size))
 			logger.Printf("BLOCK_SIZE BREAK at transaction %v", i)
 			break
 		}
@@ -51,8 +45,6 @@ func prepareBlock(block *protocol.Block) {
 			storage.DeleteOpenTx(tx)
 		}
 	}
-	logger.Printf( "BLOCK_SIZE OPENTX after addition: NO BREAK --> Block too large!!!", len(opentxs))
-	logger.Printf( "BLOCK_SIZE OPENTX after addition: %v", len(opentxs))
 }
 
 //Implement the sort interface
