@@ -24,10 +24,16 @@ func prepareBlock(block *protocol.Block) {
 
 	sort.Sort(tmpCopy)
 
-	for _, tx := range opentxs {
+	logger.Printf("BLOCK_SIZE before loop: (%x) block_size: %v > %v",block.Hash[0:8], block.GetSize(), activeParameters.Block_size )
+	logger.Printf( "BLOCK_SIZE OPENTX: %v", len(opentxs))
+
+	for i, tx := range opentxs {
 		//Prevent block size to overflow.
+		logger.Printf("BLOCK_SIZE BeforeIF: (%x) block_size: %v + tx_size: %v = %v > %v",block.Hash[0:8], block.GetSize(), tx.Size(), block.GetSize()+tx.Size(), activeParameters.Block_size )
+
 		if block.GetSize()+tx.Size() > activeParameters.Block_size {
-			logger.Printf("BLOCK_SIZE: (%x) block_size %v + tx_size %v = %v > %v",block.Hash[0:8], block.GetSize(), tx.Size(), block.GetSize()+tx.Size(), activeParameters.Block_size )
+			logger.Printf("BLOCK_SIZE IF: (%x) block_size: %v + tx_size %v = %v > %v",block.Hash[0:8], block.GetSize(), tx.Size(), block.GetSize()+tx.Size(), activeParameters.Block_size )
+			logger.Printf("BLOCK_SIZE BREAK at transaction %v", i)
 			break
 		}
 
