@@ -45,6 +45,7 @@ func prepareBlock(block *protocol.Block) {
 			storage.DeleteOpenTx(tx)
 		}
 	}
+	logger.Printf( "BLOCK_SIZE OPENTX after addition: %v", len(opentxs))
 }
 
 //Implement the sort interface
