@@ -99,8 +99,7 @@ func (block *Block) InitBloomFilter(txPubKeys [][32]byte) {
 }
 
 func (block *Block) GetSize() uint64 {
-	size :=
-		MIN_BLOCKSIZE + int(block.GetTxDataSize())
+	size := MIN_BLOCKSIZE + int(block.GetTxDataSize())
 
 	if block.BloomFilter != nil {
 		encodedBF, _ := block.BloomFilter.GobEncode()
