@@ -587,6 +587,8 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 
 	//Check block size.
 	if block.GetSize() > activeParameters.Block_size {
+		logger.Printf("BLOCK_SIZE: Blocksize %v > ActiveParam ", block.GetSize())
+		logger.Printf("BLOCK_SIZE: bloomfiltersize %v ", block.GetBloomFilterSize())
 		return nil, nil, nil, nil, errors.New("Block size too large.")
 	}
 

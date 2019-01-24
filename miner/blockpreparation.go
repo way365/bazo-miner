@@ -27,8 +27,8 @@ func prepareBlock(block *protocol.Block) {
 	logger.Printf( "Open Transactions to be validated: %v", len(opentxs))
 
 	for i, tx := range opentxs {
-		//Prevent block size to overflow.
-		if int(block.GetSize())+(i*int(len(tx.Hash()))) > int(activeParameters.Block_size){
+		//Prevent block size to overflow. +10 Because of the bloomFilter
+		if int(block.GetSize()+10)+(i*int(len(tx.Hash()))) > int(activeParameters.Block_size){
 			break
 		}
 
