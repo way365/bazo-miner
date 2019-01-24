@@ -24,17 +24,11 @@ func prepareBlock(block *protocol.Block) {
 
 	sort.Sort(tmpCopy)
 
-	logger.Printf( "BLOCK_SIZE OPENTX: %v", len(opentxs))
+	logger.Printf( "Open Transactions to be validated: %v", len(opentxs))
 
 	for i, tx := range opentxs {
 		//Prevent block size to overflow.
-		if block.GetSize()+tx.Size() > activeParameters.Block_size {
-			break
-		}
-
-		if int(block.GetSize())+(i*int(tx.Size())) > int(activeParameters.Block_size){
-			logger.Printf("BLOCK_SIZE: %v + %v = %v > %v ",int(block.GetSize()), i*int(tx.Size()), int(block.GetSize())+(i*int(tx.Size())), int(activeParameters.Block_size))
-			logger.Printf("BLOCK_SIZE BREAK at transaction %v", i)
+		if int(block.GetSize())+(i*int(len(tx.Hash()))) > int(activeParameters.Block_size){
 			break
 		}
 
