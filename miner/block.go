@@ -50,7 +50,7 @@ func finalizeBlock(block *protocol.Block) error {
 		}
 	}
 
-	//Merkle tree includes the hashes of all txs.
+	//Merkle tree includes the hashes of all txs in this block
 	block.MerkleRoot = protocol.BuildMerkleTree(block).MerkleRoot()
 
 	validatorAcc, err := storage.GetAccount(protocol.SerializeHashContent(validatorAccAddress))
