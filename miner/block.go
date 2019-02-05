@@ -25,9 +25,10 @@ type blockData struct {
 }
 
 //Block constructor, argument is the previous block in the blockchain.
-func newBlock(prevHash [32]byte, commitmentProof [crypto.COMM_PROOF_LENGTH]byte, height uint32) *protocol.Block {
+func newBlock(prevHash [32]byte, prevHashWithoutTx [32]byte, commitmentProof [crypto.COMM_PROOF_LENGTH]byte, height uint32) *protocol.Block {
 	block := new(protocol.Block)
 	block.PrevHash = prevHash
+	block.PrevHashWithoutTx = prevHashWithoutTx
 	block.CommitmentProof = commitmentProof
 	block.Height = height
 	block.StateCopy = make(map[[32]byte]*protocol.Account)
@@ -68,7 +69,12 @@ func finalizeBlock(block *protocol.Block) error {
 		return err
 	}
 
+	//Block hash with MerkleTree and therefore, including all transactions
 	partialHash := block.HashBlock()
+
+	//Block hash without MerkleTree and therefore, without any transactions
+	partialHashWithoutMerkleRoot := block.HashBlockWithoutMerkleRoot()
+
 	prevProofs := GetLatestProofs(activeParameters.num_included_prev_proofs, block)
 
 	nonce, err := proofOfStake(getDifficulty(), block.PrevHash, prevProofs, block.Height, validatorAcc.Balance, commitmentProof)
@@ -83,6 +89,7 @@ func finalizeBlock(block *protocol.Block) error {
 
 	//Put pieces together to get the final hash.
 	block.Hash = sha3.Sum256(append(nonceBuf[:], partialHash[:]...))
+	block.HashWithoutTx = sha3.Sum256(append(nonceBuf[:], partialHashWithoutMerkleRoot[:]...))
 
 	//This doesn't need to be hashed, because we already have the merkle tree taking care of consistency.
 	block.NrAccTx = uint16(len(block.AccTxData))

@@ -20,14 +20,16 @@ const (
 
 type Block struct {
 	//Header
-	Header       byte
-	Hash         [32]byte
-	PrevHash     [32]byte
-	NrConfigTx   uint8
-	NrElementsBF uint16
-	BloomFilter  *bloom.BloomFilter
-	Height       uint32
-	Beneficiary  [32]byte
+	Header      	 	byte
+	Hash         		[32]byte
+	PrevHash     		[32]byte
+	HashWithoutTx   	[32]byte 			//valid hash once all tx are aggregated
+	PrevHashWithoutTx  	[32]byte			//valid hash of ancestor once all tx are aggregated
+	NrConfigTx   		uint8
+	NrElementsBF 		uint16
+	BloomFilter  		*bloom.BloomFilter
+	Height       		uint32
+	Beneficiary  		[32]byte
 
 	//Body
 	Nonce                 [8]byte
@@ -66,6 +68,7 @@ func (block *Block) HashBlock() [32]byte {
 
 	blockHash := struct {
 		prevHash              [32]byte
+		prevHashWithoutTx     [32]byte
 		timestamp             int64
 		merkleRoot            [32]byte
 		beneficiary           [32]byte
@@ -75,8 +78,36 @@ func (block *Block) HashBlock() [32]byte {
 		conflictingBlockHash2 [32]byte
 	}{
 		block.PrevHash,
+		block.PrevHashWithoutTx,
 		block.Timestamp,
 		block.MerkleRoot,
+		block.Beneficiary,
+		block.CommitmentProof,
+		block.SlashedAddress,
+		block.ConflictingBlockHash1,
+		block.ConflictingBlockHash2,
+	}
+	return SerializeHashContent(blockHash)
+}
+
+func (block *Block) HashBlockWithoutMerkleRoot() [32]byte {
+	if block == nil {
+		return [32]byte{}
+	}
+
+	blockHash := struct {
+		prevHash              [32]byte
+		prevHashWithoutTx	  [32]byte
+		timestamp             int64
+		beneficiary           [32]byte
+		commitmentProof       [crypto.COMM_PROOF_LENGTH]byte
+		slashedAddress        [32]byte
+		conflictingBlockHash1 [32]byte
+		conflictingBlockHash2 [32]byte
+	}{
+		block.PrevHash,
+		block.PrevHashWithoutTx,
+		block.Timestamp,
 		block.Beneficiary,
 		block.CommitmentProof,
 		block.SlashedAddress,
@@ -165,10 +196,13 @@ func (block *Block) Encode() []byte {
 		return nil
 	}
 
+
 	encoded := Block{
 		Header:                block.Header,
 		Hash:                  block.Hash,
 		PrevHash:              block.PrevHash,
+		HashWithoutTx:         block.HashWithoutTx,
+		PrevHashWithoutTx:     block.PrevHashWithoutTx,
 		Nonce:                 block.Nonce,
 		Timestamp:             block.Timestamp,
 		MerkleRoot:            block.MerkleRoot,
@@ -202,14 +236,16 @@ func (block *Block) EncodeHeader() []byte {
 	}
 
 	encoded := Block{
-		Header:       block.Header,
-		Hash:         block.Hash,
-		PrevHash:     block.PrevHash,
-		NrConfigTx:   block.NrConfigTx,
-		NrElementsBF: block.NrElementsBF,
-		BloomFilter:  block.BloomFilter,
-		Height:       block.Height,
-		Beneficiary:  block.Beneficiary,
+		Header:       		block.Header,
+		Hash:         		block.Hash,
+		PrevHash:     		block.PrevHash,
+		HashWithoutTx:      block.HashWithoutTx,
+		PrevHashWithoutTx:  block.PrevHashWithoutTx,
+		NrConfigTx:   		block.NrConfigTx,
+		NrElementsBF: 		block.NrElementsBF,
+		BloomFilter:  		block.BloomFilter,
+		Height:       		block.Height,
+		Beneficiary:  		block.Beneficiary,
 	}
 
 	buffer := new(bytes.Buffer)
@@ -230,8 +266,9 @@ func (block *Block) Decode(encoded []byte) (b *Block) {
 }
 
 func (block Block) String() string {
-	return fmt.Sprintf("\nHash: %x\n"+
-		"Previous Hash: %x\n"+
+	return fmt.Sprintf("\n" +
+		"Hash: %x			   "+ "Hash Without Tx: %x\n"+
+		"Previous Hash: %x    "+ "Previous Hash Without Tx: %x\n"+
 		"Nonce: %x\n"+
 		"Timestamp: %v\n"+
 		"MerkleRoot: %x\n"+
@@ -246,8 +283,8 @@ func (block Block) String() string {
 		"Slashed Address:%x\n"+
 		"Conflicted Block Hash 1:%x\n"+
 		"Conflicted Block Hash 2:%x\n",
-		block.Hash[0:8],
-		block.PrevHash[0:8],
+		block.Hash[0:8], block.HashWithoutTx[0:8],
+		block.PrevHash[0:8], block.PrevHashWithoutTx[0:8],
 		block.Nonce,
 		block.Timestamp,
 		block.MerkleRoot[0:8],

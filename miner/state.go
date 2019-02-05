@@ -130,7 +130,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 			}
 			fmt.Println("Last block: ", lastBlock.Height)
 			if lastBlock.Height == 0 {
-				break;
+				break
 			}
 		}
 	}
@@ -142,7 +142,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 		//Set the last closed block as the initial block
 		initialBlock = storage.AllClosedBlocksAsc[len(storage.AllClosedBlocksAsc)-1]
 	} else {
-		initialBlock = newBlock([32]byte{}, [crypto.COMM_PROOF_LENGTH]byte{}, 0)
+		initialBlock = newBlock([32]byte{},[32]byte{}, [crypto.COMM_PROOF_LENGTH]byte{}, 0)
 
 		commitmentProof, err := crypto.SignMessageWithRSAKey(rootCommPrivKey, fmt.Sprint(initialBlock.Height))
 		if err != nil {
