@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"time"
 
@@ -808,12 +809,20 @@ func postValidate(data blockData, initialSetup bool) {
 		storage.DeleteOpenBlock(data.block.Hash)
 		storage.WriteClosedBlock(data.block)
 
+		if rand1() {
+			logger.Printf("BLOCK_UPDATE: (%x) becomes empty --> (%x)", data.block.Hash[0:8], data.block.HashWithoutTx[0:8])
+			storage.UpdateBlocksToBlocksWithoutTx(data.block)
+		}
+
 		// Write last block to db and delete last block's ancestor.
 		storage.DeleteAllLastClosedBlock()
 		storage.WriteLastClosedBlock(data.block)
 	}
 }
 
+func rand1() bool {
+	return rand.Float32() < 0.5
+}
 //Only blocks with timestamp not diverging from system time (past or future) more than one hour are accepted.
 func timestampCheck(timestamp int64) error {
 	systemTime := p2p.ReadSystemTime()

@@ -267,8 +267,8 @@ func (block *Block) Decode(encoded []byte) (b *Block) {
 
 func (block Block) String() string {
 	return fmt.Sprintf("\n" +
-		"Hash: %x			   "+ "Hash Without Tx: %x\n"+
-		"Previous Hash: %x    "+ "Previous Hash Without Tx: %x\n"+
+		"Hash: %x				"+ "Hash Without Tx: %x\n"+
+		"Previous Hash: %x		"+ "Previous Hash Without Tx: %x\n"+
 		"Nonce: %x\n"+
 		"Timestamp: %v\n"+
 		"MerkleRoot: %x\n"+

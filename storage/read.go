@@ -38,6 +38,22 @@ func ReadClosedBlock(hash [32]byte) (block *protocol.Block) {
 	return block
 }
 
+func ReadClosedBlockWithoutTx(hash [32]byte) (block *protocol.Block) {
+
+	db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("closedblockswithouttx"))
+		encodedBlock := b.Get(hash[:])
+		block = block.Decode(encodedBlock)
+		return nil
+	})
+
+	if block == nil {
+		return nil
+	}
+
+	return block
+}
+
 func ReadLastClosedBlock() (block *protocol.Block) {
 
 	db.View(func(tx *bolt.Tx) error {
