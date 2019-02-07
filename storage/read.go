@@ -38,6 +38,7 @@ func ReadClosedBlock(hash [32]byte) (block *protocol.Block) {
 	return block
 }
 
+//This function does read all blocks without transactions inside.
 func ReadClosedBlockWithoutTx(hash [32]byte) (block *protocol.Block) {
 
 	db.View(func(tx *bolt.Tx) error {
@@ -72,18 +73,27 @@ func ReadLastClosedBlock() (block *protocol.Block) {
 }
 
 func ReadAllClosedBlocks() (allClosedBlocks []*protocol.Block) {
-	if nextBlock := ReadLastClosedBlock(); nextBlock != nil {
+	nextBlock := ReadLastClosedBlock()
+	if  nextBlock != nil {
 		hasNext := true
 
 		allClosedBlocks = append(allClosedBlocks, nextBlock)
 
+		//[32]byte is equal to the genesis lock hash which consists of only zeros.
 		if nextBlock.Hash != [32]byte{} {
 			for hasNext {
-				nextBlock = ReadClosedBlock(nextBlock.PrevHash)
-				allClosedBlocks = append(allClosedBlocks, nextBlock)
-				if nextBlock.Hash == [32]byte{} {
+
+				//The distinction between 'nextBlock' and 'newNextBlock' needs to be, because otherwise it is possible
+				//inside the if-statement a 'nil.PrevHashWithoutTx' request can occur.
+				newNextBlock := ReadClosedBlock(nextBlock.PrevHash)
+				if newNextBlock == nil {
+					newNextBlock = ReadClosedBlockWithoutTx(nextBlock.PrevHashWithoutTx)
+				}
+				allClosedBlocks = append(allClosedBlocks, newNextBlock)
+				if newNextBlock.Hash == [32]byte{} {
 					hasNext = false
 				}
+				nextBlock = newNextBlock
 			}
 		}
 	}
@@ -164,3 +174,4 @@ func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
 	}
 	return nil
 }
+

@@ -54,8 +54,8 @@ func (peers peersStruct) contains(ipport string, peerType uint) bool {
 		peerConns = peers.clientConns
 	}
 
-	for peer, _ := range peerConns {
-		if (peer.getIPPort() == ipport) {
+	for peer := range peerConns {
+		if peer.getIPPort() == ipport {
 			return true
 		}
 	}

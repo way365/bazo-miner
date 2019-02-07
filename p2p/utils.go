@@ -5,11 +5,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
 	"net"
 	"strings"
 	"time"
-	"github.com/bazo-blockchain/bazo-miner/protocol"
 )
 
 func Connect(connectionString string) *net.TCPConn {

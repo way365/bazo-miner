@@ -4,15 +4,14 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"math/rand"
 	"strconv"
 	"time"
 
+	"github.com/bazo-blockchain/bazo-miner/crypto"
 	"github.com/bazo-blockchain/bazo-miner/p2p"
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
 	"github.com/bazo-blockchain/bazo-miner/vm"
-	"github.com/bazo-blockchain/bazo-miner/crypto"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -33,6 +32,7 @@ func newBlock(prevHash [32]byte, prevHashWithoutTx [32]byte, commitmentProof [cr
 	block.CommitmentProof = commitmentProof
 	block.Height = height
 	block.StateCopy = make(map[[32]byte]*protocol.Account)
+	block.Aggregated = false
 
 	return block
 }
@@ -802,16 +802,26 @@ func postValidate(data blockData, initialSetup bool) {
 			"--> Body includes %v Bytes of TxData\n",
 			data.block.Hash[0:8], data.block.GetSize(), data.block.GetHeaderSize(), data.block.GetBodySize(),
 			data.block.GetTxDataSize())
-		CalculateBlockchainSize(int(data.block.GetSize()))
+		//CalculateBlockchainSize(int(data.block.GetSize()))
 		logger.Printf("AVERAGE_TX_SIZE: %f", storage.ReadAverageTxSize())
 
 		//It might be that block is not in the openblock storage, but this doesn't matter.
 		storage.DeleteOpenBlock(data.block.Hash)
 		storage.WriteClosedBlock(data.block)
 
-		if rand1() {
-			logger.Printf("BLOCK_UPDATE: (%x) becomes empty --> (%x)", data.block.Hash[0:8], data.block.HashWithoutTx[0:8])
-			storage.UpdateBlocksToBlocksWithoutTx(data.block)
+		//Do not empty last three blocks and only if it not aggregated already. TODO Probably rewrite this later.
+		for _, block := range storage.ReadAllClosedBlocks(){
+			logger.Printf("TEST_FOR_EMPTY_BLOCK:(%x) Height: %x, Aggregated: %t", block.Hash[0:8], block.Height, block.Aggregated)
+
+			//Empty all blocks despite the last 3 and genesis block.
+			if block.Aggregated == false && block.Height > 0 {
+				if (int(block.Height)) < (int(data.block.Height) - 3) {
+					logger.Printf("TEST_FOR_EMPTY_BLOCK_PASSED:(%x) Height: %x, Aggregated: %t", block.Hash[0:8], block.Height, block.Aggregated)
+					storage.UpdateBlocksToBlocksWithoutTx(block)
+				}
+
+			}
+
 		}
 
 		// Write last block to db and delete last block's ancestor.
@@ -820,9 +830,6 @@ func postValidate(data blockData, initialSetup bool) {
 	}
 }
 
-func rand1() bool {
-	return rand.Float32() < 0.5
-}
 //Only blocks with timestamp not diverging from system time (past or future) more than one hour are accepted.
 func timestampCheck(timestamp int64) error {
 	systemTime := p2p.ReadSystemTime()

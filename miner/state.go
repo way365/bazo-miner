@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/bazo-blockchain/bazo-miner/crypto"
 	"github.com/bazo-blockchain/bazo-miner/p2p"
-	"strconv"
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
+	"strconv"
 	"time"
 )
 
@@ -189,7 +189,9 @@ func initState() (initialBlock *protocol.Block, err error) {
 			"--> Body includes %v Bytes of TxData\n",
 			blockToValidate.Hash[0:8], blockToValidate.GetSize(), blockToValidate.GetHeaderSize(), blockToValidate.GetBodySize(),
 			blockToValidate.GetTxDataSize())
-		CalculateBlockchainSize(int(blockToValidate.GetSize()))
+
+		//TODO Calculate correct blockchain size with https://godoc.org/github.com/boltdb/bolt#Tx.Size
+		//CalculateBlockchainSize(int(blockToValidate.GetSize()))
 
 		//Set the last validated block as the lastBlock
 		lastBlock = blockToValidate

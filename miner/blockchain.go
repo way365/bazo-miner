@@ -11,16 +11,16 @@ import (
 )
 
 var (
-	logger              			*log.Logger
-	blockValidation     			= &sync.Mutex{}
-	parameterSlice      			[]Parameters
-	activeParameters    			*Parameters
-	uptodate            			bool
-	slashingDict        			= make(map[[32]byte]SlashingProof)
-	validatorAccAddress 			[64]byte
-	multisigPubKey      			*ecdsa.PublicKey
-	commPrivKey, rootCommPrivKey	*rsa.PrivateKey
-	blockchainSize int			= 0
+	logger                       *log.Logger
+	blockValidation                   			= &sync.Mutex{}
+	parameterSlice               []Parameters
+	activeParameters             *Parameters
+	uptodate                     bool
+	slashingDict                         			= make(map[[32]byte]SlashingProof)
+	validatorAccAddress          [64]byte
+	multisigPubKey               *ecdsa.PublicKey
+	commPrivKey, rootCommPrivKey *rsa.PrivateKey
+	blockchainSize               = 0
 )
 
 //Miner entry point
@@ -63,7 +63,6 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 //Mining is a constant process, trying to come up with a successful PoW.
 func mining(initialBlock *protocol.Block) {
 	currentBlock := newBlock(initialBlock.Hash, initialBlock.PrevHashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, initialBlock.Height+1)
-
 
 	for {
 		err := finalizeBlock(currentBlock)
@@ -111,7 +110,7 @@ func initRootKey(rootKey *ecdsa.PublicKey) error {
 	return nil
 }
 
-func CalculateBlockchainSize(currentBlockSize int) {
-	blockchainSize = blockchainSize + currentBlockSize
-	logger.Printf("Blockchain size is: %v bytes\n", blockchainSize)
-}
+//func CalculateBlockchainSize(currentBlockSize int) {
+//	blockchainSize = blockchainSize + currentBlockSize
+//	logger.Printf("Blockchain size is: %v bytes\n", blockchainSize)
+//}
