@@ -142,7 +142,6 @@ func proofOfStake(diff uint8,
 
 		copy(pos[0:32], buf.Bytes())
 
-		//TODO @simibac What do you do here?
 		//Byte check
 		for byteNr = 0; byteNr < (uint8)(diff/8); byteNr++ {
 			if pos[byteNr] != 0 {
@@ -166,16 +165,16 @@ func proofOfStake(diff uint8,
 }
 
 func GetLatestProofs(n int, block *protocol.Block) (prevProofs [][crypto.COMM_PROOF_LENGTH]byte) {
-	for block.Height > 0 && n > 0 {
 
+	for block.Height > 0 && n > 0 {
 		//try to read block from 'closedblocks' and 'closedblockswithouttx' bucket.
 		closedBlock := storage.ReadClosedBlock(block.PrevHash)
 		if closedBlock == nil {
 			closedBlock = storage.ReadClosedBlockWithoutTx(block.PrevHashWithoutTx)
 		}
-
 		prevProofs = append(prevProofs, closedBlock.CommitmentProof)
 		n -= 1
+		block = closedBlock
 	}
 	return prevProofs
 }

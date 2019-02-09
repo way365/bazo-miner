@@ -24,7 +24,6 @@ func seekSlashingProof(block *protocol.Block) error {
 		return nil
 	} else {
 		//Get the latest blocks and check if there is proof for multi-voting within the slashing window
-		//TODO @simibac Why loading all closed blocks if we check over the slashing window?
 		prevBlocks := storage.ReadAllClosedBlocks()
 
 		if prevBlocks == nil {

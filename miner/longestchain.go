@@ -50,7 +50,7 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 		newChain = append(newChain, newBlock)
 
 		//Search for an ancestor (which needs to be in closed storage -> validated block).
-				//Search in closed (Validated) blocks first
+		//Search in closed (Validated) blocks first
 		potentialAncestor := storage.ReadClosedBlock(newBlock.PrevHash)
 		if potentialAncestor != nil {
 			//Found ancestor because it is found in our closed block storage.
@@ -84,8 +84,8 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 			}
 		}
 
-		//TODO Optimize code (duplicated)
 		//Fetch the block we apparently missed from the network.
+		//p2p.BlockReq(newBlock.PrevHash, newBlock.PrevHashWithoutTx)
 		p2p.BlockReq(newBlock.PrevHash)
 
 		//Blocking wait

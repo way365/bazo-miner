@@ -72,30 +72,36 @@ func ReadLastClosedBlock() (block *protocol.Block) {
 	return block
 }
 
+//This method does read all blocks in closedBlocks & closedblockswithouttx.
 func ReadAllClosedBlocks() (allClosedBlocks []*protocol.Block) {
-	nextBlock := ReadLastClosedBlock()
-	if  nextBlock != nil {
-		hasNext := true
 
-		allClosedBlocks = append(allClosedBlocks, nextBlock)
-
-		//[32]byte is equal to the genesis lock hash which consists of only zeros.
-		if nextBlock.Hash != [32]byte{} {
-			for hasNext {
-
-				//The distinction between 'nextBlock' and 'newNextBlock' needs to be, because otherwise it is possible
-				//inside the if-statement a 'nil.PrevHashWithoutTx' request can occur.
-				newNextBlock := ReadClosedBlock(nextBlock.PrevHash)
-				if newNextBlock == nil {
-					newNextBlock = ReadClosedBlockWithoutTx(nextBlock.PrevHashWithoutTx)
+	//This does return all blocks which are either in clossedblocks or closedblockswithouttx bucket of the Database.
+	//They are not ordered now, but this does actually not matter.
+	block := ReadLastClosedBlock()
+	if  block != nil {
+		db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte("closedblocks"))
+			b.ForEach(func(k, v []byte) error {
+				if v != nil {
+					encodedBlock := v
+					block = block.Decode(encodedBlock)
+					allClosedBlocks = append(allClosedBlocks, block)
 				}
-				allClosedBlocks = append(allClosedBlocks, newNextBlock)
-				if newNextBlock.Hash == [32]byte{} {
-					hasNext = false
+				return nil
+			})
+
+			b = tx.Bucket([]byte("closedblockswithouttx"))
+			b.ForEach(func(k, v []byte) error {
+				if v != nil {
+					encodedBlock := v
+					block = block.Decode(encodedBlock)
+					allClosedBlocks = append(allClosedBlocks, block)
 				}
-				nextBlock = newNextBlock
-			}
-		}
+				return nil
+			})
+
+			return nil
+		})
 	}
 
 	return allClosedBlocks

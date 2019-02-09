@@ -6,6 +6,7 @@ import (
 
 //Both block and tx requests are handled asymmetricaly, using channels as inter-communication
 //All the request in this file are specifically initiated by the miner package
+//func BlockReq(hash [32]byte, hashWithoutTx [32]byte) error {
 func BlockReq(hash [32]byte) error {
 
 	// Block Request with a Broadcast request. This does rise the possibility of a valid answer.

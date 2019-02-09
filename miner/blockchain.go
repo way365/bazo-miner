@@ -27,6 +27,7 @@ var (
 func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validatorCommitment, rootCommitment *rsa.PrivateKey) {
 	var err error
 
+
 	validatorAccAddress = crypto.GetAddressFromPubKey(validatorWallet)
 	multisigPubKey = multisigWallet
 	commPrivKey = validatorCommitment
@@ -34,6 +35,7 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 
 	//Set up logger.
 	logger = storage.InitLogger()
+	logger.Printf("\n\n\n-------------------- START MINER ---------------------")
 
 	parameterSlice = append(parameterSlice, NewDefaultParameters())
 	activeParameters = &parameterSlice[0]
@@ -53,7 +55,7 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 		return
 	}
 
-	logger.Printf("Active config params:%v", activeParameters)
+	logger.Printf("Active config params:%v\n", activeParameters)
 
 	//Start to listen to network inputs (txs and blocks).
 	go incomingData()
@@ -62,7 +64,7 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 
 //Mining is a constant process, trying to come up with a successful PoW.
 func mining(initialBlock *protocol.Block) {
-	currentBlock := newBlock(initialBlock.Hash, initialBlock.PrevHashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, initialBlock.Height+1)
+	currentBlock := newBlock(initialBlock.Hash, initialBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, initialBlock.Height+1)
 
 	for {
 		err := finalizeBlock(currentBlock)
@@ -78,6 +80,7 @@ func mining(initialBlock *protocol.Block) {
 				//Only broadcast the block if it is valid.
 				broadcastBlock(currentBlock)
 				logger.Printf("Validated block (mined): %vState:\n%v", currentBlock, getState())
+
 			} else {
 				logger.Printf("Mined block (%x) could not be validated: %v\n", currentBlock.Hash[0:8], err)
 			}

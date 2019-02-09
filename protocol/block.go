@@ -279,6 +279,7 @@ func (block *Block) Decode(encoded []byte) (b *Block) {
 func (block Block) String() string {
 	return fmt.Sprintf("\n" +
 		"Hash: %x			"+ "Hash Without Tx: %x\n"+
+		"Hash: %d			"+ "Hash Without Tx: %d\n"+
 		"Previous Hash: %x		"+ "Previous Hash Without Tx: %x\n"+
 		"Aggregated: %t\n"+
 		"Nonce: %x\n"+
@@ -292,10 +293,12 @@ func (block Block) String() string {
 		"Total Transactions in this block: %v\n"+
 		"Height: %d\n"+
 		"Commitment Proof: %x\n"+
+		"Commitment Proof: %d\n"+
 		"Slashed Address:%x\n"+
 		"Conflicted Block Hash 1:%x\n"+
 		"Conflicted Block Hash 2:%x\n",
 		block.Hash[0:8], block.HashWithoutTx[0:8],
+		block.Hash[0:8], block.HashWithoutTx[0:8], //TODO remove line
 		block.PrevHash[0:8], block.PrevHashWithoutTx[0:8],
 		block.Aggregated,
 		block.Nonce,
@@ -309,6 +312,7 @@ func (block Block) String() string {
 		uint16(block.NrFundsTx) + uint16(block.NrAccTx) + uint16(block.NrConfigTx) + uint16(block.NrStakeTx),
 		block.Height,
 		block.CommitmentProof[0:8],
+		block.CommitmentProof[0:8], //TODO remove line
 		block.SlashedAddress[0:8],
 		block.ConflictingBlockHash1[0:8],
 		block.ConflictingBlockHash2[0:8],

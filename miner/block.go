@@ -47,7 +47,6 @@ func finalizeBlock(block *protocol.Block) error {
 			block.SlashedAddress = hash
 			block.ConflictingBlockHash1 = slashingProof.ConflictingBlockHash1
 			block.ConflictingBlockHash2 = slashingProof.ConflictingBlockHash2
-			//TODO @simibac Why do you break?
 			break
 		}
 	}
@@ -370,7 +369,6 @@ func fetchFundsTxData(block *protocol.Block, fundsTxSlice []*protocol.FundsTx, i
 			}
 		}
 
-		//TODO Optimize code (duplicated)
 		//We check if the Transaction is in the invalidOpenTX stash. When it is in there, and it is valid now, we save
 		//it into the fundsTX and continue like usual. This additional stash does lower the amount of network requests. 
 		tx = storage.ReadOpenTx(txHash)
@@ -465,7 +463,6 @@ func fetchStakeTxData(block *protocol.Block, stakeTxSlice []*protocol.StakeTx, i
 			}
 		}
 
-		//TODO Optimize code (duplicated)
 		tx = storage.ReadOpenTx(txHash)
 		if tx != nil {
 			stakeTx = tx.(*protocol.StakeTx)
@@ -497,7 +494,6 @@ func fetchStakeTxData(block *protocol.Block, stakeTxSlice []*protocol.StakeTx, i
 //because there is the case that we might need to go fetch several blocks
 // and have to check the blocks first before changing the state in the correct order.
 func validate(b *protocol.Block, initialSetup bool) error {
-	//TODO Optimize code
 
 	//This mutex is necessary that own-mined blocks and received blocks from the network are not
 	//validated concurrently.
@@ -595,8 +591,6 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 
 	//Check block size.
 	if block.GetSize() > activeParameters.Block_size {
-		logger.Printf("BLOCK_SIZE: Blocksize %v > ActiveParam ", block.GetSize())
-		logger.Printf("BLOCK_SIZE: bloomfiltersize %v ", block.GetBloomFilterSize())
 		return nil, nil, nil, nil, errors.New("Block size too large.")
 	}
 
@@ -699,8 +693,8 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 		}
 	}
 
-	//Merkle Tree validation
-	if protocol.BuildMerkleTree(block).MerkleRoot() != block.MerkleRoot {
+	//Merkle Tree validation --> If already aggregated, no need for Merkle Tree validation, because there are no Tx in the block
+	if block.Aggregated == false && protocol.BuildMerkleTree(block).MerkleRoot() != block.MerkleRoot {
 		return nil, nil, nil, nil, errors.New("Merkle Root is incorrect.")
 	}
 
@@ -811,17 +805,13 @@ func postValidate(data blockData, initialSetup bool) {
 
 		//Do not empty last three blocks and only if it not aggregated already. TODO Probably rewrite this later.
 		for _, block := range storage.ReadAllClosedBlocks(){
-			logger.Printf("TEST_FOR_EMPTY_BLOCK:(%x) Height: %x, Aggregated: %t", block.Hash[0:8], block.Height, block.Aggregated)
 
 			//Empty all blocks despite the last 3 and genesis block.
-			if block.Aggregated == false && block.Height > 0 {
-				if (int(block.Height)) < (int(data.block.Height) - 3) {
-					logger.Printf("TEST_FOR_EMPTY_BLOCK_PASSED:(%x) Height: %x, Aggregated: %t", block.Hash[0:8], block.Height, block.Aggregated)
+			if !block.Aggregated && block.Height > 0 {
+				if (int(block.Height)) < (int(data.block.Height) - NO_AGGREGATION_LENGTH) {
 					storage.UpdateBlocksToBlocksWithoutTx(block)
 				}
-
 			}
-
 		}
 
 		// Write last block to db and delete last block's ancestor.

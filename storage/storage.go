@@ -122,5 +122,5 @@ func TearDown() {
 }
 
 func PrintMemPoolSize(){
-	logger.Printf("MEMPOOL_SIZE: %v\n", len(txMemPool))
+	//logger.Printf("MEMPOOL_SIZE: %v\n", len(txMemPool))
 }
