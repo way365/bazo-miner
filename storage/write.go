@@ -42,7 +42,18 @@ func WriteLastClosedBlock(block *protocol.Block) (err error) {
 func WriteOpenTx(transaction protocol.Transaction) {
 
 	txMemPool[transaction.Hash()] = transaction
-	PrintMemPoolSize()
+}
+
+func WriteOpenTxToBeAggregated(transaction protocol.Transaction) {
+
+	txToBeAggregated[transaction.Hash()] = transaction
+}
+
+func PrintOpenTx() {
+
+	logger.Printf("OPENTX: .......")
+	logger.Printf("%x", txMemPool)
+	logger.Printf(".......")
 }
 
 func WriteINVALIDOpenTx(transaction protocol.Transaction) {
@@ -83,7 +94,10 @@ func WriteClosedTx(transaction protocol.Transaction) (err error) {
 		bucket = "closedconfigs"
 	case *protocol.StakeTx:
 		bucket = "closedstakes"
+	case *protocol.AggTxSender:
+		bucket = "closedaggregationssender"
 	}
+
 
 	hash := transaction.Hash()
 	err = db.Update(func(tx *bolt.Tx) error {

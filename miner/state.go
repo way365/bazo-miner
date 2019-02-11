@@ -165,12 +165,12 @@ func initState() (initialBlock *protocol.Block, err error) {
 		//Do not validate the genesis block, since a lot of properties are set to nil
 		if blockToValidate.Hash != [32]byte{} {
 			//Fetching payload data from the txs (if necessary, ask other miners)
-			accTxs, fundsTxs, configTxs, stakeTxs, err := preValidate(blockToValidate, true)
+			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, err := preValidate(blockToValidate, true)
 			if err != nil {
 				return nil, errors.New(fmt.Sprintf("Block (%x) could not be prevalidated: %v\n", blockToValidate.Hash[0:8], err))
 			}
 
-			blockDataMap[blockToValidate.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, blockToValidate}
+			blockDataMap[blockToValidate.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, blockToValidate}
 
 			err = validateState(blockDataMap[blockToValidate.Hash])
 			if err != nil {
@@ -179,16 +179,12 @@ func initState() (initialBlock *protocol.Block, err error) {
 
 			postValidate(blockDataMap[blockToValidate.Hash], true)
 		} else {
-			blockDataMap[blockToValidate.Hash] = blockData{nil, nil, nil, nil, blockToValidate}
+			blockDataMap[blockToValidate.Hash] = blockData{nil, nil, nil, nil, nil, blockToValidate}
 
 			postValidate(blockDataMap[blockToValidate.Hash], true)
 		}
 
-		logger.Printf("Validated block with height %v\n", blockToValidate.Height)
-		logger.Printf("Size of Block %x: %v Bytes. --> Header: %v Bytes, Body: %v Bytes " +
-			"--> Body includes %v Bytes of TxData\n",
-			blockToValidate.Hash[0:8], blockToValidate.GetSize(), blockToValidate.GetHeaderSize(), blockToValidate.GetBodySize(),
-			blockToValidate.GetTxDataSize())
+
 		CalculateBlockchainSize(int(blockToValidate.GetSize()))
 
 		//Set the last validated block as the lastBlock
@@ -236,8 +232,29 @@ func accStateChange(txSlice []*protocol.AccTx) error {
 	return nil
 }
 
+//this method does inititate the state change for aggregated Transactions. It does
+func aggTxSenderStateChange(txSlice []*protocol.AggTxSender) (err error) {
+	for _, tx1 := range txSlice {
+		var fundsFxSlice []*protocol.FundsTx
+		for _, tx2 := range tx1.AggregatedTxSlice {
+			//Fetch all aggregated open Funds transactions for state validation.
+			trx := storage.ReadOpenTxToBeAggregated(tx2)
+			fundsFxSlice = append(fundsFxSlice, trx.(*protocol.FundsTx))
+		}
+
+		if err := fundsStateChange(fundsFxSlice); err != nil {
+			return err
+		}
+		fundsFxSlice = nil
+	}
+
+	return nil
+}
+
 func fundsStateChange(txSlice []*protocol.FundsTx) (err error) {
 	for _, tx := range txSlice {
+		logger.Printf("fundsStateChange: Current StateChangeTrsanaction %x", tx.Hash())
+
 		var rootAcc *protocol.Account
 		//Check if we have to issue new coins (in case a root account signed the tx)
 		if rootAcc, err = storage.GetRootAccount(tx.From); err != nil {

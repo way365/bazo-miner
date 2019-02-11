@@ -80,8 +80,11 @@ func ReadReceivedBlockStash() (receivedBlocks []*protocol.Block){
 }
 
 func ReadOpenTx(hash [32]byte) (transaction protocol.Transaction) {
-
 	return txMemPool[hash]
+}
+
+func ReadOpenTxToBeAggregated(hash [32]byte) (transaction protocol.Transaction) {
+	return txToBeAggregated[hash]
 }
 
 func ReadAverageTxSize() (float32) {
@@ -149,12 +152,14 @@ func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
 
 	var aggTx *protocol.AggTxSender
 	db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("closedaccs"))
+		b := tx.Bucket([]byte("closedaggregationssender"))
 		encodedTx = b.Get(hash[:])
 		return nil
 	})
 	if encodedTx != nil {
 		return aggTx.Decode(encodedTx)
 	}
+
+
 	return nil
 }

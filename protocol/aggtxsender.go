@@ -13,28 +13,29 @@ const (
 //when we broadcast transactions we need a way to distinguish with a type
 
 type AggTxSender struct {
-	Header 				byte
 	Amount 				uint64
 	Fee    				uint64
 	TxCnt  				uint32
 	From   				[32]byte
-	ToSlice    			[]byte
-	AggregatedTxSlice 	[]byte
+	To    				map[[32]byte][32]byte
+	AggregatedTxSlice 	[][32]byte
+	Aggregated			bool
 }
 
-func ConstrAggTxSender(header byte, amount uint64, fee uint64, txCnt uint32, from [32]byte, to []byte) (tx *AggTxSender, err error) {
+func ConstrAggTxSender(amount uint64, fee uint64, txCnt uint32, from [32]byte, to [][32]byte, transactions [][32]byte) (tx *AggTxSender, err error) {
 	tx = new(AggTxSender)
+	tx.To = map[[32]byte][32]byte{}
 
-	tx.Header = header
-	tx.From = from
-	tx.ToSlice = to
 	tx.Amount = amount
+	tx.From = from
 	tx.Fee = fee
 	tx.TxCnt = txCnt
+	tx.AggregatedTxSlice = transactions
+	tx.Aggregated = false
 
-	txHash := tx.Hash()
-
-	txHash = txHash
+	for _, trx := range to {
+		tx.To[trx] = trx
+	}
 
 	return tx, nil
 }
@@ -47,19 +48,17 @@ func (tx *AggTxSender) Hash() (hash [32]byte) {
 	}
 
 	txHash := struct {
-		Header byte
 		Amount uint64
 		Fee    uint64
 		TxCnt  uint32
 		From   [32]byte
-		To     []byte
+		To     map[[32]byte][32]byte
 	}{
-		tx.Header,
 		tx.Amount,
 		tx.Fee,
 		tx.TxCnt,
 		tx.From,
-		tx.ToSlice,
+		tx.To,
 	}
 
 	return SerializeHashContent(txHash)
@@ -70,12 +69,11 @@ func (tx *AggTxSender) Hash() (hash [32]byte) {
 func (tx *AggTxSender) Encode() (encodedTx []byte) {
 	// Encode
 	encodeData := AggTxSender{
-		Header: 	tx.Header,
 		Amount: 	tx.Amount,
 		Fee:    	tx.Fee,
 		TxCnt:  	tx.TxCnt,
 		From:		tx.From,
-		ToSlice:    tx.ToSlice,
+		To:    		tx.To,
 	}
 	buffer := new(bytes.Buffer)
 	gob.NewEncoder(buffer).Encode(encodeData)
@@ -94,21 +92,23 @@ func (tx *AggTxSender) TxFee() uint64 { return tx.Fee }
 func (tx *AggTxSender) Size() uint64  { return AGGTX_SENDER_SIZE }
 
 func (tx *AggTxSender) Sender() [32]byte { return tx.From }
-func (tx *AggTxSender) ReceiverSlice() []byte { return tx.ToSlice }
 
 func (tx AggTxSender) String() string {
 	return fmt.Sprintf(
-		"\nHeader: %v\n"+
+		"\nHash: %x\n" +
 			"Amount: %v\n"+
 			"Fee: %v\n"+
 			"TxCnt: %v\n"+
 			"From: %x\n"+
-			"To: %x\n",
-		tx.Header,
+			"To: %x\n"+
+			"Transactions: %x\n",
+		tx.Hash(),
 		tx.Amount,
 		tx.Fee,
 		tx.TxCnt,
 		tx.From,
-		tx.ToSlice,
+		tx.To,
+		tx.AggregatedTxSlice,
 	)
 }
+

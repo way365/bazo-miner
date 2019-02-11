@@ -26,6 +26,9 @@ func verify(tx protocol.Transaction) bool {
 		verified = verifyConfigTx(tx.(*protocol.ConfigTx))
 	case *protocol.StakeTx:
 		verified = verifyStakeTx(tx.(*protocol.StakeTx))
+	case *protocol.AggTxSender:
+		logger.Printf("VERIFIED AGGTX...")
+		verified = true
 	}
 
 	return verified

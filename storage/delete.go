@@ -45,6 +45,10 @@ func DeleteOpenTx(transaction protocol.Transaction) {
 	delete(txMemPool, transaction.Hash())
 }
 
+func DeleteOpenTxToBeAggregated(transaction protocol.Transaction) {
+	delete(txToBeAggregated, transaction.Hash())
+}
+
 func DeleteINVALIDOpenTx(transaction protocol.Transaction) {
 	delete(txINVALIDMemPool, transaction.Hash())
 }
@@ -61,7 +65,7 @@ func DeleteClosedTx(transaction protocol.Transaction) {
 	case *protocol.StakeTx:
 		bucket = "closedstakes"
 	case *protocol.AggTxSender:
-		bucket = "closedstakes"
+		bucket = "closedaggregationssender"
 	}
 
 	hash := transaction.Hash()

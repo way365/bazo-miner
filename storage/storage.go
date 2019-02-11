@@ -16,6 +16,7 @@ var (
 	RootKeys           				= make(map[[32]byte]*protocol.Account)
 	txMemPool          				= make(map[[32]byte]protocol.Transaction)
 	txINVALIDMemPool   				= make(map[[32]byte]protocol.Transaction)
+	txToBeAggregated          		= make(map[[32]byte]protocol.Transaction)
 	DifferentSenders   				= make(map[[32]byte][32]byte)
 	FundsTxBeforeAggregation		= make([]*protocol.FundsTx, 0)
 	receivedBlockStash				= make([]*protocol.Block, 0)
@@ -91,6 +92,13 @@ func Init(dbname string, bootstrapIpport string) {
 	})
 	db.Update(func(tx *bolt.Tx) error {
 		_, err = tx.CreateBucket([]byte("closedstakes"))
+		if err != nil {
+			return fmt.Errorf(ERROR_MSG+"Create bucket: %s", err)
+		}
+		return nil
+	})
+	db.Update(func(tx *bolt.Tx) error {
+		_, err = tx.CreateBucket([]byte("closedaggregationssender"))
 		if err != nil {
 			return fmt.Errorf(ERROR_MSG+"Create bucket: %s", err)
 		}
