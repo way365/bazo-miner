@@ -118,6 +118,9 @@ func (*FundsTx) Decode(encodedTx []byte) *FundsTx {
 func (tx *FundsTx) TxFee() uint64 { return tx.Fee }
 func (tx *FundsTx) Size() uint64  { return FUNDSTX_SIZE }
 
+func (tx *FundsTx) Sender() [32]byte { return tx.From }
+func (tx *FundsTx) Receiver() [32]byte { return tx.From }
+
 func (tx FundsTx) String() string {
 	return fmt.Sprintf(
 		"\nHeader: %v\n"+

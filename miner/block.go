@@ -242,6 +242,7 @@ func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
 
 	//Add the tx hash to the block header and write it to open storage (non-validated transactions).
 	b.FundsTxData = append(b.FundsTxData, tx.Hash())
+	storage.FundsTxBeforeAggregation = append(storage.FundsTxBeforeAggregation, tx)
 	//logger.Printf("Added tx (%x) to the FundsTxData slice: %v", tx.Hash(), *tx)
 	//logger.Printf("Added tx (%x) to the FundsTxData slice", tx.Hash())
 	return nil

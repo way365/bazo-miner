@@ -120,6 +120,8 @@ func (tx *AccTx) TxFee() uint64 { return tx.Fee }
 
 func (tx *AccTx) Size() uint64 { return ACCTX_SIZE }
 
+func (tx *AccTx) Sender() [32]byte { return tx.Issuer}
+
 func (tx AccTx) String() string {
 	return fmt.Sprintf(
 		"\n"+

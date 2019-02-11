@@ -146,5 +146,15 @@ func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
 	if encodedTx != nil {
 		return staketx.Decode(encodedTx)
 	}
+
+	var aggTx *protocol.AggTxSender
+	db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("closedaccs"))
+		encodedTx = b.Get(hash[:])
+		return nil
+	})
+	if encodedTx != nil {
+		return aggTx.Decode(encodedTx)
+	}
 	return nil
 }

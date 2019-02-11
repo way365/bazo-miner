@@ -10,18 +10,20 @@ import (
 )
 
 var (
-	db                 *bolt.DB
-	logger             *log.Logger
-	State              = make(map[[32]byte]*protocol.Account)
-	RootKeys           = make(map[[32]byte]*protocol.Account)
-	txMemPool          = make(map[[32]byte]protocol.Transaction)
-	txINVALIDMemPool          = make(map[[32]byte]protocol.Transaction)
-	receivedBlockStash = make([]*protocol.Block, 0)
+	db                 				*bolt.DB
+	logger             				*log.Logger
+	State              				= make(map[[32]byte]*protocol.Account)
+	RootKeys           				= make(map[[32]byte]*protocol.Account)
+	txMemPool          				= make(map[[32]byte]protocol.Transaction)
+	txINVALIDMemPool   				= make(map[[32]byte]protocol.Transaction)
+	DifferentSenders   				= make(map[[32]byte][32]byte)
+	FundsTxBeforeAggregation		= make([]*protocol.FundsTx, 0)
+	receivedBlockStash				= make([]*protocol.Block, 0)
 	AllClosedBlocksAsc []*protocol.Block
-	Bootstrap_Server   string
-	averageTxSize float32 = 0
-	totalTransactionSize float32 = 0
-	nrClosedTransactions float32 = 0
+	Bootstrap_Server string
+	averageTxSize float32 			= 0
+	totalTransactionSize float32 	= 0
+	nrClosedTransactions float32 	= 0
 )
 
 const (

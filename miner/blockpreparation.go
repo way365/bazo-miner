@@ -21,14 +21,31 @@ func prepareBlock(block *protocol.Block) {
 	//Shouldn't be too bad because no deep copy.
 	var tmpCopy openTxs
 	tmpCopy = opentxs
-
 	sort.Sort(tmpCopy)
 
 	logger.Printf( "Open Transactions to be validated: %v", len(opentxs))
 
-	for i, tx := range opentxs {
-		//Prevent block size to overflow. +10 Because of the bloomFilter
-		if int(block.GetSize()+10)+(i*int(len(tx.Hash()))) > int(activeParameters.Block_size){
+	//Counter for all transactions which will not be aggregated. (Stake-, config-, acctx)
+	nonAggregatableTxCounter := 0
+	blockSize := block.GetSize()+block.GetBloomFilterSize()
+
+	//map where all senders from FundsTx and AggTx are added to. --> this ensures that tx with same sender are only counted once.
+	storage.DifferentSenders = map[[32]byte][32]byte{}
+	for _, tx := range opentxs {
+
+		//Switch because with an if statement every transaction would need a getter-method for its type.
+		// Therefore, switch is more code efficient.
+		switch tx.(type) {
+		case *protocol.FundsTx, *protocol.AggTxSender:
+			storage.DifferentSenders[tx.Sender()] = tx.Sender()
+		default:
+			nonAggregatableTxCounter += 1
+		}
+
+		//Check if block will become to big when adding the next transaction.
+		if int(blockSize)+
+			(len(storage.DifferentSenders)*int(len(tx.Hash()))) +
+			(int(nonAggregatableTxCounter)*int(len(tx.Hash()))) > int(activeParameters.Block_size){
 			break
 		}
 
@@ -39,6 +56,15 @@ func prepareBlock(block *protocol.Block) {
 			storage.DeleteOpenTx(tx)
 		}
 	}
+
+	// In miner\block.go --> AddFundsTx the transactions get added into storage.FundsTxBeforeAggregation.
+	// This will be sorted below.
+	sortFundsTxBeforeAggregation()
+
+	//Set measurement values back to zero / nil.
+	storage.DifferentSenders = nil
+	nonAggregatableTxCounter = 0
+
 }
 
 //Implement the sort interface
@@ -75,4 +101,62 @@ func (f openTxs) Less(i, j int) bool {
 	}
 
 	return f[i].(*protocol.FundsTx).TxCnt < f[j].(*protocol.FundsTx).TxCnt
+}
+
+// This functions below here are used for sorting the List of transactions which can be aggregated.
+// The Mempool is only sorted according to teh TxCount, So sorting the transactions which can be aggregated by sender
+// and TxCount eases the aggregation process.
+// It is implemented near to https://golang.org/pkg/sort/
+
+type lessFunc func(p1, p2 *protocol.FundsTx) bool
+
+type multiSorter struct {
+	transactions []*protocol.FundsTx
+	less    []lessFunc
+}
+
+func (ms *multiSorter) Sort(transactionsToSort []*protocol.FundsTx) {
+	ms.transactions = transactionsToSort
+	sort.Sort(ms)
+}
+
+func OrderedBy(less ...lessFunc) *multiSorter {
+	return &multiSorter{
+		less: less,
+	}
+}
+
+func (ms *multiSorter) Len() int {
+	return len(ms.transactions)
+}
+
+func (ms *multiSorter) Swap(i, j int) {
+	ms.transactions[i], ms.transactions[j] = ms.transactions[j], ms.transactions[i]
+}
+
+func (ms *multiSorter) Less(i, j int) bool {
+	p, q := ms.transactions[i], ms.transactions[j]
+	var k int
+	for k = 0; k < len(ms.less)-1; k++ {
+		less := ms.less[k]
+		switch {
+		case less(p, q):
+			return true
+		case less(q, p):
+			return false
+		}
+	}
+	return ms.less[k](p, q)
+}
+
+func sortFundsTxBeforeAggregation() {
+	//These Functions are inserted in the OrderBy function above. According to them the slice will be sorted.
+	sender := func(c1, c2 *protocol.FundsTx) bool {
+		return string(c1.From[:32]) < string(c2.From[:32])
+	}
+	txcount:= func(c1, c2 *protocol.FundsTx) bool {
+		return c1.TxCnt< c2.TxCnt
+	}
+
+	OrderedBy(sender, txcount).Sort(storage.FundsTxBeforeAggregation)
 }

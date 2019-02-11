@@ -60,6 +60,8 @@ func DeleteClosedTx(transaction protocol.Transaction) {
 		bucket = "closedconfigs"
 	case *protocol.StakeTx:
 		bucket = "closedstakes"
+	case *protocol.AggTxSender:
+		bucket = "closedstakes"
 	}
 
 	hash := transaction.Hash()
