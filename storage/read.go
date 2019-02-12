@@ -108,7 +108,6 @@ func ReadAllOpenTxs() (allOpenTxs []protocol.Transaction) {
 
 //Personally I like it better to test (which tx type it is) here, and get returned the interface. Simplifies the code
 func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
-
 	var encodedTx []byte
 	var fundstx *protocol.FundsTx
 	db.View(func(tx *bolt.Tx) error {

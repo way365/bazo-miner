@@ -49,11 +49,11 @@ func WriteOpenTxToBeAggregated(transaction protocol.Transaction) {
 	txToBeAggregated[transaction.Hash()] = transaction
 }
 
-func PrintOpenTx() {
+func PrintOpenTx() {  //TODO Remove this function
 
-	logger.Printf("OPENTX: .......")
-	logger.Printf("%x", txMemPool)
-	logger.Printf(".......")
+	//logger.Printf("OPENTX: .......")
+	//logger.Printf("%x", txMemPool)
+	//logger.Printf(".......")
 }
 
 func WriteINVALIDOpenTx(transaction protocol.Transaction) {

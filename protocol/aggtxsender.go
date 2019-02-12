@@ -69,11 +69,13 @@ func (tx *AggTxSender) Hash() (hash [32]byte) {
 func (tx *AggTxSender) Encode() (encodedTx []byte) {
 	// Encode
 	encodeData := AggTxSender{
-		Amount: 	tx.Amount,
-		Fee:    	tx.Fee,
-		TxCnt:  	tx.TxCnt,
-		From:		tx.From,
-		To:    		tx.To,
+		Amount: 				tx.Amount,
+		Fee:    				tx.Fee,
+		TxCnt:  				tx.TxCnt,
+		From:					tx.From,
+		To:    					tx.To,
+		AggregatedTxSlice: 		tx.AggregatedTxSlice,
+
 	}
 	buffer := new(bytes.Buffer)
 	gob.NewEncoder(buffer).Encode(encodeData)
