@@ -48,17 +48,20 @@ func (tx *AggTxSender) Hash() (hash [32]byte) {
 	}
 
 	txHash := struct {
-		Amount uint64
-		Fee    uint64
-		TxCnt  uint32
-		From   [32]byte
-		To     map[[32]byte][32]byte
+		Amount			 	uint64
+		Fee    				uint64
+		TxCnt  				uint32
+		From   				[32]byte
+		To     				map[[32]byte][32]byte
+		AggregatedTxSlice 	[][32]byte
+
 	}{
 		tx.Amount,
 		tx.Fee,
 		tx.TxCnt,
 		tx.From,
 		tx.To,
+		tx.AggregatedTxSlice,
 	}
 
 	return SerializeHashContent(txHash)

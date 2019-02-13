@@ -41,7 +41,16 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 			return
 		}
 		tx = sTx
+	case AGGTX_BRDCST:
+		var fTx *protocol.AggTxSender
+		fTx = fTx.Decode(payload)
+		if fTx == nil {
+			return
+		}
+		tx = fTx
 	}
+
+	logger.Printf("Received Transaction (%x)", tx.Hash())
 
 	//Response tx acknowledgment if the peer is a client
 	if !peers.minerConns[p] {
@@ -55,6 +64,10 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 	}
 	if storage.ReadClosedTx(tx.Hash()) != nil {
 		//logger.Printf("Received transaction (%x) already validated.\n", tx.Hash())
+		return
+	}
+	if storage.ReadOpenTxToBeAggregated(tx.Hash()) != nil {
+		//logger.Printf("Received transaction (%x) ready for aggregation.\n", tx.Hash())
 		return
 	}
 

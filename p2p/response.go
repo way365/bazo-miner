@@ -18,11 +18,14 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 	//Check closed and open storage if the tx is available
 	openTx := storage.ReadOpenTx(txHash)
 	closedTx := storage.ReadClosedTx(txHash)
+	aggReadyTx := storage.ReadOpenTxToBeAggregated(txHash)
 
 	if openTx != nil {
 		tx = openTx
 	} else if closedTx != nil {
 		tx = closedTx
+	} else if aggReadyTx != nil {
+		tx = aggReadyTx
 	}
 
 	//In case it was not found, send a corresponding message back
@@ -42,6 +45,8 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 		packet = BuildPacket(CONFIGTX_RES, tx.Encode())
 	case STAKETX_REQ:
 		packet = BuildPacket(STAKETX_RES, tx.Encode())
+	case AGGTX_REQ:
+		packet = BuildPacket(AGGTX_RES, tx.Encode())
 	}
 
 	sendData(p, packet)

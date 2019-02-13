@@ -493,7 +493,7 @@ func fetchAccTxData(block *protocol.Block, accTxSlice []*protocol.AccTx, initial
 			//This check is important. A malicious miner might have sent us a tx whose hash is a different one
 			//from what we requested.
 			if accTx.Hash() != txHash {
-				errChan <- errors.New("Received txHash did not correspond to our request.")
+				errChan <- errors.New("Received AcctxHash did not correspond to our request.")
 			}
 		}
 
@@ -543,7 +543,7 @@ func fetchFundsTxData(block *protocol.Block, fundsTxSlice []*protocol.FundsTx, i
 				return
 			}
 			if fundsTx.Hash() != txHash {
-				errChan <- errors.New("Received txHash did not correspond to our request.")
+				errChan <- errors.New("Received FundstxHash did not correspond to our request.")
 			}
 		}
 
@@ -588,7 +588,7 @@ func fetchConfigTxData(block *protocol.Block, configTxSlice []*protocol.ConfigTx
 				return
 			}
 			if configTx.Hash() != txHash {
-				errChan <- errors.New("Received txHash did not correspond to our request.")
+				errChan <- errors.New("Received ConfigtxHash did not correspond to our request.")
 			}
 		}
 
@@ -633,7 +633,7 @@ func fetchStakeTxData(block *protocol.Block, stakeTxSlice []*protocol.StakeTx, i
 				return
 			}
 			if stakeTx.Hash() != txHash {
-				errChan <- errors.New("Received txHash did not correspond to our request.")
+				errChan <- errors.New("Received StaketxHash did not correspond to our request.")
 			}
 		}
 
@@ -656,7 +656,7 @@ func fetchAggTxSenderData(block *protocol.Block, aggTxSenderSlice []*protocol.Ag
 		if closedTx != nil {
 			if initialSetup {
 
-				//For all aggregated FundsTx, fetch them.
+				//For all aggregated FundsTx, fetch them. TODO This code below is duplicated in the case below
 				for _, trx := range closedTx.(*protocol.AggTxSender).AggregatedTxSlice {
 					aggregatedFundsTxSliceHashes = append(aggregatedFundsTxSliceHashes, trx)
 				}
@@ -689,21 +689,38 @@ func fetchAggTxSenderData(block *protocol.Block, aggTxSenderSlice []*protocol.Ag
 		//} else if  txINVALID != nil && verify(txINVALID) {
 		//	aggTxSender = txINVALID.(*protocol.AggTxSender)
 		} else {
-		//	err := p2p.TxReq(txHash, p2p.FUNDSTX_REQ)
-		//	if err != nil {
-		//		errChan <- errors.New(fmt.Sprintf("FundsTx could not be read: %v", err))
-		//		return
-		//	}
-		//	select {
-		//	case aggTxSender = <-p2p.FundsTxChan:
-		//		storage.WriteOpenTx(aggTxSender)
-		//	case <-time.After(TXFETCH_TIMEOUT * time.Second):
-		//		errChan <- errors.New("FundsTx fetch timed out")
-		//		return
-		//	}
-		//	if aggTxSender.Hash() != txHash {
-		//		errChan <- errors.New("Received txHash did not correspond to our request.")
-		//	}
+			err := p2p.TxReq(txHash, p2p.AGGTX_REQ)
+			if err != nil {
+				errChan <- errors.New(fmt.Sprintf("AggTx could not be read: %v", err))
+				return
+			}
+
+			select {
+			case aggTxSender = <-p2p.AggTxChan:
+				storage.WriteOpenTx(aggTxSender)
+				for _, trx := range aggTxSender.AggregatedTxSlice {
+					aggregatedFundsTxSliceHashes = append(aggregatedFundsTxSliceHashes, trx)
+				}
+				aggregatedFundsTxSlice = make([]*protocol.FundsTx, len(aggregatedFundsTxSliceHashes))
+
+				go fetchAggregatedFundsTxData(aggregatedFundsTxSliceHashes, aggregatedFundsTxSlice, initialSetup, errAggFundsTxFetchChan)
+
+				errAggFundsTxFetch = <-errAggFundsTxFetchChan
+
+				if errAggFundsTxFetch != nil {
+					errChan <- errAggFundsTxFetch
+				}
+
+			case <-time.After(TXFETCH_TIMEOUT * time.Second):
+				errChan <- errors.New("AggTx fetch timed out")
+				return
+			}
+
+			receivedHash := aggTxSender.Hash()
+			if receivedHash != txHash {
+				errChan <- errors.New("Received AggtxHash did not correspond to our request.")
+			}
+
 		}
 
 		aggTxSenderSlice[cnt] = aggTxSender
@@ -746,13 +763,13 @@ func fetchAggregatedFundsTxData(aggregatedFundsTxHashesSlice [][32]byte, aggrega
 			}
 			select {
 			case fundsTx = <-p2p.FundsTxChan:
-				storage.WriteOpenTx(fundsTx)
+				storage.WriteOpenTxToBeAggregated(fundsTx)
 			case <-time.After(TXFETCH_TIMEOUT * time.Second):
 				errAggFundsTxFetchChan <- errors.New("FundsTx fetch timed out")
 				return
 			}
 			if fundsTx.Hash() != txHash {
-				errAggFundsTxFetchChan <- errors.New("Received txHash did not correspond to our request.")
+				errAggFundsTxFetchChan <- errors.New("Received AggregatedFundsTxHash did not correspond to our request.")
 			}
 		}
 
@@ -1092,7 +1109,11 @@ func postValidate(data blockData, initialSetup bool) {
 			}
 
 			//Delete AggTx and write it to closed Tx.
-			storage.WriteClosedTx(tx)
+			logger.Printf("Closed AggTx: %x, %v", tx.Hash(), tx.Hash())
+			err := storage.WriteClosedTx(tx)
+
+			logger.Printf("Error writing tx: %v",err)
+
 			storage.DeleteOpenTx(tx)
 		}
 

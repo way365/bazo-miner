@@ -14,6 +14,7 @@ const (
 	BLOCK_BRDCST        = 6
 	BLOCK_HEADER_BRDCST = 7
 	TX_BRDCST_ACK       = 8
+	AGGTX_BRDCST        = 9  //FABIO Is new
 
 	FUNDSTX_REQ            = 10
 	ACCTX_REQ              = 11
@@ -24,6 +25,7 @@ const (
 	ACC_REQ                = 16
 	ROOTACC_REQ            = 17
 	INTERMEDIATE_NODES_REQ = 18
+	AGGTX_REQ			   = 19 //FABIO Is new
 
 	FUNDSTX_RES            = 20
 	ACCTX_RES              = 21
@@ -34,6 +36,7 @@ const (
 	ACC_RES                = 26
 	ROOTACC_RES            = 27
 	INTERMEDIATE_NODES_RES = 28
+	AGGTX_RES			   = 29 //FABIO Is new
 
 	NEIGHBOR_REQ = 30
 	NEIGHBOR_RES = 40

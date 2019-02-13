@@ -186,15 +186,14 @@ func initState() (initialBlock *protocol.Block, err error) {
 
 
 		//CalculateBlockchainSize(int(blockToValidate.GetSize()))
-		logger.Printf("Block validated: %d", blockToValidate.Height)
+		logger.Printf("Block validated: %d --> %x, %v", blockToValidate.Height, blockToValidate.Hash[0:8], blockToValidate.Hash[0:8])
 
-		
 		//Set the last validated block as the lastBlock
 		lastBlock = blockToValidate
 	}
 
 	logger.Printf("\n\n%v block(s) validated. Chain good to go.\n------------------------------------------------------------------------\n\n", len(storage.AllClosedBlocksAsc))
-	logger.Printf("STATE: \n%v\n------------------------------------------------------------------------\n\n", getState())
+	logger.Printf("Current STATE: \n%v\n------------------------------------------------------------------------\n\n", getState())
 
 	return initialBlock, nil
 }

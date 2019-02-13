@@ -160,5 +160,8 @@ func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
 	}
 
 
+//	logger.Printf("Error Read: %v", error)
+
+
 	return nil
 }

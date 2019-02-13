@@ -19,6 +19,7 @@ var (
 	AccTxChan    = make(chan *protocol.AccTx)
 	ConfigTxChan = make(chan *protocol.ConfigTx)
 	StakeTxChan  = make(chan *protocol.StakeTx)
+	AggTxChan    = make(chan *protocol.AggTxSender)
 
 	BlockReqChan = make(chan []byte)
 
@@ -107,6 +108,14 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 			return
 		}
 		StakeTxChan <- stakeTx
+	case AGGTX_RES:
+		var aggTx *protocol.AggTxSender
+		aggTx = aggTx.Decode(payload)
+		if aggTx == nil {
+			return
+		}
+		logger.Printf("Received & Forwarded: %x,\n%v", aggTx.Hash(), aggTx)
+		AggTxChan <- aggTx
 	}
 }
 
