@@ -35,7 +35,7 @@ func prepareBlock(block *protocol.Block) {
 		//Switch because with an if statement every transaction would need a getter-method for its type.
 		//Therefore, switch is more code-efficient.
 		switch tx.(type) {
-		case *protocol.FundsTx, *protocol.AggTxSender:
+		case *protocol.FundsTx, *protocol.AggSenderTx:
 			storage.DifferentSenders[tx.Sender()] = tx.Sender()
 		default:
 			nonAggregatableTxCounter += 1
@@ -88,7 +88,7 @@ func (f openTxs) Less(i, j int) bool {
 		return true
 	case *protocol.StakeTx:
 		return true
-	case *protocol.AggTxSender:
+	case *protocol.AggSenderTx:
 		return true
 	}
 
@@ -99,7 +99,7 @@ func (f openTxs) Less(i, j int) bool {
 		return false
 	case *protocol.StakeTx:
 		return false
-	case *protocol.AggTxSender:
+	case *protocol.AggSenderTx:
 		return false
 	}
 

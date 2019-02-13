@@ -9,12 +9,12 @@ import (
 //Already validated block but not part of the current longest chain.
 //No need for an additional state mutex, because this function is called while the blockValidation mutex is actively held.
 func rollback(b *protocol.Block) error {
-	accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggTxSenderSlice, err := preValidateRollback(b)
+	accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggSenderTxSlice, err := preValidateRollback(b)
 	if err != nil {
 		return err
 	}
 
-	data := blockData{accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggTxSenderSlice,b}
+	data := blockData{accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggSenderTxSlice,b}
 
 	//Going back to pre-block system parameters before the state is rolled back.
 	configStateChangeRollback(data.configTxSlice, b.Hash)
@@ -27,7 +27,7 @@ func rollback(b *protocol.Block) error {
 	return nil
 }
 
-func preValidateRollback(b *protocol.Block) (accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, aggTxSenderSlice []*protocol.AggTxSender, err error) {
+func preValidateRollback(b *protocol.Block) (accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, aggSenderTxSlice []*protocol.AggSenderTx, err error) {
 	//Fetch all transactions from closed storage.
 	for _, hash := range b.AccTxData {
 		var accTx *protocol.AccTx
@@ -75,17 +75,17 @@ func preValidateRollback(b *protocol.Block) (accTxSlice []*protocol.AccTx, funds
 	}
 
 	for _, hash := range b.AggTxData {
-		var aggTx *protocol.AggTxSender
+		var aggTx *protocol.AggSenderTx
 		tx := storage.ReadClosedTx(hash)
 		if tx == nil {
 			return nil, nil, nil, nil, nil, errors.New("CRITICAL: Aggregated Transaction was not in the confirmed tx storage")
 		} else {
-			aggTx = tx.(*protocol.AggTxSender)
+			aggTx = tx.(*protocol.AggSenderTx)
 		}
-		aggTxSenderSlice = append(aggTxSenderSlice, aggTx)
+		aggSenderTxSlice = append(aggSenderTxSlice, aggTx)
 	}
 
-	return accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggTxSenderSlice, nil
+	return accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggSenderTxSlice, nil
 }
 
 func validateStateRollback(data blockData) {

@@ -22,7 +22,7 @@ type blockData struct {
 	fundsTxSlice  []*protocol.FundsTx
 	configTxSlice []*protocol.ConfigTx
 	stakeTxSlice  []*protocol.StakeTx
-	aggTxSlice	  []*protocol.AggTxSender
+	aggTxSlice	  []*protocol.AggSenderTx
 	block         *protocol.Block
 }
 
@@ -258,7 +258,7 @@ func addFundsTxFinal(b *protocol.Block, tx *protocol.FundsTx) error {
 	return nil
 }
 
-func addAggTxSenderFinal(b *protocol.Block, tx *protocol.AggTxSender) error {
+func addAggSenderTxFinal(b *protocol.Block, tx *protocol.AggSenderTx) error {
 	b.AggTxData = append(b.AggTxData, tx.Hash())
 	return nil
 }
@@ -318,7 +318,7 @@ func AggregateFundsTransactions(SortedAndSelectedFundsTx []*protocol.FundsTx, bl
 			storage.DeleteOpenTx(tx)
 		}
 
-		aggTx, err := protocol.ConstrAggTxSender(
+		aggTx, err := protocol.ConstrAggSenderTx(
 			amount,
 			FEE_MINIMUM,
 			SortedAndSelectedFundsTx[len(SortedAndSelectedFundsTx)-1].TxCnt,
@@ -333,7 +333,7 @@ func AggregateFundsTransactions(SortedAndSelectedFundsTx []*protocol.FundsTx, bl
 
 		logger.Printf("AGGTX:  -------%v", aggTx)
 		logger.Printf("        -------")
-		addAggTxSenderFinal(block, aggTx)
+		addAggSenderTxFinal(block, aggTx)
 		storage.WriteOpenTx(aggTx)
 
 		SortedAndSelectedFundsTx = nil
@@ -643,13 +643,13 @@ func fetchStakeTxData(block *protocol.Block, stakeTxSlice []*protocol.StakeTx, i
 	errChan <- nil
 }
 
-func fetchAggTxSenderData(block *protocol.Block, aggTxSenderSlice []*protocol.AggTxSender, aggregatedFundsTxSlice []*protocol.FundsTx, initialSetup bool, errChan chan error) {
+func fetchAggSenderTxData(block *protocol.Block, aggSenderTxSlice []*protocol.AggSenderTx, aggregatedFundsTxSlice []*protocol.FundsTx, initialSetup bool, errChan chan error) {
 	errAggFundsTxFetchChan := make(chan error, 1)
 	var errAggFundsTxFetch error
 
 	for cnt, txHash := range block.AggTxData {
 		var tx protocol.Transaction
-		var aggTxSender *protocol.AggTxSender
+		var aggSenderTx *protocol.AggSenderTx
 		var aggregatedFundsTxSliceHashes [][32]byte
 
 		closedTx := storage.ReadClosedTx(txHash)
@@ -657,7 +657,7 @@ func fetchAggTxSenderData(block *protocol.Block, aggTxSenderSlice []*protocol.Ag
 			if initialSetup {
 
 				//For all aggregated FundsTx, fetch them. TODO This code below is duplicated in the case below
-				for _, trx := range closedTx.(*protocol.AggTxSender).AggregatedTxSlice {
+				for _, trx := range closedTx.(*protocol.AggSenderTx).AggregatedTxSlice {
 					aggregatedFundsTxSliceHashes = append(aggregatedFundsTxSliceHashes, trx)
 				}
 				aggregatedFundsTxSlice = make([]*protocol.FundsTx, len(aggregatedFundsTxSliceHashes))
@@ -670,8 +670,8 @@ func fetchAggTxSenderData(block *protocol.Block, aggTxSenderSlice []*protocol.Ag
 					errChan <- errAggFundsTxFetch
 				}
 
-				aggTxSender = closedTx.(*protocol.AggTxSender)
-				aggTxSenderSlice[cnt] = aggTxSender
+				aggSenderTx = closedTx.(*protocol.AggSenderTx)
+				aggSenderTxSlice[cnt] = aggSenderTx
 				continue
 			} else {
 				errChan <- errors.New("Block validation had fundsTx that was already in a previous block.")
@@ -685,9 +685,9 @@ func fetchAggTxSenderData(block *protocol.Block, aggTxSenderSlice []*protocol.Ag
 		tx = storage.ReadOpenTx(txHash)
 		//txINVALID := storage.ReadINVALIDOpenTx(txHash)
 		if tx != nil {
-			aggTxSender = tx.(*protocol.AggTxSender)
+			aggSenderTx = tx.(*protocol.AggSenderTx)
 		//} else if  txINVALID != nil && verify(txINVALID) {
-		//	aggTxSender = txINVALID.(*protocol.AggTxSender)
+		//	aggSenderTx = txINVALID.(*protocol.AggSenderTx)
 		} else {
 			err := p2p.TxReq(txHash, p2p.AGGTX_REQ)
 			if err != nil {
@@ -696,9 +696,9 @@ func fetchAggTxSenderData(block *protocol.Block, aggTxSenderSlice []*protocol.Ag
 			}
 
 			select {
-			case aggTxSender = <-p2p.AggTxChan:
-				storage.WriteOpenTx(aggTxSender)
-				for _, trx := range aggTxSender.AggregatedTxSlice {
+			case aggSenderTx = <-p2p.AggTxChan:
+				storage.WriteOpenTx(aggSenderTx)
+				for _, trx := range aggSenderTx.AggregatedTxSlice {
 					aggregatedFundsTxSliceHashes = append(aggregatedFundsTxSliceHashes, trx)
 				}
 				aggregatedFundsTxSlice = make([]*protocol.FundsTx, len(aggregatedFundsTxSliceHashes))
@@ -716,14 +716,14 @@ func fetchAggTxSenderData(block *protocol.Block, aggTxSenderSlice []*protocol.Ag
 				return
 			}
 
-			receivedHash := aggTxSender.Hash()
+			receivedHash := aggSenderTx.Hash()
 			if receivedHash != txHash {
 				errChan <- errors.New("Received AggtxHash did not correspond to our request.")
 			}
 
 		}
 
-		aggTxSenderSlice[cnt] = aggTxSender
+		aggSenderTxSlice[cnt] = aggSenderTx
 	}
 
 	errChan <- nil
@@ -870,7 +870,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 }
 
 //Doesn't involve any state changes.
-func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, aggTxSenderSlice []*protocol.AggTxSender, err error) {
+func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, aggSenderTxSlice []*protocol.AggSenderTx, err error) {
 	//This dynamic check is only done if we're up-to-date with syncing, otherwise timestamp is not checked.
 	//Other miners (which are up-to-date) made sure that this is correct.
 	if !initialSetup && uptodate {
@@ -928,14 +928,14 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	fundsTxSlice = make([]*protocol.FundsTx, block.NrFundsTx)
 	configTxSlice = make([]*protocol.ConfigTx, block.NrConfigTx)
 	stakeTxSlice = make([]*protocol.StakeTx, block.NrStakeTx)
-	aggTxSenderSlice = make([]*protocol.AggTxSender, block.NrAggTx)
+	aggSenderTxSlice = make([]*protocol.AggSenderTx, block.NrAggTx)
 	var aggregatedFundsTxSlice = make([]*protocol.FundsTx, 0)
 
 	go fetchAccTxData(block, accTxSlice, initialSetup, errChan)
 	go fetchFundsTxData(block, fundsTxSlice, initialSetup, errChan)
 	go fetchConfigTxData(block, configTxSlice, initialSetup, errChan)
 	go fetchStakeTxData(block, stakeTxSlice, initialSetup, errChan)
-	go fetchAggTxSenderData(block, aggTxSenderSlice, aggregatedFundsTxSlice, initialSetup, errChan)
+	go fetchAggSenderTxData(block, aggSenderTxSlice, aggregatedFundsTxSlice, initialSetup, errChan)
 
 	//Wait for all goroutines to finish.
 	for cnt := 0; cnt < 5; cnt++ {
@@ -1004,7 +1004,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 		return nil, nil, nil, nil, nil, errors.New("Merkle Root is incorrect.")
 	}
 
-	return accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggTxSenderSlice,  err
+	return accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggSenderTxSlice,  err
 }
 
 //Dynamic state check.
@@ -1020,7 +1020,7 @@ func validateState(data blockData) error {
 		return err
 	}
 
-	if err := aggTxSenderStateChange(data.aggTxSlice); err != nil {
+	if err := aggSenderTxStateChange(data.aggTxSlice); err != nil {
 		//accStateChangeRollback(data.accTxSlice)
 		return err
 	}

@@ -235,7 +235,7 @@ func accStateChange(txSlice []*protocol.AccTx) error {
 }
 
 //this method does inititate the state change for aggregated Transactions. It does
-func aggTxSenderStateChange(txSlice []*protocol.AggTxSender) (err error) {
+func aggSenderTxStateChange(txSlice []*protocol.AggSenderTx) (err error) {
 	for _, tx1 := range txSlice {
 		var fundsFxSlice []*protocol.FundsTx
 		for _, tx2 := range tx1.AggregatedTxSlice {

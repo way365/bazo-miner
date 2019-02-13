@@ -12,7 +12,7 @@ const (
 
 //when we broadcast transactions we need a way to distinguish with a type
 
-type AggTxSender struct {
+type AggSenderTx struct {
 	Amount 				uint64
 	Fee    				uint64
 	TxCnt  				uint32
@@ -22,8 +22,8 @@ type AggTxSender struct {
 	Aggregated			bool
 }
 
-func ConstrAggTxSender(amount uint64, fee uint64, txCnt uint32, from [32]byte, to [][32]byte, transactions [][32]byte) (tx *AggTxSender, err error) {
-	tx = new(AggTxSender)
+func ConstrAggSenderTx(amount uint64, fee uint64, txCnt uint32, from [32]byte, to [][32]byte, transactions [][32]byte) (tx *AggSenderTx, err error) {
+	tx = new(AggSenderTx)
 	tx.To = map[[32]byte][32]byte{}
 
 	tx.Amount = amount
@@ -41,7 +41,7 @@ func ConstrAggTxSender(amount uint64, fee uint64, txCnt uint32, from [32]byte, t
 }
 
 
-func (tx *AggTxSender) Hash() (hash [32]byte) {
+func (tx *AggSenderTx) Hash() (hash [32]byte) {
 	if tx == nil {
 		//is returning nil better?
 		return [32]byte{}
@@ -69,9 +69,9 @@ func (tx *AggTxSender) Hash() (hash [32]byte) {
 
 //when we serialize the struct with binary.Write, unexported field get serialized as well, undesired
 //behavior. Therefore, writing own encoder/decoder
-func (tx *AggTxSender) Encode() (encodedTx []byte) {
+func (tx *AggSenderTx) Encode() (encodedTx []byte) {
 	// Encode
-	encodeData := AggTxSender{
+	encodeData := AggSenderTx{
 		Amount: 				tx.Amount,
 		Fee:    				tx.Fee,
 		TxCnt:  				tx.TxCnt,
@@ -85,20 +85,20 @@ func (tx *AggTxSender) Encode() (encodedTx []byte) {
 	return buffer.Bytes()
 }
 
-func (*AggTxSender) Decode(encodedTx []byte) *AggTxSender {
-	var decoded AggTxSender
+func (*AggSenderTx) Decode(encodedTx []byte) *AggSenderTx {
+	var decoded AggSenderTx
 	buffer := bytes.NewBuffer(encodedTx)
 	decoder := gob.NewDecoder(buffer)
 	decoder.Decode(&decoded)
 	return &decoded
 }
 
-func (tx *AggTxSender) TxFee() uint64 { return tx.Fee }
-func (tx *AggTxSender) Size() uint64  { return AGGTX_SENDER_SIZE }
+func (tx *AggSenderTx) TxFee() uint64 { return tx.Fee }
+func (tx *AggSenderTx) Size() uint64  { return AGGTX_SENDER_SIZE }
 
-func (tx *AggTxSender) Sender() [32]byte { return tx.From }
+func (tx *AggSenderTx) Sender() [32]byte { return tx.From }
 
-func (tx AggTxSender) String() string {
+func (tx AggSenderTx) String() string {
 	return fmt.Sprintf(
 		"\nHash: %x\n" +
 			"Amount: %v\n"+
