@@ -24,6 +24,7 @@ var (
 	BlockReqChan = make(chan []byte)
 
 	receivedTXStash = make([]*protocol.FundsTx, 0)
+	receivedAggTXStash = make([]*protocol.AggSenderTx, 0)
 )
 
 //This is for blocks and txs that the miner successfully validated.
@@ -63,6 +64,15 @@ func txAlreadyInStash(slice []*protocol.FundsTx, newTXHash [32]byte) bool {
 	return false
 }
 
+func aggTxAlreadyInStash(slice []*protocol.AggSenderTx, newTXHash [32]byte) bool {
+	for _, txInStash := range slice {
+		if txInStash.Hash() == newTXHash {
+			return true
+		}
+	}
+	return false
+}
+
 //These are transactions the miner specifically requested.
 func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 	if payload == nil {
@@ -82,6 +92,7 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		// our request." error
 		if !txAlreadyInStash(receivedTXStash, fundsTx.Hash()) {
 			receivedTXStash = append(receivedTXStash, fundsTx)
+			logger.Printf("FORWARD: %x", fundsTx.Hash())
 			FundsTxChan <- fundsTx
 			if len(receivedTXStash) > 1000 {
 				receivedTXStash = append(receivedTXStash[:0], receivedTXStash[1:]...)
@@ -114,8 +125,15 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		if aggTx == nil {
 			return
 		}
-		logger.Printf("Received & Forwarded: %x,\n%v", aggTx.Hash(), aggTx)
-		AggTxChan <- aggTx
+
+		if !aggTxAlreadyInStash(receivedAggTXStash, aggTx.Hash()) {
+			receivedAggTXStash = append(receivedAggTXStash, aggTx)
+			AggTxChan <- aggTx
+			if len(receivedAggTXStash) > 1000 {
+				receivedAggTXStash = append(receivedAggTXStash[:0], receivedAggTXStash[1:]...)
+			}
+		}
+
 	}
 }
 

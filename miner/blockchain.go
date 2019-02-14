@@ -53,7 +53,14 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 		return
 	}
 
-	logger.Printf("Active config params:%v", activeParameters)
+	logger.Printf("ActiveConfigParams: \n%v\n------------------------------------------------------------------------\n\nBlockchian is Running\n", activeParameters)
+
+	//this is used to generate teh state with aggregated transactions.
+	for _, tx := range storage.ReadAllBootstrapReceivedTransactions() {
+		storage.DeleteOpenTx(tx)
+		storage.WriteClosedTx(tx)
+	}
+	storage.DeleteBootstrapReceivedMempool()
 
 	//Start to listen to network inputs (txs and blocks).
 	go incomingData()
@@ -82,6 +89,8 @@ func mining(initialBlock *protocol.Block) {
 				logger.Printf("Mined block (%x) could not be validated: %v\n", currentBlock.Hash[0:8], err)
 			}
 		}
+
+		storage.ReadMempool()
 
 		//This is the same mutex that is claimed at the beginning of a block validation. The reason we do this is
 		//that before start mining a new block we empty the mempool which contains tx data that is likely to be

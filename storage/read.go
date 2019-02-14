@@ -80,16 +80,21 @@ func ReadReceivedBlockStash() (receivedBlocks []*protocol.Block){
 }
 
 func ReadOpenTx(hash [32]byte) (transaction protocol.Transaction) {
+	openTxMutex.Lock()
+	defer openTxMutex.Unlock()
 	return txMemPool[hash]
 }
 
-func ReadOpenTxToBeAggregated(hash [32]byte) (transaction protocol.Transaction) {
-	return txToBeAggregated[hash]
+func ReadBootstrapReceivedTransactions(hash [32]byte) (transaction protocol.Transaction) {
+	return bootstrapReceivedMemPool[hash]
 }
 
-func ReadAverageTxSize() (float32) {
+func ReadAllBootstrapReceivedTransactions() (allOpenTxs []protocol.Transaction) {
 
-	return averageTxSize
+	for key := range bootstrapReceivedMemPool {
+		allOpenTxs = append(allOpenTxs, txMemPool[key])
+	}
+	return
 }
 
 func ReadINVALIDOpenTx(hash [32]byte) (transaction protocol.Transaction) {
@@ -159,9 +164,16 @@ func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
 		return aggTx.Decode(encodedTx)
 	}
 
-
-//	logger.Printf("Error Read: %v", error)
-
-
 	return nil
+}
+
+func ReadMempool(){
+	logger.Printf("MemPool_________")
+	//for key := range txMemPool {
+	//	logger.Printf("%x", key)
+	//}
+	//logger.Printf("________________")
+	logger.Printf("Mempool_Size: %x", len(txMemPool))
+	logger.Printf("________________")
+
 }

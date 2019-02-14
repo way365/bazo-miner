@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/bazo-blockchain/bazo-miner/protocol"
@@ -16,7 +17,7 @@ var (
 	RootKeys           				= make(map[[32]byte]*protocol.Account)
 	txMemPool          				= make(map[[32]byte]protocol.Transaction)
 	txINVALIDMemPool   				= make(map[[32]byte]protocol.Transaction)
-	txToBeAggregated          		= make(map[[32]byte]protocol.Transaction)
+	bootstrapReceivedMemPool		= make(map[[32]byte]protocol.Transaction)
 	DifferentSenders   				= make(map[[32]byte][32]byte)
 	FundsTxBeforeAggregation		= make([]*protocol.FundsTx, 0)
 	receivedBlockStash				= make([]*protocol.Block, 0)
@@ -25,6 +26,7 @@ var (
 	averageTxSize float32 			= 0
 	totalTransactionSize float32 	= 0
 	nrClosedTransactions float32 	= 0
+	openTxMutex 					= &sync.Mutex{}
 )
 
 const (

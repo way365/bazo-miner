@@ -27,8 +27,7 @@ func verify(tx protocol.Transaction) bool {
 	case *protocol.StakeTx:
 		verified = verifyStakeTx(tx.(*protocol.StakeTx))
 	case *protocol.AggSenderTx:
-		logger.Printf("VERIFIED AGGTX...")
-		verified = true
+		verified = verifyAggSenderTx(tx.(*protocol.AggSenderTx))
 	}
 
 	return verified
@@ -183,6 +182,22 @@ func verifyStakeTx(tx *protocol.StakeTx) bool {
 	pubKey := ecdsa.PublicKey{elliptic.P256(), pub1, pub2}
 
 	return ecdsa.Verify(&pubKey, txHash[:], r, s)
+}
+
+func verifyAggSenderTx(tx *protocol.AggSenderTx) bool {
+	if tx == nil {
+		logger.Println("Transactions does not exist.")
+		return false
+	}
+
+	//Check if accounts are existent
+	accSender, err := storage.GetAccount(tx.From)
+	if tx.From != protocol.SerializeHashContent(accSender.Address) || tx.To == nil || err != nil {
+		logger.Printf("Account non existent. From: %v\nTo: %v\n%v", tx.From, tx.To, err)
+		return false
+	}
+
+	return true
 }
 
 //Returns true if id is in the list of possible ids and rational value for payload parameter.

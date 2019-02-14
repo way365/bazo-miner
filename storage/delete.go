@@ -42,11 +42,15 @@ func DeleteAllLastClosedBlock() {
 }
 
 func DeleteOpenTx(transaction protocol.Transaction) {
+	openTxMutex.Lock()
+	defer openTxMutex.Unlock()
 	delete(txMemPool, transaction.Hash())
 }
 
-func DeleteOpenTxToBeAggregated(transaction protocol.Transaction) {
-	delete(txToBeAggregated, transaction.Hash())
+func DeleteOpenTxWithHash(transactionHash [32]byte) {
+	openTxMutex.Lock()
+	defer openTxMutex.Unlock()
+	delete(txMemPool, transactionHash)
 }
 
 func DeleteINVALIDOpenTx(transaction protocol.Transaction) {
@@ -78,6 +82,13 @@ func DeleteClosedTx(transaction protocol.Transaction) {
 	nrClosedTransactions = nrClosedTransactions - 1
 	totalTransactionSize = totalTransactionSize - float32(transaction.Size())
 	averageTxSize = totalTransactionSize/nrClosedTransactions
+}
+
+func DeleteBootstrapReceivedMempool() {
+	//Delete in-memory storage
+	for key := range txMemPool {
+		delete(bootstrapReceivedMemPool, key)
+	}
 }
 
 func DeleteAll() {

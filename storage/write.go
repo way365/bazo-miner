@@ -40,20 +40,13 @@ func WriteLastClosedBlock(block *protocol.Block) (err error) {
 
 //Changing the "tx" shortcut here and using "transaction" to distinguish between bolt's transactions
 func WriteOpenTx(transaction protocol.Transaction) {
-
+	openTxMutex.Lock()
+	defer openTxMutex.Unlock()
 	txMemPool[transaction.Hash()] = transaction
 }
+func WriteBootstrapTxReceived(transaction protocol.Transaction) {
 
-func WriteOpenTxToBeAggregated(transaction protocol.Transaction) {
-
-	txToBeAggregated[transaction.Hash()] = transaction
-}
-
-func PrintOpenTx() {  //TODO Remove this function
-
-	//logger.Printf("OPENTX: .......")
-	//logger.Printf("%x", txMemPool)
-	//logger.Printf(".......")
+	bootstrapReceivedMemPool[transaction.Hash()] = transaction
 }
 
 func WriteINVALIDOpenTx(transaction protocol.Transaction) {

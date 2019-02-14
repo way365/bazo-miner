@@ -106,7 +106,8 @@ func (tx AggSenderTx) String() string {
 			"TxCnt: %v\n"+
 			"From: %x\n"+
 			"To: %x\n"+
-			"Transactions: %x\n",
+			"Transactions: %x\n"+
+			"#Tx: %v\n",
 		tx.Hash(),
 		tx.Amount,
 		tx.Fee,
@@ -114,6 +115,7 @@ func (tx AggSenderTx) String() string {
 		tx.From,
 		tx.To,
 		tx.AggregatedTxSlice,
+		len(tx.AggregatedTxSlice),
 	)
 }
 

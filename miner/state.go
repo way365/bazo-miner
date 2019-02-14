@@ -187,12 +187,14 @@ func initState() (initialBlock *protocol.Block, err error) {
 
 		//CalculateBlockchainSize(int(blockToValidate.GetSize()))
 		logger.Printf("Block validated: %d --> %x, %v", blockToValidate.Height, blockToValidate.Hash[0:8], blockToValidate.Hash[0:8])
+		//logger.Printf("Block validated: %v", blockToValidate)
 
 		//Set the last validated block as the lastBlock
 		lastBlock = blockToValidate
 	}
 
 	logger.Printf("\n\n%v block(s) validated. Chain good to go.\n------------------------------------------------------------------------\n\n", len(storage.AllClosedBlocksAsc))
+	logger.Printf("Last Block: \n%v\n------------------------------------------------------------------------\n\n", lastBlock)
 	logger.Printf("Current STATE: \n%v\n------------------------------------------------------------------------\n\n", getState())
 
 	return initialBlock, nil
@@ -240,7 +242,7 @@ func aggSenderTxStateChange(txSlice []*protocol.AggSenderTx) (err error) {
 		var fundsFxSlice []*protocol.FundsTx
 		for _, tx2 := range tx1.AggregatedTxSlice {
 			//Fetch all aggregated open Funds transactions for state validation.
-			trx := storage.ReadOpenTxToBeAggregated(tx2)
+			trx := storage.ReadOpenTx(tx2)
 			if trx == nil {
 				trx = storage.ReadClosedTx(tx2)
 			}

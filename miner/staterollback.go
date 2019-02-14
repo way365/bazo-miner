@@ -47,6 +47,31 @@ func fundsStateChangeRollback(txSlice []*protocol.FundsTx) {
 	}
 }
 
+func aggregatedStateRollback(txSlice []*protocol.AggSenderTx) {
+	//Rollback in reverse order than original state change
+	var fundsTxSlice []*protocol.FundsTx
+	for cnt := len(txSlice) - 1; cnt >= 0; cnt-- {
+		tx := txSlice[cnt]
+
+		//accSender, _ := storage.GetAccount(tx.From)
+
+		//Adding all Aggregated FundsTx in reverse order.
+		for _, txHash := range tx.AggregatedTxSlice {
+			fundsTxSlice = append([]*protocol.FundsTx{storage.ReadClosedTx(txHash).(*protocol.FundsTx)},fundsTxSlice...)
+
+		}
+
+		//do normal rollback for fundsTx
+		fundsStateChange(fundsTxSlice)
+
+		//If new coins were issued, revert
+		if rootAcc, _ := storage.GetRootAccount(tx.From); rootAcc != nil {
+			rootAcc.Balance -= tx.Amount
+			rootAcc.Balance -= tx.Fee
+		}
+	}
+}
+
 func configStateChangeRollback(txSlice []*protocol.ConfigTx, blockHash [32]byte) {
 	if len(txSlice) == 0 {
 		return
