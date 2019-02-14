@@ -782,9 +782,8 @@ func fetchAggregatedFundsTxData(aggregatedFundsTxHashesSlice [][32]byte, aggrega
 				errAggFundsTxFetchChan <- errors.New("FundsTx fetch timed out")
 				return
 			}
-			logger.Printf("\n  Requested: %x\n    Received:%x", txHash, fundsTx.Hash())
+
 			if fundsTx.Hash() != txHash {
-				logger.Printf("Received AggregatedFundsTxHash did not correspond to our request.\n  Requested: %x\n    Received:%x", txHash, fundsTx.Hash())
 				errAggFundsTxFetchChan <- errors.New("Received AggregatedFundsTxHash did not correspond to our request.")
 			}
 		}

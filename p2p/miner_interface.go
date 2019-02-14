@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"github.com/bazo-blockchain/bazo-miner/protocol"
+	"sync"
 )
 
 var (
@@ -25,6 +26,9 @@ var (
 
 	receivedTXStash = make([]*protocol.FundsTx, 0)
 	receivedAggTXStash = make([]*protocol.AggSenderTx, 0)
+
+	fundsTxSashMutex = &sync.Mutex{}
+	aggTxSashMutex = &sync.Mutex{}
 )
 
 //This is for blocks and txs that the miner successfully validated.
@@ -90,14 +94,18 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		// Otherwise send nothing. This means, that the TX was sent before and we ensure, that only one TX per Broadcast
 		// request is going through to the FETCH Request. This should prevent the "Received txHash did not correspond to
 		// our request." error
+		// The Mutex Lock is needed, because sometimes the execution is too fast. And even with the stash transactions
+		// are sent multiple times through the channel.
+		// The same concept is used for the AggTx below.
+		fundsTxSashMutex.Lock()
 		if !txAlreadyInStash(receivedTXStash, fundsTx.Hash()) {
 			receivedTXStash = append(receivedTXStash, fundsTx)
-			logger.Printf("FORWARD: %x", fundsTx.Hash())
 			FundsTxChan <- fundsTx
 			if len(receivedTXStash) > 1000 {
 				receivedTXStash = append(receivedTXStash[:0], receivedTXStash[1:]...)
 			}
 		}
+		fundsTxSashMutex.Unlock()
 	case ACCTX_RES:
 		var accTx *protocol.AccTx
 		accTx = accTx.Decode(payload)
@@ -126,6 +134,7 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 			return
 		}
 
+		aggTxSashMutex.Lock()
 		if !aggTxAlreadyInStash(receivedAggTXStash, aggTx.Hash()) {
 			receivedAggTXStash = append(receivedAggTXStash, aggTx)
 			AggTxChan <- aggTx
@@ -133,6 +142,7 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 				receivedAggTXStash = append(receivedAggTXStash[:0], receivedAggTXStash[1:]...)
 			}
 		}
+		aggTxSashMutex.Unlock()
 
 	}
 }
