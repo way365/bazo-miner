@@ -29,7 +29,7 @@ func prepareBlock(block *protocol.Block) {
 	nonAggregatableTxCounter := 0
 	blockSize := block.GetSize()+block.GetBloomFilterSize()
 
-	//map where all senders from FundsTx and AggTx are added to. --> this ensures that tx with same sender are only counted once.
+	//map where all senders from FundsTx and AggSenderTx are added to. --> this ensures that tx with same sender are only counted once.
 	storage.DifferentSenders = map[[32]byte][32]byte{}
 	for _, tx := range opentxs {
 		//Switch because with an if statement every transaction would need a getter-method for its type.

@@ -165,12 +165,12 @@ func initState() (initialBlock *protocol.Block, err error) {
 		//Do not validate the genesis block, since a lot of properties are set to nil
 		if blockToValidate.Hash != [32]byte{} {
 			//Fetching payload data from the txs (if necessary, ask other miners)
-			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, err := preValidate(blockToValidate, true)
+			accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs, err := preValidate(blockToValidate, true)
 			if err != nil {
 				return nil, errors.New(fmt.Sprintf("Block (%x) could not be prevalidated: %v\n", blockToValidate.Hash[0:8], err))
 			}
 
-			blockDataMap[blockToValidate.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, blockToValidate}
+			blockDataMap[blockToValidate.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs, blockToValidate}
 
 			err = validateState(blockDataMap[blockToValidate.Hash])
 			if err != nil {
@@ -372,7 +372,7 @@ func stakeStateChange(txSlice []*protocol.StakeTx, height uint32) (err error) {
 	return nil
 }
 
-func collectTxFees(accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, minerHash [32]byte) (err error) {
+func collectTxFees(accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, aggSenderTxSlice []*protocol.AggSenderTx, minerHash [32]byte) (err error) {
 	var tmpAccTx []*protocol.AccTx
 	var tmpFundsTx []*protocol.FundsTx
 	var tmpConfigTx []*protocol.ConfigTx
@@ -381,6 +381,24 @@ func collectTxFees(accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsT
 	minerAcc, err := storage.GetAccount(minerHash)
 	if err != nil {
 		return err
+	}
+
+	//This function does grab all fundsTx and add them to the other fundsTx. With this, the miner does get the txfees
+	// for all fundsTx. SO his incentive is to gather as much transactions into one stake transaction. This
+	// enlarges his reward and no extra reward is needed for aggSenderTx.
+	for _, tx := range aggSenderTxSlice {
+		for _, txHash := range tx.AggregatedTxSlice {
+			trx := storage.ReadOpenTx(txHash)
+
+			if trx == nil {
+				trx = storage.ReadBootstrapReceivedTransactions(txHash)
+			}
+			if trx == nil {
+				trx = storage.ReadClosedTx(txHash)
+			}
+
+			fundsTxSlice = append(fundsTxSlice, trx.(*protocol.FundsTx))
+		}
 	}
 
 	var senderAcc *protocol.Account

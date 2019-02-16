@@ -74,15 +74,15 @@ func preValidateRollback(b *protocol.Block) (accTxSlice []*protocol.AccTx, funds
 		stakeTxSlice = append(stakeTxSlice, stakeTx)
 	}
 
-	for _, hash := range b.AggTxData {
-		var aggTx *protocol.AggSenderTx
+	for _, hash := range b.AggSenderTxData {
+		var aggSenderTx *protocol.AggSenderTx
 		tx := storage.ReadClosedTx(hash)
 		if tx == nil {
 			return nil, nil, nil, nil, nil, errors.New("CRITICAL: Aggregated Transaction was not in the confirmed tx storage")
 		} else {
-			aggTx = tx.(*protocol.AggSenderTx)
+			aggSenderTx = tx.(*protocol.AggSenderTx)
 		}
-		aggSenderTxSlice = append(aggSenderTxSlice, aggTx)
+		aggSenderTxSlice = append(aggSenderTxSlice, aggSenderTx)
 	}
 
 	return accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggSenderTxSlice, nil
@@ -94,7 +94,7 @@ func validateStateRollback(data blockData) {
 	collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 	stakeStateChangeRollback(data.stakeTxSlice)
 	fundsStateChangeRollback(data.fundsTxSlice)
-	aggregatedStateRollback(data.aggTxSlice)
+	aggregatedStateRollback(data.aggSenderTxSlice)
 	accStateChangeRollback(data.accTxSlice)
 }
 
@@ -120,17 +120,17 @@ func postValidateRollback(data blockData) {
 		storage.DeleteClosedTx(tx)
 	}
 
-	for _, tx := range data.aggTxSlice {
+	for _, tx := range data.aggSenderTxSlice {
 
-		//Reopen FundsTx per aggTx
+		//Reopen FundsTx per aggSenderTx
 		for _, aggregatedTxHash := range tx.AggregatedTxSlice {
 			trx := storage.ReadClosedTx(aggregatedTxHash)
 			storage.WriteOpenTx(trx)
 			storage.DeleteClosedTx(trx)
 		}
 
-		//Delete AggTx. No need to write in OpenTx, because it will be created newly.
-		logger.Printf("Rolled Back AggTx: %x, %v", tx.Hash(), tx.Hash())
+		//Delete AggSenderTx. No need to write in OpenTx, because it will be created newly.
+		logger.Printf("Rolled Back AggSenderTx: %x, %v", tx.Hash(), tx.Hash())
 		storage.DeleteClosedTx(tx)
 	}
 

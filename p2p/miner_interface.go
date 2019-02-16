@@ -20,7 +20,7 @@ var (
 	AccTxChan    = make(chan *protocol.AccTx)
 	ConfigTxChan = make(chan *protocol.ConfigTx)
 	StakeTxChan  = make(chan *protocol.StakeTx)
-	AggTxChan    = make(chan *protocol.AggSenderTx)
+	AggSenderTxChan    = make(chan *protocol.AggSenderTx)
 
 	BlockReqChan = make(chan []byte)
 
@@ -28,7 +28,7 @@ var (
 	receivedAggTXStash = make([]*protocol.AggSenderTx, 0)
 
 	fundsTxSashMutex = &sync.Mutex{}
-	aggTxSashMutex = &sync.Mutex{}
+	aggSenderTxSashMutex = &sync.Mutex{}
 )
 
 //This is for blocks and txs that the miner successfully validated.
@@ -68,7 +68,7 @@ func txAlreadyInStash(slice []*protocol.FundsTx, newTXHash [32]byte) bool {
 	return false
 }
 
-func aggTxAlreadyInStash(slice []*protocol.AggSenderTx, newTXHash [32]byte) bool {
+func aggSenderTxAlreadyInStash(slice []*protocol.AggSenderTx, newTXHash [32]byte) bool {
 	for _, txInStash := range slice {
 		if txInStash.Hash() == newTXHash {
 			return true
@@ -96,7 +96,7 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		// our request." error
 		// The Mutex Lock is needed, because sometimes the execution is too fast. And even with the stash transactions
 		// are sent multiple times through the channel.
-		// The same concept is used for the AggTx below.
+		// The same concept is used for the AggSenderTx below.
 		fundsTxSashMutex.Lock()
 		if !txAlreadyInStash(receivedTXStash, fundsTx.Hash()) {
 			receivedTXStash = append(receivedTXStash, fundsTx)
@@ -127,22 +127,22 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 			return
 		}
 		StakeTxChan <- stakeTx
-	case AGGTX_RES:
-		var aggTx *protocol.AggSenderTx
-		aggTx = aggTx.Decode(payload)
-		if aggTx == nil {
+	case AGGSENDERTX_RES:
+		var aggSenderTx *protocol.AggSenderTx
+		aggSenderTx = aggSenderTx.Decode(payload)
+		if aggSenderTx == nil {
 			return
 		}
 
-		aggTxSashMutex.Lock()
-		if !aggTxAlreadyInStash(receivedAggTXStash, aggTx.Hash()) {
-			receivedAggTXStash = append(receivedAggTXStash, aggTx)
-			AggTxChan <- aggTx
+		aggSenderTxSashMutex.Lock()
+		if !aggSenderTxAlreadyInStash(receivedAggTXStash, aggSenderTx.Hash()) {
+			receivedAggTXStash = append(receivedAggTXStash, aggSenderTx)
+			AggSenderTxChan <- aggSenderTx
 			if len(receivedAggTXStash) > 1000 {
 				receivedAggTXStash = append(receivedAggTXStash[:0], receivedAggTXStash[1:]...)
 			}
 		}
-		aggTxSashMutex.Unlock()
+		aggSenderTxSashMutex.Unlock()
 
 	}
 }

@@ -41,7 +41,7 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 			return
 		}
 		tx = sTx
-	case AGGTX_BRDCST:
+	case AGGSENDERTX_BRDCST:
 		var fTx *protocol.AggSenderTx
 		fTx = fTx.Decode(payload)
 		if fTx == nil {

@@ -118,7 +118,7 @@ func proofOfStake(diff uint8,
 		// lastBlock is a global variable which points to the last block. This check makes sure we abort if another
 		// block has been validated
 		if prevHash != lastBlock.Hash {
-			//Error code -2 initiates that probably a aggTx Should be deleted from open storage.
+			//Error code -2 initiates that probably a aggSenderTx Should be deleted from open storage.
 			return -2, errors.New("Abort mining, another block has been successfully validated in the meantime")
 		}
 

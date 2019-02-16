@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	AGGTX_SENDER_SIZE = 213 //TODO correct size
+	AGGSENDERTX_SENDER_SIZE = 213 //TODO correct size
 )
 
 //when we broadcast transactions we need a way to distinguish with a type
@@ -94,7 +94,7 @@ func (*AggSenderTx) Decode(encodedTx []byte) *AggSenderTx {
 }
 
 func (tx *AggSenderTx) TxFee() uint64 { return tx.Fee }
-func (tx *AggSenderTx) Size() uint64  { return AGGTX_SENDER_SIZE }
+func (tx *AggSenderTx) Size() uint64  { return AGGSENDERTX_SENDER_SIZE }
 
 func (tx *AggSenderTx) Sender() [32]byte { return tx.From }
 

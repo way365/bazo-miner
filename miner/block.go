@@ -22,7 +22,7 @@ type blockData struct {
 	fundsTxSlice  []*protocol.FundsTx
 	configTxSlice []*protocol.ConfigTx
 	stakeTxSlice  []*protocol.StakeTx
-	aggTxSlice	  []*protocol.AggSenderTx
+	aggSenderTxSlice	  []*protocol.AggSenderTx
 	block         *protocol.Block
 }
 
@@ -75,9 +75,9 @@ func finalizeBlock(block *protocol.Block) error {
 
 	nonce, err := proofOfStake(getDifficulty(), block.PrevHash, prevProofs, block.Height, validatorAcc.Balance, commitmentProof)
 	if err != nil {
-		//Delete created AggTx From OpenTx.
+		//Delete created AggSenderTx From OpenTx.
 		if nonce == -2 {
-			for _, txHash := range block.AggTxData {
+			for _, txHash := range block.AggSenderTxData {
 				storage.DeleteOpenTxWithHash(txHash)
 			}
 		}
@@ -97,7 +97,7 @@ func finalizeBlock(block *protocol.Block) error {
 	block.NrFundsTx = uint16(len(block.FundsTxData))
 	block.NrConfigTx = uint8(len(block.ConfigTxData))
 	block.NrStakeTx = uint16(len(block.StakeTxData))
-	block.NrAggTx = uint16(len(block.AggTxData))
+	block.NrAggSenderTx = uint16(len(block.AggSenderTxData))
 
 	copy(block.CommitmentProof[0:crypto.COMM_PROOF_LENGTH], commitmentProof[:])
 
@@ -265,7 +265,7 @@ func addFundsTxFinal(b *protocol.Block, tx *protocol.FundsTx) error {
 }
 
 func addAggSenderTxFinal(b *protocol.Block, tx *protocol.AggSenderTx) error {
-	b.AggTxData = append(b.AggTxData, tx.Hash())
+	b.AggSenderTxData = append(b.AggSenderTxData, tx.Hash())
 	return nil
 }
 
@@ -321,7 +321,7 @@ func AggregateFundsTransactions(SortedAndSelectedFundsTx []*protocol.FundsTx, bl
 			tx.Aggregated = true
 		}
 
-		aggTx, err := protocol.ConstrAggSenderTx(
+		aggSenderTx, err := protocol.ConstrAggSenderTx(
 			amount,
 			FEE_MINIMUM,
 			SortedAndSelectedFundsTx[len(SortedAndSelectedFundsTx)-1].TxCnt,
@@ -334,10 +334,10 @@ func AggregateFundsTransactions(SortedAndSelectedFundsTx []*protocol.FundsTx, bl
 			return err
 		}
 
-		logger.Printf("AGGTX:  -------%v", aggTx)
+		logger.Printf("AGGSENDERTX:  -------%v", aggSenderTx)
 		logger.Printf("        -------")
-		addAggSenderTxFinal(block, aggTx)
-		storage.WriteOpenTx(aggTx)
+		addAggSenderTxFinal(block, aggSenderTx)
+		storage.WriteOpenTx(aggSenderTx)
 
 		SortedAndSelectedFundsTx = nil
 		amount = 0
@@ -654,7 +654,7 @@ func fetchAggSenderTxData(block *protocol.Block, aggSenderTxSlice []*protocol.Ag
 	errAggFundsTxFetchChan := make(chan error, 1)
 	var errAggFundsTxFetch error
 
-	for cnt, txHash := range block.AggTxData {
+	for cnt, txHash := range block.AggSenderTxData {
 		var tx protocol.Transaction
 		var aggSenderTx *protocol.AggSenderTx
 		var aggregatedFundsTxSliceHashes [][32]byte
@@ -696,14 +696,18 @@ func fetchAggSenderTxData(block *protocol.Block, aggSenderTxSlice []*protocol.Ag
 		//} else if  txINVALID != nil && verify(txINVALID) {
 		//	aggSenderTx = txINVALID.(*protocol.AggSenderTx)
 		} else {
-			err := p2p.TxReq(txHash, p2p.AGGTX_REQ)
+			cnt := 0
+			here:
+			cnt +=1
+			err := p2p.TxReq(txHash, p2p.AGGSENDERTX_REQ)
+			logger.Printf("Requested: %x", txHash)
 			if err != nil {
-				errChan <- errors.New(fmt.Sprintf("AggTx could not be read: %v", err))
+				errChan <- errors.New(fmt.Sprintf("AggSenderTx could not be read: %v", err))
 				return
 			}
 
 			select {
-			case aggSenderTx = <-p2p.AggTxChan:
+			case aggSenderTx = <-p2p.AggSenderTxChan:
 				storage.WriteOpenTx(aggSenderTx)
 				if initialSetup {
 					storage.WriteBootstrapTxReceived(aggSenderTx)
@@ -722,12 +726,16 @@ func fetchAggSenderTxData(block *protocol.Block, aggSenderTxSlice []*protocol.Ag
 				}
 
 			case <-time.After(TXFETCH_TIMEOUT * time.Second):
-				errChan <- errors.New("AggTx fetch timed out")
+				logger.Printf("%x", txHash)
+				errChan <- errors.New("AggSenderTx fetch timed out")
 				return
 			}
 
 			receivedHash := aggSenderTx.Hash()
-			if receivedHash != txHash {
+
+			//three tries to fetch correct AggTx
+			if receivedHash != txHash && cnt < 2 {
+				goto here
 				errChan <- errors.New("Received AggtxHash did not correspond to our request.")
 			}
 
@@ -834,7 +842,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 	if len(blocksToRollback) == 0 {
 		for _, block := range blocksToValidate {
 			//Fetching payload data from the txs (if necessary, ask other miners).
-			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, err := preValidate(block, initialSetup)
+			accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs, err := preValidate(block, initialSetup)
 
 			//Check if the validator that added the block has previously voted on different competing chains (find slashing proof).
 			//The proof will be stored in the global slashing dictionary.
@@ -846,7 +854,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 				return err
 			}
 
-			blockDataMap[block.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggTxs,block}
+			blockDataMap[block.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs,block}
 			if err := validateState(blockDataMap[block.Hash]); err != nil {
 				return err
 			}
@@ -865,7 +873,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 		}
 		for _, block := range blocksToValidate {
 			//Fetching payload data from the txs (if necessary, ask other miners).
-			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, err := preValidate(block, initialSetup)
+			accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs, err := preValidate(block, initialSetup)
 
 			//Check if the validator that added the block has previously voted on different competing chains (find slashing proof).
 			//The proof will be stored in the global slashing dictionary.
@@ -877,7 +885,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 				return err
 			}
 
-			blockDataMap[block.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggTxs,block}
+			blockDataMap[block.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs,block}
 			if err := validateState(blockDataMap[block.Hash]); err != nil {
 				return err
 			}
@@ -935,7 +943,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 		duplicates[txHash] = true
 	}
 
-	for _, txHash := range block.AggTxData {
+	for _, txHash := range block.AggSenderTxData {
 		if _, exists := duplicates[txHash]; exists {
 			return nil, nil, nil, nil, nil, errors.New("Duplicate Aggregation Transaction Hash detected.")
 		}
@@ -950,7 +958,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	fundsTxSlice = make([]*protocol.FundsTx, block.NrFundsTx)
 	configTxSlice = make([]*protocol.ConfigTx, block.NrConfigTx)
 	stakeTxSlice = make([]*protocol.StakeTx, block.NrStakeTx)
-	aggSenderTxSlice = make([]*protocol.AggSenderTx, block.NrAggTx)
+	aggSenderTxSlice = make([]*protocol.AggSenderTx, block.NrAggSenderTx)
 	var aggregatedFundsTxSlice []*protocol.FundsTx
 
 	go fetchAccTxData(block, accTxSlice, initialSetup, errChan)
@@ -1042,7 +1050,7 @@ func validateState(data blockData) error {
 		return err
 	}
 
-	if err := aggSenderTxStateChange(data.aggTxSlice); err != nil {
+	if err := aggSenderTxStateChange(data.aggSenderTxSlice); err != nil {
 		fundsStateChangeRollback(data.fundsTxSlice)
 		accStateChangeRollback(data.accTxSlice)
 		return err
@@ -1051,14 +1059,14 @@ func validateState(data blockData) error {
 	if err := stakeStateChange(data.stakeTxSlice, data.block.Height); err != nil {
 		fundsStateChangeRollback(data.fundsTxSlice)
 		accStateChangeRollback(data.accTxSlice)
-		aggregatedStateRollback(data.aggTxSlice)
+		aggregatedStateRollback(data.aggSenderTxSlice)
 		return err
 	}
 
-	if err := collectTxFees(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary); err != nil {
+	if err := collectTxFees(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.aggSenderTxSlice, data.block.Beneficiary); err != nil {
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
-		aggregatedStateRollback(data.aggTxSlice)
+		aggregatedStateRollback(data.aggSenderTxSlice)
 		accStateChangeRollback(data.accTxSlice)
 		return err
 	}
@@ -1067,7 +1075,7 @@ func validateState(data blockData) error {
 		collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
-		aggregatedStateRollback(data.aggTxSlice)
+		aggregatedStateRollback(data.aggSenderTxSlice)
 		accStateChangeRollback(data.accTxSlice)
 		return err
 	}
@@ -1077,7 +1085,7 @@ func validateState(data blockData) error {
 		collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
-		aggregatedStateRollback(data.aggTxSlice)
+		aggregatedStateRollback(data.aggSenderTxSlice)
 		accStateChangeRollback(data.accTxSlice)
 		return err
 	}
@@ -1088,7 +1096,7 @@ func validateState(data blockData) error {
 		collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
-		aggregatedStateRollback(data.aggTxSlice)
+		aggregatedStateRollback(data.aggSenderTxSlice)
 		accStateChangeRollback(data.accTxSlice)
 		return err
 	}
@@ -1127,15 +1135,15 @@ func postValidate(data blockData, initialSetup bool) {
 			storage.DeleteOpenTx(tx)
 		}
 
-		for _, tx := range data.aggTxSlice {
+		for _, tx := range data.aggSenderTxSlice {
 
-			//delete FundsTx per aggTx in open storage and write them to the closed storage.
+			//delete FundsTx per aggSenderTx in open storage and write them to the closed storage.
 			for _, aggregatedTxHash := range tx.AggregatedTxSlice {
 				trx := storage.ReadOpenTx(aggregatedTxHash)
 				storage.WriteClosedTx(trx)
 				storage.DeleteOpenTx(trx)
 			}
-			//Delete AggTx and write it to closed Tx.
+			//Delete AggSenderTx and write it to closed Tx.
 			storage.WriteClosedTx(tx)
 			storage.DeleteOpenTx(tx)
 		}

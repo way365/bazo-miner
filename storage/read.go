@@ -154,14 +154,14 @@ func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
 		return staketx.Decode(encodedTx)
 	}
 
-	var aggTx *protocol.AggSenderTx
+	var aggSenderTx *protocol.AggSenderTx
 	db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("closedaggregationssender"))
 		encodedTx = b.Get(hash[:])
 		return nil
 	})
 	if encodedTx != nil {
-		return aggTx.Decode(encodedTx)
+		return aggSenderTx.Decode(encodedTx)
 	}
 
 	return nil
@@ -174,6 +174,7 @@ func ReadMempool(){
 	//}
 	//logger.Printf("________________")
 	logger.Printf("Mempool_Size: %x", len(txMemPool))
+	logger.Printf("       ...      ")
 	logger.Printf("________________")
 
 }
