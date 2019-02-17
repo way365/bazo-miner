@@ -8,5 +8,6 @@ type Transaction interface {
 	TxFee() uint64
 	Size() uint64
 	Sender() [32]byte
+	Receiver() [32]byte
 
 }

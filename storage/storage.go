@@ -18,15 +18,17 @@ var (
 	txMemPool          				= make(map[[32]byte]protocol.Transaction)
 	txINVALIDMemPool   				= make(map[[32]byte]protocol.Transaction)
 	bootstrapReceivedMemPool		= make(map[[32]byte]protocol.Transaction)
-	DifferentSenders   				= make(map[[32]byte][32]byte)
+	DifferentSenders   				= make(map[[32]byte]uint32)
+	DifferentReceivers				= make(map[[32]byte]uint32)
 	FundsTxBeforeAggregation		= make([]*protocol.FundsTx, 0)
 	receivedBlockStash				= make([]*protocol.Block, 0)
 	AllClosedBlocksAsc []*protocol.Block
 	Bootstrap_Server string
-	averageTxSize float32 			= 0
-	totalTransactionSize float32 	= 0
-	nrClosedTransactions float32 	= 0
-	openTxMutex 					= &sync.Mutex{}
+	averageTxSize float32 				= 0
+	totalTransactionSize float32 		= 0
+	nrClosedTransactions float32 		= 0
+	openTxMutex 						= &sync.Mutex{}
+	openFundsTxBeforeAggregationMutex	= &sync.Mutex{}
 )
 
 const (

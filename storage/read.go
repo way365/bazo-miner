@@ -85,6 +85,12 @@ func ReadOpenTx(hash [32]byte) (transaction protocol.Transaction) {
 	return txMemPool[hash]
 }
 
+func ReadFundsTxBeforeAggregation() ([]*protocol.FundsTx){
+	openFundsTxBeforeAggregationMutex.Lock()
+	defer openFundsTxBeforeAggregationMutex.Unlock()
+	return FundsTxBeforeAggregation
+}
+
 func ReadBootstrapReceivedTransactions(hash [32]byte) (transaction protocol.Transaction) {
 	return bootstrapReceivedMemPool[hash]
 }
@@ -173,8 +179,7 @@ func ReadMempool(){
 	//	logger.Printf("%x", key)
 	//}
 	//logger.Printf("________________")
-	logger.Printf("Mempool_Size: %x", len(txMemPool))
-	logger.Printf("       ...      ")
+	logger.Printf("Mempool_Size: %v", len(txMemPool))
 	logger.Printf("________________")
 
 }

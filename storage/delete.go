@@ -57,6 +57,20 @@ func DeleteINVALIDOpenTx(transaction protocol.Transaction) {
 	delete(txINVALIDMemPool, transaction.Hash())
 }
 
+func DeleteFundsTxBeforeAggregation(hash [32]byte) bool {
+	for i, tx := range FundsTxBeforeAggregation {
+		if hash == tx.Hash() {
+			FundsTxBeforeAggregation = append(FundsTxBeforeAggregation[:i], FundsTxBeforeAggregation[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func DeleteAllFundsTxBeforeAggregation(){
+	FundsTxBeforeAggregation = nil
+}
+
 func DeleteClosedTx(transaction protocol.Transaction) {
 	var bucket string
 	switch transaction.(type) {
@@ -70,6 +84,8 @@ func DeleteClosedTx(transaction protocol.Transaction) {
 		bucket = "closedstakes"
 	case *protocol.AggSenderTx:
 		bucket = "closedaggregationssender"
+	case *protocol.AggReceiverTx:
+		bucket = "closedaggregationsreceiver"
 	}
 
 	hash := transaction.Hash()

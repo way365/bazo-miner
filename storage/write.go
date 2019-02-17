@@ -44,6 +44,13 @@ func WriteOpenTx(transaction protocol.Transaction) {
 	defer openTxMutex.Unlock()
 	txMemPool[transaction.Hash()] = transaction
 }
+
+func WriteFundsTxBeforeAggregation(transaction *protocol.FundsTx) {
+	openFundsTxBeforeAggregationMutex.Lock()
+	defer openFundsTxBeforeAggregationMutex.Unlock()
+	FundsTxBeforeAggregation = append(FundsTxBeforeAggregation, transaction)
+}
+
 func WriteBootstrapTxReceived(transaction protocol.Transaction) {
 
 	bootstrapReceivedMemPool[transaction.Hash()] = transaction

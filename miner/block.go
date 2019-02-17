@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bazo-blockchain/bazo-miner/crypto"
 	"github.com/bazo-blockchain/bazo-miner/p2p"
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
 	"github.com/bazo-blockchain/bazo-miner/vm"
-	"github.com/bazo-blockchain/bazo-miner/crypto"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -252,7 +252,8 @@ func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
 	//Add the tx hash to the block header and write it to open storage (non-validated transactions).
 	//b.FundsTxData = append(b.FundsTxData, tx.Hash())
 
-	storage.FundsTxBeforeAggregation = append(storage.FundsTxBeforeAggregation, tx)
+	//storage.FundsTxBeforeAggregation = append(storage.FundsTxBeforeAggregation, tx)
+	storage.WriteFundsTxBeforeAggregation(tx)
 	//logger.Printf("Added tx (%x) to the slice: %v", tx.Hash(), *tx)
 	//logger.Printf("From: %x To: %x, TxCnt: %d  --  %x", tx.From[0:4], tx.To[0:4], tx.TxCnt, tx.Hash())
 
@@ -269,83 +270,164 @@ func addAggSenderTxFinal(b *protocol.Block, tx *protocol.AggSenderTx) error {
 	return nil
 }
 
+func addAggReceiverTxFinal(b *protocol.Block, tx *protocol.AggReceiverTx) error {
+	b.AggReceiverTxData = append(b.AggReceiverTxData, tx.Hash())
+	return nil
+}
+
 
 func splitSortedAggregatableTransactions(b *protocol.Block){
 
-	//TxToAggregate will be the storage.FundsTxBeforeAggregation divided into slices of same sender.
 	txToAggregate := make([]*protocol.FundsTx, 0)
-	var prevTx *protocol.FundsTx
-	startLenghtFundsTxBeforeAggregation := len(storage.FundsTxBeforeAggregation)
+	moreTransactionsToAggregate := true
+	//TxToAggregate will be the storage.FundsTxBeforeAggregation divided into slices of same sender.
+	//var prevTx *protocol.FundsTx
+	//startLenghtFundsTxBeforeAggregation := len(storage.ReadFundsTxBeforeAggregation())
 
-	for i,tx := range storage.FundsTxBeforeAggregation {
+	for moreTransactionsToAggregate {
 
-		// For the first element in the slice or when the tx and previous tx have the same sender --> tx can be aggregated
-		if  i < 1 || tx.From == prevTx.From {
-			txToAggregate = append(txToAggregate, tx)
+		//Get Sender and Receiver which are most common
+		maxSender, addressSender := getMaxKeyAndValueFormMap(storage.DifferentSenders)
+		maxReceiver, addressReceiver := getMaxKeyAndValueFormMap(storage.DifferentReceivers)
 
-			//If Tx is last or only Element and can be aggregated, aggregate now.
-			if i == (startLenghtFundsTxBeforeAggregation-1) {
-				AggregateFundsTransactions(txToAggregate, b)
-				txToAggregate = nil
+		//Then the sender or receiver which is most common is selected and all transactions are added to the txToAggregate
+		// slice. The number of transactions sent/Received will lower with every tx added. Then the splitted transactions
+		// get aggregated into the correct aggregation transaction type and then written into the block.
+		if maxSender >= maxReceiver {
+			for _, tx := range storage.ReadFundsTxBeforeAggregation() {
+				if tx.From == addressSender {
+					txToAggregate = append(txToAggregate, tx)
+					storage.DifferentSenders[tx.From] = storage.DifferentSenders[tx.From] - 1
+				}
 			}
-
-		} else {  //When tx and prevTx cannot be aggregated, aggregate txToAggregate, empty txToAggregate, and insert tx into txToAggregate
-			AggregateFundsTransactions(txToAggregate, b)
-			txToAggregate = nil
-			txToAggregate = append(txToAggregate, tx)
-
-			//If Tx is last element and cannot be aggregate add now.
-			if i == (startLenghtFundsTxBeforeAggregation-1) {
-				addFundsTxFinal(b, tx)
-				txToAggregate = nil
+			AggregateFundsTransactions(txToAggregate, b, 0)
+			for _, tx := range txToAggregate {
+				storage.DeleteFundsTxBeforeAggregation(tx.Hash())
 			}
+			txToAggregate = txToAggregate[:0]
+		} else {
+			for _, tx := range storage.ReadFundsTxBeforeAggregation() {
+				if tx.To == addressReceiver {
+					txToAggregate = append(txToAggregate, tx)
+					storage.DifferentReceivers[tx.To] = storage.DifferentReceivers[tx.To] - 1
+				}
+			}
+			AggregateFundsTransactions(txToAggregate, b, 1)
+			for _, tx := range txToAggregate {
+				storage.DeleteFundsTxBeforeAggregation(tx.Hash())
+			}
+			txToAggregate = txToAggregate[:0]
 		}
-		prevTx = tx
+
+		if len(storage.ReadFundsTxBeforeAggregation()) > 0 {
+			moreTransactionsToAggregate = true
+		} else {
+			moreTransactionsToAggregate = false
+		}
 	}
-	storage.FundsTxBeforeAggregation = nil
+
+	storage.DeleteAllFundsTxBeforeAggregation()
+
 }
 
-func AggregateFundsTransactions(SortedAndSelectedFundsTx []*protocol.FundsTx, block *protocol.Block) error {
+func getMaxKeyAndValueFormMap(m map[[32]byte]uint32) (uint32, [32]byte) {
+	var max uint32 = 0
+	biggestK := [32]byte{}
+	for k := range m {
+		if m[k] > max {
+			max = m[k]
+			biggestK = k
+		}
+	}
+
+	return max, biggestK
+}
+
+func AggregateFundsTransactions(SortedAndSelectedFundsTx []*protocol.FundsTx, block *protocol.Block, selection int ) error {
 	if len(SortedAndSelectedFundsTx) > 1 {
-		logger.Printf("AGGREGATE: Sender %x ready for aggregation:", SortedAndSelectedFundsTx[0].From[0:8])
+		if selection == 0{
+			logger.Printf("AGGREGATE: Sender %x ready for aggregation:", SortedAndSelectedFundsTx[0].From[0:8])
 
-		var transactionHashes [][32]byte
-		var transactionReceivers [][32]byte
-		var amount uint64
+			var transactionHashes [][32]byte
+			var transactionReceivers [][32]byte
+			var amount uint64
 
+			for _, tx := range SortedAndSelectedFundsTx {
+				amount += tx.Amount
+				transactionReceivers = append(transactionReceivers, tx.To) //TODO not sure if this will be needed.
+				transactionHashes = append(transactionHashes, tx.Hash())
+				logger.Printf("  From: %x To: %x, TxCnt: %d  --  %x", tx.From[0:4], tx.To[0:4], tx.TxCnt, tx.Hash())
+				tx.Aggregated = true
+			}
+
+			aggSenderTx, err := protocol.ConstrAggSenderTx(
+				amount,
+				FEE_MINIMUM,
+				SortedAndSelectedFundsTx[len(SortedAndSelectedFundsTx)-1].TxCnt,
+				SortedAndSelectedFundsTx[0].From,
+				transactionReceivers,
+				transactionHashes,
+			)
+			if err != nil {
+				logger.Printf("%v\n", err)
+				return err
+			}
+
+			logger.Printf("AGGSENDERTX:  -------%v", aggSenderTx)
+			logger.Printf("        -------")
+			addAggSenderTxFinal(block, aggSenderTx)
+			storage.WriteOpenTx(aggSenderTx)
+
+			SortedAndSelectedFundsTx = nil
+			amount = 0
+			transactionReceivers = nil
+			transactionHashes = nil
+		} else {
+			logger.Printf("AGGREGATE: Receiver %x ready for aggregation:", SortedAndSelectedFundsTx[0].To[0:8])
+
+			var transactionHashes [][32]byte
+			var transactionSenders [][32]byte
+			var amount uint64
+
+			for _, tx := range SortedAndSelectedFundsTx {
+				amount += tx.Amount
+				transactionSenders = append(transactionSenders, tx.From) //TODO not sure if this will be needed.
+				transactionHashes = append(transactionHashes, tx.Hash())
+				logger.Printf("  From: %x To: %x, TxCnt: %d  --  %x", tx.From[0:4], tx.To[0:4], tx.TxCnt, tx.Hash())
+				tx.Aggregated = true
+			}
+
+			aggReceiverTx, err := protocol.ConstrAggReceiverTx(
+				amount,
+				FEE_MINIMUM,
+				transactionSenders,
+				SortedAndSelectedFundsTx[0].To,
+				transactionHashes,
+			)
+			if err != nil {
+				logger.Printf("%v\n", err)
+				return err
+			}
+
+			logger.Printf("AGGRECEIVERTX:  -------%v", aggReceiverTx)
+			logger.Printf("        -------")
+			addAggReceiverTxFinal(block, aggReceiverTx)
+			storage.WriteOpenTx(aggReceiverTx)
+
+			SortedAndSelectedFundsTx = nil
+			amount = 0
+			transactionSenders = nil
+			transactionHashes = nil
+		}
+	} else if len(SortedAndSelectedFundsTx) > 0{
 		for _, tx := range SortedAndSelectedFundsTx {
-			amount += tx.Amount
-			transactionReceivers = append(transactionReceivers, tx.To) //TODO not sure if this will be needed.
-			transactionHashes = append(transactionHashes, tx.Hash())
-			logger.Printf("  From: %x To: %x, TxCnt: %d  --  %x", tx.From[0:4], tx.To[0:4], tx.TxCnt, tx.Hash())
-			tx.Aggregated = true
+			logger.Printf("  Sort & Selected From: %x To: %x, TxCnt: %d  --  %x", tx.From[0:4], tx.To[0:4], tx.TxCnt, tx.Hash())
 		}
-
-		aggSenderTx, err := protocol.ConstrAggSenderTx(
-			amount,
-			FEE_MINIMUM,
-			SortedAndSelectedFundsTx[len(SortedAndSelectedFundsTx)-1].TxCnt,
-			SortedAndSelectedFundsTx[0].From,
-			transactionReceivers,
-			transactionHashes,
-		)
-		if err != nil {
-			logger.Printf("%v\n", err)
-			return err
-		}
-
-		logger.Printf("AGGSENDERTX:  -------%v", aggSenderTx)
-		logger.Printf("        -------")
-		addAggSenderTxFinal(block, aggSenderTx)
-		storage.WriteOpenTx(aggSenderTx)
-
-		SortedAndSelectedFundsTx = nil
-		amount = 0
-		transactionReceivers = nil
-		transactionHashes = nil
-
-	} else {
 		addFundsTxFinal(block, SortedAndSelectedFundsTx[0])
+	} else {
+		for _, tx := range SortedAndSelectedFundsTx {
+			logger.Printf("  Sort & Selected From: %x To: %x, TxCnt: %d  --  %x", tx.From[0:4], tx.To[0:4], tx.TxCnt, tx.Hash())
+		}
 	}
 
 	return nil
@@ -396,7 +478,7 @@ func (ms *multiSorter) Less(i, j int) bool {
 	return ms.less[k](p, q)
 }
 
-func sortFundsTxBeforeAggregation() {
+func sortFundsTxBeforeAggregation(Slice []*protocol.FundsTx) {
 	//These Functions are inserted in the OrderBy function above. According to them the slice will be sorted.
 	sender := func(c1, c2 *protocol.FundsTx) bool {
 		return string(c1.From[:32]) < string(c2.From[:32])
@@ -405,7 +487,7 @@ func sortFundsTxBeforeAggregation() {
 		return c1.TxCnt< c2.TxCnt
 	}
 
-	OrderedBy(sender, txcount).Sort(storage.FundsTxBeforeAggregation)
+	OrderedBy(sender, txcount).Sort(Slice)
 }
 
 func addConfigTx(b *protocol.Block, tx *protocol.ConfigTx) error {

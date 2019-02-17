@@ -23,20 +23,20 @@ func prepareBlock(block *protocol.Block) {
 	tmpCopy = opentxs
 	sort.Sort(tmpCopy)
 
-	logger.Printf( "Open Transactions to be validated: %v", len(opentxs))
-
 	//Counter for all transactions which will not be aggregated. (Stake-, config-, acctx)
 	nonAggregatableTxCounter := 0
 	blockSize := block.GetSize()+block.GetBloomFilterSize()
 
 	//map where all senders from FundsTx and AggSenderTx are added to. --> this ensures that tx with same sender are only counted once.
-	storage.DifferentSenders = map[[32]byte][32]byte{}
+	storage.DifferentSenders = map[[32]byte]uint32{}
+	storage.DifferentReceivers = map[[32]byte]uint32{}
 	for _, tx := range opentxs {
 		//Switch because with an if statement every transaction would need a getter-method for its type.
 		//Therefore, switch is more code-efficient.
 		switch tx.(type) {
 		case *protocol.FundsTx, *protocol.AggSenderTx:
-			storage.DifferentSenders[tx.Sender()] = tx.Sender()
+			storage.DifferentSenders[tx.Sender()] = storage.DifferentSenders[tx.Sender()]+1
+			storage.DifferentReceivers[tx.Receiver()] = storage.DifferentReceivers[tx.Receiver()]+1
 		default:
 			nonAggregatableTxCounter += 1
 		}
@@ -56,12 +56,18 @@ func prepareBlock(block *protocol.Block) {
 		}
 	}
 
+	//logger.Printf("DifferentSenders:   %x", storage.DifferentSenders)
+	//logger.Printf("DifferentReceivers: %x", storage.DifferentReceivers)
+
 	// In miner\block.go --> AddFundsTx the transactions get added into storage.FundsTxBeforeAggregation.
-	sortFundsTxBeforeAggregation()
-	splitSortedAggregatableTransactions(block)
+	if len(storage.ReadFundsTxBeforeAggregation()) > 0 {
+		sortFundsTxBeforeAggregation(storage.ReadFundsTxBeforeAggregation())
+		splitSortedAggregatableTransactions(block)
+	}
 
 	//Set measurement values back to zero / nil.
 	storage.DifferentSenders = nil
+	storage.DifferentReceivers = nil
 	nonAggregatableTxCounter = 0
 
 }
@@ -90,6 +96,8 @@ func (f openTxs) Less(i, j int) bool {
 		return true
 	case *protocol.AggSenderTx:
 		return true
+	case *protocol.AggReceiverTx:
+		return true
 	}
 
 	switch f[j].(type) {
@@ -100,6 +108,8 @@ func (f openTxs) Less(i, j int) bool {
 	case *protocol.StakeTx:
 		return false
 	case *protocol.AggSenderTx:
+		return false
+	case *protocol.AggReceiverTx:
 		return false
 	}
 
