@@ -6,42 +6,45 @@ const HEADER_LEN = 5
 
 //Mapping constants, used to parse incoming messages
 const (
-	FUNDSTX_BRDCST      = 1
-	ACCTX_BRDCST        = 2
-	CONFIGTX_BRDCST     = 3
-	STAKETX_BRDCST      = 4
-	VERIFIEDTX_BRDCST   = 5
-	BLOCK_BRDCST        = 6
-	BLOCK_HEADER_BRDCST = 7
-	TX_BRDCST_ACK       = 8
-	AGGSENDERTX_BRDCST        = 9  //FABIO Is new
+	FUNDSTX_BRDCST     		= 1
+	ACCTX_BRDCST       		= 2
+	CONFIGTX_BRDCST    		= 3
+	STAKETX_BRDCST     		= 4
+	VERIFIEDTX_BRDCST  		= 5
+	BLOCK_BRDCST       		= 6
+	BLOCK_HEADER_BRDCST		= 7
+	TX_BRDCST_ACK      		= 8
+	AGGSENDERTX_BRDCST      = 9
+	AGGRECEIVERTX_BRDCST    = 10
 
-	FUNDSTX_REQ            = 10
-	ACCTX_REQ              = 11
-	CONFIGTX_REQ           = 12
-	STAKETX_REQ            = 13
-	BLOCK_REQ              = 14
-	BLOCK_HEADER_REQ       = 15
-	ACC_REQ                = 16
-	ROOTACC_REQ            = 17
-	INTERMEDIATE_NODES_REQ = 18
-	AGGSENDERTX_REQ			   = 19 //FABIO Is new
+	FUNDSTX_REQ            	= 20
+	ACCTX_REQ              	= 21
+	CONFIGTX_REQ           	= 22
+	STAKETX_REQ            	= 23
+	BLOCK_REQ              	= 24
+	BLOCK_HEADER_REQ       	= 25
+	ACC_REQ                	= 26
+	ROOTACC_REQ            	= 27
+	INTERMEDIATE_NODES_REQ 	= 28
+	AGGSENDERTX_REQ			= 29 //FABIO Is new
+	AGGRECEIVERTX_REQ		= 30 //FABIO Is new
 
-	FUNDSTX_RES            = 20
-	ACCTX_RES              = 21
-	CONFIGTX_RES           = 22
-	STAKETX_RES            = 23
-	BLOCK_RES              = 24
-	BlOCK_HEADER_RES       = 25
-	ACC_RES                = 26
-	ROOTACC_RES            = 27
-	INTERMEDIATE_NODES_RES = 28
-	AGGSENDERTX_RES			   = 29 //FABIO Is new
+	FUNDSTX_RES            	= 40
+	ACCTX_RES              	= 41
+	CONFIGTX_RES           	= 42
+	STAKETX_RES            	= 43
+	BLOCK_RES              	= 44
+	BlOCK_HEADER_RES       	= 45
+	ACC_RES                	= 46
+	ROOTACC_RES            	= 47
+	INTERMEDIATE_NODES_RES 	= 48
+	AGGSENDERTX_RES			= 49 //FABIO Is new
+	AGGRECEIVERTX_RES		= 50 //FABIO Is new
 
-	NEIGHBOR_REQ = 30
-	NEIGHBOR_RES = 40
+	NEIGHBOR_REQ = 130
+	NEIGHBOR_RES = 140
 
-	TIME_BRDCST = 50
+	TIME_BRDCST = 150
 
 	MINER_PING  = 100
 	MINER_PONG  = 101

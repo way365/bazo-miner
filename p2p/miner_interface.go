@@ -16,11 +16,12 @@ var (
 	VerifiedTxsOut chan []byte = make(chan []byte)
 
 	//Data requested by miner, to allow parallelism, we have a chan for every tx type.
-	FundsTxChan  = make(chan *protocol.FundsTx)
-	AccTxChan    = make(chan *protocol.AccTx)
-	ConfigTxChan = make(chan *protocol.ConfigTx)
-	StakeTxChan  = make(chan *protocol.StakeTx)
-	AggSenderTxChan    = make(chan *protocol.AggSenderTx)
+	FundsTxChan  		= make(chan *protocol.FundsTx)
+	AccTxChan    		= make(chan *protocol.AccTx)
+	ConfigTxChan 		= make(chan *protocol.ConfigTx)
+	StakeTxChan  		= make(chan *protocol.StakeTx)
+	AggSenderTxChan    	= make(chan *protocol.AggSenderTx)
+	AggReceiverTxChan  	= make(chan *protocol.AggReceiverTx)
 
 	BlockReqChan = make(chan []byte)
 

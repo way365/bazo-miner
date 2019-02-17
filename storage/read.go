@@ -170,6 +170,16 @@ func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
 		return aggSenderTx.Decode(encodedTx)
 	}
 
+	var aggReceiverTx *protocol.AggReceiverTx
+	db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("closedaggregationsreceiver"))
+		encodedTx = b.Get(hash[:])
+		return nil
+	})
+	if encodedTx != nil {
+		return aggReceiverTx.Decode(encodedTx)
+	}
+
 	return nil
 }
 

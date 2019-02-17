@@ -43,8 +43,9 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 	case STAKETX_REQ:
 		packet = BuildPacket(STAKETX_RES, tx.Encode())
 	case AGGSENDERTX_REQ:
-		logger.Printf("Send %x to %v", tx.Hash(), p.listenerPort)
 		packet = BuildPacket(AGGSENDERTX_RES, tx.Encode())
+	case AGGRECEIVERTX_REQ:
+		packet = BuildPacket(AGGRECEIVERTX_RES, tx.Encode())
 	}
 
 	sendData(p, packet)

@@ -18,12 +18,13 @@ import (
 
 //Datastructure to fetch the payload of all transactions, needed for state validation.
 type blockData struct {
-	accTxSlice    []*protocol.AccTx
-	fundsTxSlice  []*protocol.FundsTx
-	configTxSlice []*protocol.ConfigTx
-	stakeTxSlice  []*protocol.StakeTx
+	accTxSlice    		  []*protocol.AccTx
+	fundsTxSlice  		  []*protocol.FundsTx
+	configTxSlice 		  []*protocol.ConfigTx
+	stakeTxSlice  		  []*protocol.StakeTx
 	aggSenderTxSlice	  []*protocol.AggSenderTx
-	block         *protocol.Block
+	aggReceiverTxSlice	  []*protocol.AggReceiverTx
+	block        		  *protocol.Block
 }
 
 //Block constructor, argument is the previous block in the blockchain.
@@ -98,6 +99,7 @@ func finalizeBlock(block *protocol.Block) error {
 	block.NrConfigTx = uint8(len(block.ConfigTxData))
 	block.NrStakeTx = uint16(len(block.StakeTxData))
 	block.NrAggSenderTx = uint16(len(block.AggSenderTxData))
+	block.NrAggReceiverTx = uint16(len(block.AggReceiverTxData))
 
 	copy(block.CommitmentProof[0:crypto.COMM_PROOF_LENGTH], commitmentProof[:])
 
@@ -420,14 +422,10 @@ func AggregateFundsTransactions(SortedAndSelectedFundsTx []*protocol.FundsTx, bl
 			transactionHashes = nil
 		}
 	} else if len(SortedAndSelectedFundsTx) > 0{
-		for _, tx := range SortedAndSelectedFundsTx {
-			logger.Printf("  Sort & Selected From: %x To: %x, TxCnt: %d  --  %x", tx.From[0:4], tx.To[0:4], tx.TxCnt, tx.Hash())
-		}
 		addFundsTxFinal(block, SortedAndSelectedFundsTx[0])
 	} else {
-		for _, tx := range SortedAndSelectedFundsTx {
-			logger.Printf("  Sort & Selected From: %x To: %x, TxCnt: %d  --  %x", tx.From[0:4], tx.To[0:4], tx.TxCnt, tx.Hash())
-		}
+		err := errors.New("Nullpointer")
+		return err
 	}
 
 	return nil
@@ -768,7 +766,6 @@ func fetchAggSenderTxData(block *protocol.Block, aggSenderTxSlice []*protocol.Ag
 			}
 		}
 
-		//TODO Optimize code (duplicated)
 		//We check if the Transaction is in the invalidOpenTX stash. When it is in there, and it is valid now, we save
 		//it into the fundsTX and continue like usual. This additional stash does lower the amount of network requests.
 		tx = storage.ReadOpenTx(txHash)
@@ -782,7 +779,6 @@ func fetchAggSenderTxData(block *protocol.Block, aggSenderTxSlice []*protocol.Ag
 			here:
 			cnt +=1
 			err := p2p.TxReq(txHash, p2p.AGGSENDERTX_REQ)
-			logger.Printf("Requested: %x", txHash)
 			if err != nil {
 				errChan <- errors.New(fmt.Sprintf("AggSenderTx could not be read: %v", err))
 				return
@@ -808,22 +804,109 @@ func fetchAggSenderTxData(block *protocol.Block, aggSenderTxSlice []*protocol.Ag
 				}
 
 			case <-time.After(TXFETCH_TIMEOUT * time.Second):
-				logger.Printf("%x", txHash)
 				errChan <- errors.New("AggSenderTx fetch timed out")
 				return
 			}
 
-			receivedHash := aggSenderTx.Hash()
-
 			//three tries to fetch correct AggTx
-			if receivedHash != txHash && cnt < 2 {
+			if aggSenderTx.Hash() != txHash && cnt < 2 {
 				goto here
-				errChan <- errors.New("Received AggtxHash did not correspond to our request.")
+				errChan <- errors.New("Received AggSendertxHash did not correspond to our request.")
 			}
 
 		}
 
 		aggSenderTxSlice[cnt] = aggSenderTx
+	}
+
+	errChan <- nil
+}
+
+func fetchAggReceiverTxData(block *protocol.Block, aggReceiverTxSlice []*protocol.AggReceiverTx, aggregatedFundsTxSlice []*protocol.FundsTx, initialSetup bool, errChan chan error) {
+	errAggFundsTxFetchChan := make(chan error, 1)
+	var errAggFundsTxFetch error
+
+	for cnt, txHash := range block.AggReceiverTxData {
+		var tx protocol.Transaction
+		var aggReceiverTx *protocol.AggReceiverTx
+		var aggregatedFundsTxSliceHashes [][32]byte
+
+		closedTx := storage.ReadClosedTx(txHash)
+		if closedTx != nil {
+			if initialSetup {
+				//For all aggregated FundsTx, fetch them.
+				for _, trx := range closedTx.(*protocol.AggReceiverTx).AggregatedTxSlice {
+					aggregatedFundsTxSliceHashes = append(aggregatedFundsTxSliceHashes, trx)
+				}
+				aggregatedFundsTxSlice = make([]*protocol.FundsTx, len(aggregatedFundsTxSliceHashes))
+
+				go fetchAggregatedFundsTxData(aggregatedFundsTxSliceHashes, aggregatedFundsTxSlice, initialSetup,errAggFundsTxFetchChan)
+
+				errAggFundsTxFetch = <-errAggFundsTxFetchChan
+
+				if errAggFundsTxFetch != nil {
+					errChan <- errAggFundsTxFetch
+				}
+
+				aggReceiverTx = closedTx.(*protocol.AggReceiverTx)
+				aggReceiverTxSlice[cnt] = aggReceiverTx
+				continue
+			} else {
+				logger.Printf("Block validation had fundsTx (%x, %v) that was already in a previous block.", closedTx.Hash(), closedTx.Hash())
+				errChan <- errors.New("Block validation had fundsTx that was already in a previous block.")
+				return
+			}
+		}
+
+		tx = storage.ReadOpenTx(txHash)
+		//txINVALID := storage.ReadINVALIDOpenTx(txHash)
+		if tx != nil {
+			aggReceiverTx = tx.(*protocol.AggReceiverTx)
+			//} else if  txINVALID != nil && verify(txINVALID) {
+			//	aggReceiverTx = txINVALID.(*protocol.AggReceiverTx)
+		} else {
+			cnt := 0
+		here:
+			cnt +=1
+			err := p2p.TxReq(txHash, p2p.AGGRECEIVERTX_REQ)
+			if err != nil {
+				errChan <- errors.New(fmt.Sprintf("AggReceiverTx could not be read: %v", err))
+				return
+			}
+
+			select {
+			case aggReceiverTx = <-p2p.AggReceiverTxChan:
+				storage.WriteOpenTx(aggReceiverTx)
+				if initialSetup {
+					storage.WriteBootstrapTxReceived(aggReceiverTx)
+				}
+				for _, trx := range aggReceiverTx.AggregatedTxSlice {
+					aggregatedFundsTxSliceHashes = append(aggregatedFundsTxSliceHashes, trx)
+				}
+				aggregatedFundsTxSlice = make([]*protocol.FundsTx, len(aggregatedFundsTxSliceHashes))
+
+				go fetchAggregatedFundsTxData(aggregatedFundsTxSliceHashes, aggregatedFundsTxSlice, initialSetup, errAggFundsTxFetchChan)
+
+				errAggFundsTxFetch = <-errAggFundsTxFetchChan
+
+				if errAggFundsTxFetch != nil {
+					errChan <- errAggFundsTxFetch
+				}
+
+			case <-time.After(TXFETCH_TIMEOUT * time.Second):
+				errChan <- errors.New("AggReceiverTx fetch timed out")
+				return
+			}
+
+			//three tries to fetch correct AggTx
+			if aggReceiverTx.Hash() != txHash && cnt < 2 {
+				goto here
+				errChan <- errors.New("Received AggReceivertxHash did not correspond to our request.")
+			}
+
+		}
+
+		aggReceiverTxSlice[cnt] = aggReceiverTx
 	}
 
 	errChan <- nil
@@ -905,11 +988,13 @@ func validate(b *protocol.Block, initialSetup bool) error {
 		return err
 	}
 
-	logger.Printf("Blocks To Rollback: ")
-	for _, block := range blocksToRollback {
-		logger.Printf("%x", block.Hash)
+	if len(blocksToRollback) > 0 {
+		logger.Printf("Blocks To Rollback: ")
+		for _, block := range blocksToRollback {
+			logger.Printf("%x", block.Hash)
+		}
+		logger.Printf("___________________")
 	}
-	logger.Printf("___________________")
 	//Verify block time is dynamic and corresponds to system time at the time of retrieval.
 	//If we are syncing or far behind, we cannot do this dynamic check,
 	//therefore we include a boolean uptodate. If it's true we consider ourselves uptodate and
@@ -924,7 +1009,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 	if len(blocksToRollback) == 0 {
 		for _, block := range blocksToValidate {
 			//Fetching payload data from the txs (if necessary, ask other miners).
-			accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs, err := preValidate(block, initialSetup)
+			accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs, aggReceiverTxs, err := preValidate(block, initialSetup)
 
 			//Check if the validator that added the block has previously voted on different competing chains (find slashing proof).
 			//The proof will be stored in the global slashing dictionary.
@@ -936,7 +1021,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 				return err
 			}
 
-			blockDataMap[block.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs,block}
+			blockDataMap[block.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs, aggReceiverTxs,block}
 			if err := validateState(blockDataMap[block.Hash]); err != nil {
 				return err
 			}
@@ -955,7 +1040,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 		}
 		for _, block := range blocksToValidate {
 			//Fetching payload data from the txs (if necessary, ask other miners).
-			accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs, err := preValidate(block, initialSetup)
+			accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs, aggReceiverTxs, err := preValidate(block, initialSetup)
 
 			//Check if the validator that added the block has previously voted on different competing chains (find slashing proof).
 			//The proof will be stored in the global slashing dictionary.
@@ -967,7 +1052,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 				return err
 			}
 
-			blockDataMap[block.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs,block}
+			blockDataMap[block.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs,aggReceiverTxs, block}
 			if err := validateState(blockDataMap[block.Hash]); err != nil {
 				return err
 			}
@@ -982,12 +1067,12 @@ func validate(b *protocol.Block, initialSetup bool) error {
 }
 
 //Doesn't involve any state changes.
-func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, aggSenderTxSlice []*protocol.AggSenderTx, err error) {
+func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, aggSenderTxSlice []*protocol.AggSenderTx, aggReceiverTxSlice []*protocol.AggReceiverTx, err error) {
 	//This dynamic check is only done if we're up-to-date with syncing, otherwise timestamp is not checked.
 	//Other miners (which are up-to-date) made sure that this is correct.
 	if !initialSetup && uptodate {
 		if err := timestampCheck(block.Timestamp); err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, err
 		}
 	}
 
@@ -995,45 +1080,52 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	if block.GetSize() > activeParameters.Block_size {
 		logger.Printf("BLOCK_SIZE: Blocksize %v > ActiveParam ", block.GetSize())
 		logger.Printf("BLOCK_SIZE: bloomfiltersize %v ", block.GetBloomFilterSize())
-		return nil, nil, nil, nil, nil, errors.New("Block size too large.")
+		return nil, nil, nil, nil, nil, nil, errors.New("Block size too large.")
 	}
 
 	//Duplicates are not allowed, use tx hash hashmap to easily check for duplicates.
 	duplicates := make(map[[32]byte]bool)
 	for _, txHash := range block.AccTxData {
 		if _, exists := duplicates[txHash]; exists {
-			return nil, nil, nil, nil, nil, errors.New("Duplicate Account Transaction Hash detected.")
+			return nil, nil, nil, nil, nil, nil, errors.New("Duplicate Account Transaction Hash detected.")
 		}
 		duplicates[txHash] = true
 	}
 	for _, txHash := range block.FundsTxData {
 		if _, exists := duplicates[txHash]; exists {
-			return nil, nil, nil, nil, nil, errors.New("Duplicate Funds Transaction Hash detected.")
+			return nil, nil, nil, nil, nil, nil, errors.New("Duplicate Funds Transaction Hash detected.")
 		}
 		duplicates[txHash] = true
 	}
 	for _, txHash := range block.ConfigTxData {
 		if _, exists := duplicates[txHash]; exists {
-			return nil, nil, nil, nil, nil, errors.New("Duplicate Config Transaction Hash detected.")
+			return nil, nil, nil, nil, nil, nil, errors.New("Duplicate Config Transaction Hash detected.")
 		}
 		duplicates[txHash] = true
 	}
 	for _, txHash := range block.StakeTxData {
 		if _, exists := duplicates[txHash]; exists {
-			return nil, nil, nil, nil, nil, errors.New("Duplicate Stake Transaction Hash detected.")
+			return nil, nil, nil, nil, nil, nil, errors.New("Duplicate Stake Transaction Hash detected.")
 		}
 		duplicates[txHash] = true
 	}
 
 	for _, txHash := range block.AggSenderTxData {
 		if _, exists := duplicates[txHash]; exists {
-			return nil, nil, nil, nil, nil, errors.New("Duplicate Aggregation Transaction Hash detected.")
+			return nil, nil, nil, nil, nil, nil, errors.New("Duplicate Aggregation Transaction Hash detected.")
+		}
+		duplicates[txHash] = true
+	}
+
+	for _, txHash := range block.AggReceiverTxData {
+		if _, exists := duplicates[txHash]; exists {
+			return nil, nil, nil, nil, nil, nil, errors.New("Duplicate Aggregation Transaction Hash detected.")
 		}
 		duplicates[txHash] = true
 	}
 
 	//We fetch tx data for each type in parallel -> performance boost.
-	errChan := make(chan error, 5)
+	errChan := make(chan error, 6)
 
 	//We need to allocate slice space for the underlying array when we pass them as reference.
 	accTxSlice = make([]*protocol.AccTx, block.NrAccTx)
@@ -1041,6 +1133,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	configTxSlice = make([]*protocol.ConfigTx, block.NrConfigTx)
 	stakeTxSlice = make([]*protocol.StakeTx, block.NrStakeTx)
 	aggSenderTxSlice = make([]*protocol.AggSenderTx, block.NrAggSenderTx)
+	aggReceiverTxSlice = make([]*protocol.AggReceiverTx, block.NrAggReceiverTx)
 	var aggregatedFundsTxSlice []*protocol.FundsTx
 
 	go fetchAccTxData(block, accTxSlice, initialSetup, errChan)
@@ -1048,12 +1141,13 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	go fetchConfigTxData(block, configTxSlice, initialSetup, errChan)
 	go fetchStakeTxData(block, stakeTxSlice, initialSetup, errChan)
 	go fetchAggSenderTxData(block, aggSenderTxSlice, aggregatedFundsTxSlice, initialSetup, errChan)
+	go fetchAggReceiverTxData(block, aggReceiverTxSlice, aggregatedFundsTxSlice, initialSetup, errChan)
 
 	//Wait for all goroutines to finish.
-	for cnt := 0; cnt < 5; cnt++ {
+	for cnt := 0; cnt < 6; cnt++ {
 		err = <-errChan
 		if err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, err
 		}
 	}
 
@@ -1064,12 +1158,12 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	//Check state contains beneficiary.
 	acc, err := storage.GetAccount(block.Beneficiary)
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil,  nil, err
 	}
 
 	//Check if node is part of the validator set.
 	if !acc.IsStaking {
-		return nil, nil, nil, nil, nil, errors.New("Validator is not part of the validator set.")
+		return nil, nil, nil, nil, nil,  nil, errors.New("Validator is not part of the validator set.")
 	}
 
 	//First, initialize an RSA Public Key instance with the modulus of the proposer of the block (acc)
@@ -1077,12 +1171,12 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	//Invalid if the commitment proof can not be verified with the public key of the proposer
 	commitmentPubKey, err := crypto.CreateRSAPubKeyFromBytes(acc.CommitmentKey)
 	if err != nil {
-		return nil, nil, nil, nil, nil, errors.New("Invalid commitment key in account.")
+		return nil, nil, nil, nil, nil,  nil, errors.New("Invalid commitment key in account.")
 	}
 
 	err = crypto.VerifyMessageWithRSAKey(commitmentPubKey, fmt.Sprint(block.Height), block.CommitmentProof)
 	if err != nil {
-		return nil, nil, nil, nil, nil, errors.New("The submitted commitment proof can not be verified.")
+		return nil, nil, nil, nil, nil,  nil, errors.New("The submitted commitment proof can not be verified.")
 	}
 
 	//Invalid if PoS calculation is not correct.
@@ -1090,33 +1184,33 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 
 	//PoS validation
 	if !validateProofOfStake(getDifficulty(), prevProofs, block.Height, acc.Balance, block.CommitmentProof, block.Timestamp) {
-		return nil, nil, nil, nil, nil, errors.New("The nonce is incorrect.")
+		return nil, nil, nil, nil, nil,  nil, errors.New("The nonce is incorrect.")
 	}
 
 	//Invalid if PoS is too far in the future.
 	now := time.Now()
 	if block.Timestamp > now.Unix()+int64(activeParameters.Accepted_time_diff) {
-		return nil, nil, nil, nil, nil, errors.New("The timestamp is too far in the future. " + string(block.Timestamp) + " vs " + string(now.Unix()))
+		return nil, nil, nil, nil, nil,  nil, errors.New("The timestamp is too far in the future. " + string(block.Timestamp) + " vs " + string(now.Unix()))
 	}
 
 	//Check for minimum waiting time.
 	if block.Height-acc.StakingBlockHeight < uint32(activeParameters.Waiting_minimum) {
-		return nil, nil, nil, nil, nil, errors.New("The miner must wait a minimum amount of blocks before start validating. Block Height:" + fmt.Sprint(block.Height) + " - Height when started validating " + string(acc.StakingBlockHeight) + " MinWaitingTime: " + string(activeParameters.Waiting_minimum))
+		return nil, nil, nil, nil, nil,  nil, errors.New("The miner must wait a minimum amount of blocks before start validating. Block Height:" + fmt.Sprint(block.Height) + " - Height when started validating " + string(acc.StakingBlockHeight) + " MinWaitingTime: " + string(activeParameters.Waiting_minimum))
 	}
 
 	//Check if block contains a proof for two conflicting block hashes, else no proof provided.
 	if block.SlashedAddress != [32]byte{} {
 		if _, err = slashingCheck(block.SlashedAddress, block.ConflictingBlockHash1, block.ConflictingBlockHash2); err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil,  nil, err
 		}
 	}
 
 	//Merkle Tree validation
 	if protocol.BuildMerkleTree(block).MerkleRoot() != block.MerkleRoot {
-		return nil, nil, nil, nil, nil, errors.New("Merkle Root is incorrect.")
+		return nil, nil, nil, nil, nil,  nil, errors.New("Merkle Root is incorrect.")
 	}
 
-	return accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggSenderTxSlice,  err
+	return accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggSenderTxSlice, aggReceiverTxSlice,  err
 }
 
 //Dynamic state check.
@@ -1138,17 +1232,26 @@ func validateState(data blockData) error {
 		return err
 	}
 
+	if err := aggReceiverTxStateChange(data.aggReceiverTxSlice); err != nil {
+		fundsStateChangeRollback(data.fundsTxSlice)
+		accStateChangeRollback(data.accTxSlice)
+		aggregatedSenderStateRollback(data.aggSenderTxSlice)
+		return err
+	}
+
 	if err := stakeStateChange(data.stakeTxSlice, data.block.Height); err != nil {
 		fundsStateChangeRollback(data.fundsTxSlice)
 		accStateChangeRollback(data.accTxSlice)
-		aggregatedStateRollback(data.aggSenderTxSlice)
+		aggregatedSenderStateRollback(data.aggSenderTxSlice)
+		aggregatedReceiverStateRollback(data.aggReceiverTxSlice)
 		return err
 	}
 
 	if err := collectTxFees(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.aggSenderTxSlice, data.block.Beneficiary); err != nil {
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
-		aggregatedStateRollback(data.aggSenderTxSlice)
+		aggregatedSenderStateRollback(data.aggSenderTxSlice)
+		aggregatedReceiverStateRollback(data.aggReceiverTxSlice)
 		accStateChangeRollback(data.accTxSlice)
 		return err
 	}
@@ -1157,7 +1260,8 @@ func validateState(data blockData) error {
 		collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
-		aggregatedStateRollback(data.aggSenderTxSlice)
+		aggregatedSenderStateRollback(data.aggSenderTxSlice)
+		aggregatedReceiverStateRollback(data.aggReceiverTxSlice)
 		accStateChangeRollback(data.accTxSlice)
 		return err
 	}
@@ -1167,7 +1271,8 @@ func validateState(data blockData) error {
 		collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
-		aggregatedStateRollback(data.aggSenderTxSlice)
+		aggregatedSenderStateRollback(data.aggSenderTxSlice)
+		aggregatedReceiverStateRollback(data.aggReceiverTxSlice)
 		accStateChangeRollback(data.accTxSlice)
 		return err
 	}
@@ -1178,7 +1283,8 @@ func validateState(data blockData) error {
 		collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
-		aggregatedStateRollback(data.aggSenderTxSlice)
+		aggregatedSenderStateRollback(data.aggSenderTxSlice)
+		aggregatedReceiverStateRollback(data.aggReceiverTxSlice)
 		accStateChangeRollback(data.accTxSlice)
 		return err
 	}
@@ -1218,6 +1324,24 @@ func postValidate(data blockData, initialSetup bool) {
 		}
 
 		for _, tx := range data.aggSenderTxSlice {
+
+			//delete FundsTx per aggSenderTx in open storage and write them to the closed storage.
+			for _, aggregatedTxHash := range tx.AggregatedTxSlice {
+				trx := storage.ReadOpenTx(aggregatedTxHash)
+				storage.WriteClosedTx(trx)
+				storage.DeleteOpenTx(trx)
+			}
+			//Delete AggSenderTx and write it to closed Tx.
+			storage.WriteClosedTx(tx)
+			storage.DeleteOpenTx(tx)
+		}
+
+		//TODO Broadcast valid aggregated transactions
+		if len(data.fundsTxSlice) > 0 {
+			broadcastVerifiedTxs(data.fundsTxSlice)
+		}
+
+		for _, tx := range data.aggReceiverTxSlice {
 
 			//delete FundsTx per aggSenderTx in open storage and write them to the closed storage.
 			for _, aggregatedTxHash := range tx.AggregatedTxSlice {

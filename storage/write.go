@@ -96,6 +96,8 @@ func WriteClosedTx(transaction protocol.Transaction) (err error) {
 		bucket = "closedstakes"
 	case *protocol.AggSenderTx:
 		bucket = "closedaggregationssender"
+	case *protocol.AggReceiverTx:
+		bucket = "closedaggregationsreceiver"
 	}
 
 

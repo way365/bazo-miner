@@ -165,12 +165,12 @@ func initState() (initialBlock *protocol.Block, err error) {
 		//Do not validate the genesis block, since a lot of properties are set to nil
 		if blockToValidate.Hash != [32]byte{} {
 			//Fetching payload data from the txs (if necessary, ask other miners)
-			accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs, err := preValidate(blockToValidate, true)
+			accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs, aggReceiverTxs, err := preValidate(blockToValidate, true)
 			if err != nil {
 				return nil, errors.New(fmt.Sprintf("Block (%x) could not be prevalidated: %v\n", blockToValidate.Hash[0:8], err))
 			}
 
-			blockDataMap[blockToValidate.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs, blockToValidate}
+			blockDataMap[blockToValidate.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggSenderTxs, aggReceiverTxs, blockToValidate}
 
 			err = validateState(blockDataMap[blockToValidate.Hash])
 			if err != nil {
@@ -179,7 +179,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 
 			postValidate(blockDataMap[blockToValidate.Hash], true)
 		} else {
-			blockDataMap[blockToValidate.Hash] = blockData{nil, nil, nil, nil, nil, blockToValidate}
+			blockDataMap[blockToValidate.Hash] = blockData{nil, nil, nil, nil, nil, nil, blockToValidate}
 
 			postValidate(blockDataMap[blockToValidate.Hash], true)
 		}
@@ -238,6 +238,27 @@ func accStateChange(txSlice []*protocol.AccTx) error {
 
 //this method does inititate the state change for aggregated Transactions. It does
 func aggSenderTxStateChange(txSlice []*protocol.AggSenderTx) (err error) {
+	for _, tx1 := range txSlice {
+		var fundsFxSlice []*protocol.FundsTx
+		for _, tx2 := range tx1.AggregatedTxSlice {
+			//Fetch all aggregated open Funds transactions for state validation.
+			trx := storage.ReadOpenTx(tx2)
+			if trx == nil {
+				trx = storage.ReadClosedTx(tx2)
+			}
+			fundsFxSlice = append(fundsFxSlice, trx.(*protocol.FundsTx))
+		}
+
+		if err := fundsStateChange(fundsFxSlice); err != nil {
+			return err
+		}
+		fundsFxSlice = nil
+	}
+
+	return nil
+}
+
+func aggReceiverTxStateChange(txSlice []*protocol.AggReceiverTx) (err error) {
 	for _, tx1 := range txSlice {
 		var fundsFxSlice []*protocol.FundsTx
 		for _, tx2 := range tx1.AggregatedTxSlice {

@@ -48,6 +48,13 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 			return
 		}
 		tx = fTx
+	case AGGRECEIVERTX_BRDCST:
+		var fTx *protocol.AggReceiverTx
+		fTx = fTx.Decode(payload)
+		if fTx == nil {
+			return
+		}
+		tx = fTx
 	}
 
 
