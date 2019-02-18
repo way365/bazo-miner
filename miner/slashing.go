@@ -45,8 +45,7 @@ func seekSlashingProof(block *protocol.Block) error {
 
 //Check if two blocks are part of the same chain or if they appear in two competing chains
 func IsInSameChain(b1, b2 *protocol.Block) bool {
-	var higherBlock *protocol.Block
-	var lowerBlock *protocol.Block
+	var higherBlock, lowerBlock  *protocol.Block
 
 	if b1.Height == b2.Height {
 		return false
@@ -62,6 +61,10 @@ func IsInSameChain(b1, b2 *protocol.Block) bool {
 
 	for higherBlock.Height > 0 {
 		higherBlock = storage.ReadClosedBlock(higherBlock.PrevHash)
+		//Check blocks without transactions
+		if higherBlock == nil {
+			higherBlock = storage.ReadClosedBlockWithoutTx(higherBlock.PrevHashWithoutTx)
+		}
 		if higherBlock.Hash == lowerBlock.Hash {
 			return true
 		}

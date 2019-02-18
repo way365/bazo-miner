@@ -7,7 +7,12 @@ import (
 //Both block and tx requests are handled asymmetricaly, using channels as inter-communication
 //All the request in this file are specifically initiated by the miner package
 //func BlockReq(hash [32]byte, hashWithoutTx [32]byte) error {
-func BlockReq(hash [32]byte) error {
+func BlockReq(hash [32]byte, hashWithoutTx [32]byte) error {
+
+	payload := hash[:]
+	payloadTEMP := hashWithoutTx[:]
+
+	payload = append(payload, payloadTEMP...)
 
 	// Block Request with a Broadcast request. This does rise the possibility of a valid answer.
 	for p := range peers.minerConns {
@@ -16,7 +21,7 @@ func BlockReq(hash [32]byte) error {
 		if p == nil {
 			return errors.New("Couldn't get a connection, request not transmitted.")
 		}
-		packet := BuildPacket(BLOCK_REQ, hash[:])
+		packet := BuildPacket(BLOCK_REQ, payload)
 		sendData(p, packet)
 	}
 

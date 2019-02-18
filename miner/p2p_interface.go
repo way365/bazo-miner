@@ -18,6 +18,8 @@ func incomingData() {
 
 //ReceivedBlockStash is a stash with all Blocks received such that we can prevent forking
 func processBlock(payload []byte) {
+
+	//TODO: Maybe a mutex around this function. such that blocks are not sent twice...
 	var block *protocol.Block
 	block = block.Decode(payload)
 

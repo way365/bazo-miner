@@ -7,7 +7,7 @@ import (
 
 func UpdateBlocksToBlocksWithoutTx(block *protocol.Block) (err error){
 
-	if rand1() {
+	if BlockReadyToAggregate(block) {
 		block.Aggregated = true
 		logger.Printf("UPDATE: Write (%x) into emptyBlockBucket as (%x)", block.Hash[0:8], block.HashWithoutTx[0:8])
 		WriteClosedBlockWithoutTx(block)
@@ -17,7 +17,12 @@ func UpdateBlocksToBlocksWithoutTx(block *protocol.Block) (err error){
 	return
 }
 
-func rand1() bool {
-	//return rand.Float32() < 0.5
-	return true
+func BlockReadyToAggregate(block *protocol.Block) bool {
+
+	// If Block contains no transactions, it can be viewed as aggregated and moved to the according bucket.
+	if (block.NrAggReceiverTx == 0) && (block.NrAggSenderTx == 0) && (block.NrStakeTx == 0) && (block.NrFundsTx == 0) && (block.NrAccTx == 0) && (block.NrConfigTx == 0) {
+		return true
+	}
+
+	return false
 }

@@ -85,7 +85,6 @@ func getState() (state string) {
 	for _, acc := range storage.State {
 		state += fmt.Sprintf("Is root: %v, %v\n", storage.IsRootKey(acc.Hash()), acc)
 	}
-	state += fmt.Sprintf("\n")
 	return state
 }
 
@@ -93,9 +92,6 @@ func initState() (initialBlock *protocol.Block, err error) {
 	var allClosedBlocks []*protocol.Block
 	if p2p.IsBootstrap() {
 		allClosedBlocks = storage.ReadAllClosedBlocks()
-//		for _, blockToValidate := range allClosedBlocks {
-//			logger.Printf("BLOCKS_TO_VALIDATE_ReadAllClosedBlocks (%d) <--> (%d); Aggregated = %t", blockToValidate.Hash[0:8], blockToValidate.HashWithoutTx[0:8], blockToValidate.Aggregated)
-//		}
 	} else {
 		p2p.LastBlockReq()
 		var lastBlock *protocol.Block
@@ -117,7 +113,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 		}
 
 		for {
-			p2p.BlockReq(lastBlock.PrevHash)
+			p2p.BlockReq(lastBlock.PrevHash, lastBlock.PrevHashWithoutTx)
 			//p2p.BlockReq(lastBlock.PrevHash, lastBlock.PrevHashWithoutTx)
 			select {
 			case encodedBlock := <-p2p.BlockReqChan:
@@ -146,7 +142,6 @@ func initState() (initialBlock *protocol.Block, err error) {
 		}
 	}
 
-
 	if len(allClosedBlocks) > 0 {
 		//Set the last closed block as the initial block
 		initialBlock = allClosedBlocks[0]
@@ -169,6 +164,10 @@ func initState() (initialBlock *protocol.Block, err error) {
 
 		storage.WriteLastClosedBlock(initialBlock)
 		storage.WriteClosedBlock(initialBlock)
+	}
+
+	if !p2p.IsBootstrap() {
+		allClosedBlocks = InvertBlockArray(allClosedBlocks)
 	}
 
 	//Validate all closed blocks and update state
@@ -201,6 +200,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 
 		//CalculateBlockchainSize(int(blockToValidate.GetSize()))
 		logger.Printf("Block validated: %d --> %x, %v", blockToValidate.Height, blockToValidate.Hash[0:8], blockToValidate.Hash[0:8])
+		logger.Printf("State: %v", getState())
 		//logger.Printf("Block validated: %v", blockToValidate)
 
 	}
@@ -212,7 +212,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 	}
 
 
-	logger.Printf("\n\n%v block(s) validated. Chain good to go.\n------------------------------------------------------------------------\n\n", len(storage.AllClosedBlocksAsc))
+	logger.Printf("\n\n%v block(s) validated. Chain good to go.\n------------------------------------------------------------------------\n\n", len(allClosedBlocks))
 	logger.Printf("Last Block: \n%v\n------------------------------------------------------------------------\n\n", lastBlock)
 	logger.Printf("Current STATE: \n%v\n------------------------------------------------------------------------\n\n", getState())
 

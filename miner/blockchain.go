@@ -55,7 +55,7 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 		return
 	}
 
-	logger.Printf("ActiveConfigParams: \n%v\n------------------------------------------------------------------------\n\nBAZO is Running\n", activeParameters)
+	logger.Printf("ActiveConfigParams: \n%v\n------------------------------------------------------------------------\n\nBAZO is Running\n\n", activeParameters)
 
 	//this is used to generate the state with aggregated transactions.
 	for _, tx := range storage.ReadAllBootstrapReceivedTransactions() {

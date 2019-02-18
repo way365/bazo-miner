@@ -3,6 +3,7 @@ package storage
 import (
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/boltdb/bolt"
+	"sort"
 )
 
 //Always return nil if requested hash is not in the storage. This return value is then checked against by the caller
@@ -75,8 +76,8 @@ func ReadLastClosedBlock() (block *protocol.Block) {
 //This method does read all blocks in closedBlocks & closedblockswithouttx.
 func ReadAllClosedBlocks() (allClosedBlocks []*protocol.Block) {
 
-	//This does return all blocks which are either in clossedblocks or closedblockswithouttx bucket of the Database.
-	//They are not ordered now, but this does actually not matter.
+	//This does return all blocks which are either in closedblocks or closedblockswithouttx bucket of the Database.
+	//They are not ordered at teh request, but this does actually not matter. Because it will be ordered below
 	block := ReadLastClosedBlock()
 	if  block != nil {
 		db.View(func(tx *bolt.Tx) error {
@@ -104,8 +105,19 @@ func ReadAllClosedBlocks() (allClosedBlocks []*protocol.Block) {
 		})
 	}
 
+	//blocks are sorted here.
+	sort.Sort(ByHeight(allClosedBlocks))
+
 	return allClosedBlocks
 }
+
+//The three functions and the type below are used to order the gathered closed blocks from below according to
+//their block height.
+type ByHeight []*protocol.Block
+func (a ByHeight) Len() int           { return len(a) }
+func (a ByHeight) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByHeight) Less(i, j int) bool { return a[i].Height < a[j].Height }
+
 
 func ReadReceivedBlockStash() (receivedBlocks []*protocol.Block){
 	return receivedBlockStash

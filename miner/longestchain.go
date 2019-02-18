@@ -86,7 +86,7 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 
 		//Fetch the block we apparently missed from the network.
 		//p2p.BlockReq(newBlock.PrevHash, newBlock.PrevHashWithoutTx)
-		p2p.BlockReq(newBlock.PrevHash)
+		p2p.BlockReq(newBlock.PrevHash, newBlock.PrevHashWithoutTx)
 
 		//Blocking wait
 		select {
