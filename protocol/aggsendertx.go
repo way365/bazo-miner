@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	AGGSENDERTX_SIZE = 213 //TODO correct size
+	AGGSENDERTX_SIZE = 53 //Only constant Values --> Without To & AggregatedTxSlice
 )
 
 //when we broadcast transactions we need a way to distinguish with a type

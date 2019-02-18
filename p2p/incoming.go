@@ -67,6 +67,8 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 		forwardTxReqToMiner(p, payload, STAKETX_RES)
 	case AGGSENDERTX_RES:
 		forwardTxReqToMiner(p, payload, AGGSENDERTX_RES)
+	case AGGRECEIVERTX_RES:
+		forwardTxReqToMiner(p, payload, AGGRECEIVERTX_RES)
 	}
 
 }

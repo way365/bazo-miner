@@ -81,6 +81,9 @@ func finalizeBlock(block *protocol.Block) error {
 			for _, txHash := range block.AggSenderTxData {
 				storage.DeleteOpenTxWithHash(txHash)
 			}
+			for _, txHash := range block.AggReceiverTxData {
+				storage.DeleteOpenTxWithHash(txHash)
+			}
 		}
 		return err
 	}
@@ -742,7 +745,7 @@ func fetchAggSenderTxData(block *protocol.Block, aggSenderTxSlice []*protocol.Ag
 		closedTx := storage.ReadClosedTx(txHash)
 		if closedTx != nil {
 			if initialSetup {
-				//For all aggregated FundsTx, fetch them. TODO This code below is duplicated in the case below
+				//For all aggregated FundsTx, fetch them.
 				for _, trx := range closedTx.(*protocol.AggSenderTx).AggregatedTxSlice {
 					aggregatedFundsTxSliceHashes = append(aggregatedFundsTxSliceHashes, trx)
 				}
@@ -1336,7 +1339,6 @@ func postValidate(data blockData, initialSetup bool) {
 			storage.DeleteOpenTx(tx)
 		}
 
-		//TODO Broadcast valid aggregated transactions
 		if len(data.fundsTxSlice) > 0 {
 			broadcastVerifiedTxs(data.fundsTxSlice)
 		}
@@ -1349,16 +1351,14 @@ func postValidate(data blockData, initialSetup bool) {
 				storage.WriteClosedTx(trx)
 				storage.DeleteOpenTx(trx)
 			}
-			//Delete AggSenderTx and write it to closed Tx.
+			//Delete AggReceiverTx and write it to closed Tx.
 			storage.WriteClosedTx(tx)
 			storage.DeleteOpenTx(tx)
 		}
 
-		//TODO Broadcast valid aggregated transactions
 		if len(data.fundsTxSlice) > 0 {
 			broadcastVerifiedTxs(data.fundsTxSlice)
 		}
-
 
 		//It might be that block is not in the openblock storage, but this doesn't matter.
 		storage.DeleteOpenBlock(data.block.Hash)

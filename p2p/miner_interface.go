@@ -26,10 +26,12 @@ var (
 	BlockReqChan = make(chan []byte)
 
 	receivedTXStash = make([]*protocol.FundsTx, 0)
-	receivedAggTXStash = make([]*protocol.AggSenderTx, 0)
+	receivedAggSenderTXStash = make([]*protocol.AggSenderTx, 0)
+	receivedAggReceiverTXStash = make([]*protocol.AggReceiverTx, 0)
 
 	fundsTxSashMutex = &sync.Mutex{}
 	aggSenderTxSashMutex = &sync.Mutex{}
+	aggReceiverTxSashMutex = &sync.Mutex{}
 )
 
 //This is for blocks and txs that the miner successfully validated.
@@ -70,6 +72,15 @@ func txAlreadyInStash(slice []*protocol.FundsTx, newTXHash [32]byte) bool {
 }
 
 func aggSenderTxAlreadyInStash(slice []*protocol.AggSenderTx, newTXHash [32]byte) bool {
+	for _, txInStash := range slice {
+		if txInStash.Hash() == newTXHash {
+			return true
+		}
+	}
+	return false
+}
+
+func aggReceiverTxAlreadyInStash(slice []*protocol.AggReceiverTx, newTXHash [32]byte) bool {
 	for _, txInStash := range slice {
 		if txInStash.Hash() == newTXHash {
 			return true
@@ -136,15 +147,31 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		}
 
 		aggSenderTxSashMutex.Lock()
-		if !aggSenderTxAlreadyInStash(receivedAggTXStash, aggSenderTx.Hash()) {
-			receivedAggTXStash = append(receivedAggTXStash, aggSenderTx)
+		if !aggSenderTxAlreadyInStash(receivedAggSenderTXStash, aggSenderTx.Hash()) {
+			receivedAggSenderTXStash = append(receivedAggSenderTXStash, aggSenderTx)
 			AggSenderTxChan <- aggSenderTx
-			if len(receivedAggTXStash) > 1000 {
-				receivedAggTXStash = append(receivedAggTXStash[:0], receivedAggTXStash[1:]...)
+			if len(receivedAggSenderTXStash) > 1000 {
+				receivedAggSenderTXStash = append(receivedAggSenderTXStash[:0], receivedAggSenderTXStash[1:]...)
 			}
 		}
 		aggSenderTxSashMutex.Unlock()
+	case AGGRECEIVERTX_RES:
+		var aggReceiverTx *protocol.AggReceiverTx
+		aggReceiverTx = aggReceiverTx.Decode(payload)
+		if aggReceiverTx == nil {
+			return
+		}
 
+		logger.Printf("Forward: %x", aggReceiverTx.Hash())
+		aggReceiverTxSashMutex.Lock()
+		if !aggReceiverTxAlreadyInStash(receivedAggReceiverTXStash, aggReceiverTx.Hash()) {
+			receivedAggReceiverTXStash = append(receivedAggReceiverTXStash, aggReceiverTx)
+			AggReceiverTxChan <- aggReceiverTx
+			if len(receivedAggReceiverTXStash) > 1000 {
+				receivedAggReceiverTXStash = append(receivedAggReceiverTXStash[:0], receivedAggReceiverTXStash[1:]...)
+			}
+		}
+		aggReceiverTxSashMutex.Unlock()
 	}
 }
 

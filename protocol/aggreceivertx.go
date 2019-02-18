@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	AGGRECEIVERTX_SIZE = 213 //TODO correct size
+	AGGRECEIVERTX_SIZE = 49 //Only Fized values --> Without From & AggregatedTxSlice
 )
 
 //when we broadcast transactions we need a way to distinguish with a type
@@ -47,7 +47,7 @@ func (tx *AggReceiverTx) Hash() (hash [32]byte) {
 	txHash := struct {
 		Amount			 	uint64
 		Fee    				uint64
-		to   				[32]byte
+		To   				[32]byte
 		From     			map[[32]byte]uint32
 		AggregatedTxSlice 	[][32]byte
 
