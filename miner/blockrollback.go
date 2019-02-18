@@ -135,7 +135,7 @@ func postValidateRollback(data blockData) {
 		storage.DeleteClosedTx(tx)
 	}
 
-	CalculateBlockchainSize(-int(data.block.GetSize()))
+	//CalculateBlockchainSize(-int(data.block.GetSize()))
 
 	collectStatisticsRollback(data.block)
 

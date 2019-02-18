@@ -13,21 +13,25 @@ const (
 	HASH_LEN                = 32
 	HEIGHT_LEN				= 4
 	//All fixed sizes form the Block struct are 254
-	MIN_BLOCKSIZE           = 254 + crypto.COMM_PROOF_LENGTH
+	MIN_BLOCKSIZE           = 254 + crypto.COMM_PROOF_LENGTH + 1
 	MIN_BLOCKHEADER_SIZE    = 104
 	BLOOM_FILTER_ERROR_RATE = 0.1
 )
 
 type Block struct {
 	//Header
-	Header       byte
-	Hash         [32]byte
-	PrevHash     [32]byte
-	NrConfigTx   uint8
-	NrElementsBF uint16
-	BloomFilter  *bloom.BloomFilter
-	Height       uint32
-	Beneficiary  [32]byte
+	Header      	 	byte
+	Hash         		[32]byte
+	PrevHash     		[32]byte
+	HashWithoutTx   	[32]byte 			//valid hash once all tx are aggregated
+	PrevHashWithoutTx  	[32]byte			//valid hash of ancestor once all tx are aggregated
+	NrConfigTx   		uint8
+	NrElementsBF 		uint16
+	BloomFilter  		*bloom.BloomFilter
+	Height       		uint32
+	Beneficiary  		[32]byte
+	Aggregated			bool				//Indicates if All transactions are aggregated with a boolean.
+
 
 	//Body
 	Nonce                 [8]byte
@@ -70,6 +74,7 @@ func (block *Block) HashBlock() [32]byte {
 
 	blockHash := struct {
 		prevHash              [32]byte
+		prevHashWithoutTx     [32]byte
 		timestamp             int64
 		merkleRoot            [32]byte
 		beneficiary           [32]byte
@@ -77,8 +82,10 @@ func (block *Block) HashBlock() [32]byte {
 		slashedAddress        [32]byte
 		conflictingBlockHash1 [32]byte
 		conflictingBlockHash2 [32]byte
+		Aggregated			  bool
 	}{
 		block.PrevHash,
+		block.PrevHashWithoutTx,
 		block.Timestamp,
 		block.MerkleRoot,
 		block.Beneficiary,
@@ -86,6 +93,36 @@ func (block *Block) HashBlock() [32]byte {
 		block.SlashedAddress,
 		block.ConflictingBlockHash1,
 		block.ConflictingBlockHash2,
+		false,
+	}
+	return SerializeHashContent(blockHash)
+}
+
+func (block *Block) HashBlockWithoutMerkleRoot() [32]byte {
+	if block == nil {
+		return [32]byte{}
+	}
+
+	blockHash := struct {
+		prevHash              [32]byte
+		prevHashWithoutTx	  [32]byte
+		timestamp             int64
+		beneficiary           [32]byte
+		commitmentProof       [crypto.COMM_PROOF_LENGTH]byte
+		slashedAddress        [32]byte
+		conflictingBlockHash1 [32]byte
+		conflictingBlockHash2 [32]byte
+		Aggregated			  bool
+	}{
+		block.PrevHash,
+		block.PrevHashWithoutTx,
+		block.Timestamp,
+		block.Beneficiary,
+		block.CommitmentProof,
+		block.SlashedAddress,
+		block.ConflictingBlockHash1,
+		block.ConflictingBlockHash2,
+		true,
 	}
 	return SerializeHashContent(blockHash)
 }
@@ -103,6 +140,7 @@ func (block *Block) InitBloomFilter(txPubKeys [][32]byte) {
 }
 
 func (block *Block) GetSize() uint64 {
+	//TODO Update MIN_BLOCKSIZE
 	size := MIN_BLOCKSIZE + int(block.GetTxDataSize())
 
 	if block.BloomFilter != nil {
@@ -117,10 +155,13 @@ func (block *Block) GetHeaderSize() uint64 {
 	size := int(reflect.TypeOf(block.Header).Size() +
 		reflect.TypeOf(block.Hash).Size() +
 		reflect.TypeOf(block.PrevHash).Size() +
+		reflect.TypeOf(block.HashWithoutTx).Size() +
+		reflect.TypeOf(block.PrevHashWithoutTx).Size() +
 		reflect.TypeOf(block.NrConfigTx).Size() +
 		reflect.TypeOf(block.NrElementsBF).Size() +
 		reflect.TypeOf(block.Height).Size() +
-		reflect.TypeOf(block.Beneficiary).Size())
+		reflect.TypeOf(block.Beneficiary).Size() +
+		reflect.TypeOf(block.Aggregated).Size())
 
 	size += int(block.GetBloomFilterSize())
 
@@ -177,6 +218,9 @@ func (block *Block) Encode() []byte {
 		Header:                block.Header,
 		Hash:                  block.Hash,
 		PrevHash:              block.PrevHash,
+		HashWithoutTx:         block.HashWithoutTx,
+		PrevHashWithoutTx:     block.PrevHashWithoutTx,
+		Aggregated:			   block.Aggregated,
 		Nonce:                 block.Nonce,
 		Timestamp:             block.Timestamp,
 		MerkleRoot:            block.MerkleRoot,
@@ -214,14 +258,17 @@ func (block *Block) EncodeHeader() []byte {
 	}
 
 	encoded := Block{
-		Header:       block.Header,
-		Hash:         block.Hash,
-		PrevHash:     block.PrevHash,
-		NrConfigTx:   block.NrConfigTx,
-		NrElementsBF: block.NrElementsBF,
-		BloomFilter:  block.BloomFilter,
-		Height:       block.Height,
-		Beneficiary:  block.Beneficiary,
+		Header:       		block.Header,
+		Hash:         		block.Hash,
+		PrevHash:     		block.PrevHash,
+		HashWithoutTx:      block.HashWithoutTx,
+		PrevHashWithoutTx:  block.PrevHashWithoutTx,
+		NrConfigTx:   		block.NrConfigTx,
+		NrElementsBF: 		block.NrElementsBF,
+		BloomFilter:  		block.BloomFilter,
+		Height:       		block.Height,
+		Beneficiary:  		block.Beneficiary,
+		Aggregated:			block.Aggregated,
 	}
 
 	buffer := new(bytes.Buffer)
@@ -242,8 +289,11 @@ func (block *Block) Decode(encoded []byte) (b *Block) {
 }
 
 func (block Block) String() string {
-	return fmt.Sprintf("\nHash: %x\n"+
-		"Previous Hash: %x\n"+
+	return fmt.Sprintf("\n" +
+		"Hash: %x			"+ "Hash Without Tx: %x\n"+
+		"Hash: %d			"+ "Hash Without Tx: %d\n"+
+		"Previous Hash: %x		"+ "Previous Hash Without Tx: %x\n"+
+		"Aggregated: %t\n"+
 		"Nonce: %x\n"+
 		"Timestamp: %v\n"+
 		"MerkleRoot: %x\n"+
@@ -257,11 +307,14 @@ func (block Block) String() string {
 		"Total Transactions in this block: %v\n"+
 		"Height: %d\n"+
 		"Commitment Proof: %x\n"+
+		"Commitment Proof: %d\n"+
 		"Slashed Address:%x\n"+
 		"Conflicted Block Hash 1:%x\n"+
 		"Conflicted Block Hash 2:%x\n",
-		block.Hash[0:8],
-		block.PrevHash[0:8],
+		block.Hash[0:8], block.HashWithoutTx[0:8],
+		block.Hash[0:8], block.HashWithoutTx[0:8], //TODO remove line
+		block.PrevHash[0:8], block.PrevHashWithoutTx[0:8],
+		block.Aggregated,
 		block.Nonce,
 		block.Timestamp,
 		block.MerkleRoot[0:8],
@@ -275,6 +328,7 @@ func (block Block) String() string {
 		uint16(block.NrFundsTx) + uint16(block.NrAccTx) + uint16(block.NrConfigTx) + uint16(block.NrStakeTx) + uint16(block.NrAggSenderTx)+ uint16(block.NrAggReceiverTx),
 		block.Height,
 		block.CommitmentProof[0:8],
+		block.CommitmentProof[0:8], //TODO remove line
 		block.SlashedAddress[0:8],
 		block.ConflictingBlockHash1[0:8],
 		block.ConflictingBlockHash2[0:8],

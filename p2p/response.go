@@ -60,8 +60,13 @@ func blockRes(p *peer, payload []byte) {
 	//If no specific block is requested, send latest
 	if len(payload) > 0 {
 		copy(blockHash[:], payload[:32])
+
+		//TODO Block Response need to be searched in the closedBlockwithouthtx as well... therefore probably the
+		//hash without tx needs to be sent in the Payload as well...
 		if block = storage.ReadClosedBlock(blockHash); block == nil {
-			block = storage.ReadOpenBlock(blockHash)
+			if block = storage.ReadClosedBlockWithoutTx(blockHash); block == nil {
+				block = storage.ReadOpenBlock(blockHash)
+			}
 		}
 	} else {
 		block = storage.ReadLastClosedBlock()

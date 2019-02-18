@@ -38,6 +38,23 @@ func ReadClosedBlock(hash [32]byte) (block *protocol.Block) {
 	return block
 }
 
+//This function does read all blocks without transactions inside.
+func ReadClosedBlockWithoutTx(hash [32]byte) (block *protocol.Block) {
+
+	db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("closedblockswithouttx"))
+		encodedBlock := b.Get(hash[:])
+		block = block.Decode(encodedBlock)
+		return nil
+	})
+
+	if block == nil {
+		return nil
+	}
+
+	return block
+}
+
 func ReadLastClosedBlock() (block *protocol.Block) {
 
 	db.View(func(tx *bolt.Tx) error {
@@ -55,21 +72,36 @@ func ReadLastClosedBlock() (block *protocol.Block) {
 	return block
 }
 
+//This method does read all blocks in closedBlocks & closedblockswithouttx.
 func ReadAllClosedBlocks() (allClosedBlocks []*protocol.Block) {
-	if nextBlock := ReadLastClosedBlock(); nextBlock != nil {
-		hasNext := true
 
-		allClosedBlocks = append(allClosedBlocks, nextBlock)
-
-		if nextBlock.Hash != [32]byte{} {
-			for hasNext {
-				nextBlock = ReadClosedBlock(nextBlock.PrevHash)
-				allClosedBlocks = append(allClosedBlocks, nextBlock)
-				if nextBlock.Hash == [32]byte{} {
-					hasNext = false
+	//This does return all blocks which are either in clossedblocks or closedblockswithouttx bucket of the Database.
+	//They are not ordered now, but this does actually not matter.
+	block := ReadLastClosedBlock()
+	if  block != nil {
+		db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte("closedblocks"))
+			b.ForEach(func(k, v []byte) error {
+				if v != nil {
+					encodedBlock := v
+					block = block.Decode(encodedBlock)
+					allClosedBlocks = append(allClosedBlocks, block)
 				}
-			}
-		}
+				return nil
+			})
+
+			b = tx.Bucket([]byte("closedblockswithouttx"))
+			b.ForEach(func(k, v []byte) error {
+				if v != nil {
+					encodedBlock := v
+					block = block.Decode(encodedBlock)
+					allClosedBlocks = append(allClosedBlocks, block)
+				}
+				return nil
+			})
+
+			return nil
+		})
 	}
 
 	return allClosedBlocks
@@ -193,3 +225,4 @@ func ReadMempool(){
 	logger.Printf("________________")
 
 }
+

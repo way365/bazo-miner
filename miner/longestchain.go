@@ -50,10 +50,16 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 		newChain = append(newChain, newBlock)
 
 		//Search for an ancestor (which needs to be in closed storage -> validated block).
-		prevBlockHash := newBlock.PrevHash
-
 		//Search in closed (Validated) blocks first
-		potentialAncestor := storage.ReadClosedBlock(prevBlockHash)
+		potentialAncestor := storage.ReadClosedBlock(newBlock.PrevHash)
+		if potentialAncestor != nil {
+			//Found ancestor because it is found in our closed block storage.
+			//We went back in time, so reverse order.
+			newChain = InvertBlockArray(newChain)
+			return potentialAncestor, newChain
+		}
+
+		potentialAncestor = storage.ReadClosedBlockWithoutTx(newBlock.PrevHashWithoutTx)
 		if potentialAncestor != nil {
 			//Found ancestor because it is found in our closed block storage.
 			//We went back in time, so reverse order.
@@ -62,7 +68,7 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 		}
 
 		//It might be the case that we already started a sync and the block is in the openblock storage.
-		newBlock = storage.ReadOpenBlock(prevBlockHash)
+		newBlock = storage.ReadOpenBlock(newBlock.PrevHash)
 		if newBlock != nil {
 			continue
 		}
@@ -72,15 +78,15 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 		// after the rollback. (Similar like when in open storage) If not in stash, continue with a block request to
 		// the network. Keep block in stash in case of multiple rollbacks (Very rare)
 		for _, block := range storage.ReadReceivedBlockStash() {
-			if block.Hash == prevBlockHash {
+			if block.Hash == newBlock.PrevHash {
 				newBlock = block
 				continue OUTER
 			}
 		}
 
-		//TODO Optimize code (duplicated)
 		//Fetch the block we apparently missed from the network.
-		p2p.BlockReq(prevBlockHash)
+		//p2p.BlockReq(newBlock.PrevHash, newBlock.PrevHashWithoutTx)
+		p2p.BlockReq(newBlock.PrevHash)
 
 		//Blocking wait
 		select {

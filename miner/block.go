@@ -28,12 +28,14 @@ type blockData struct {
 }
 
 //Block constructor, argument is the previous block in the blockchain.
-func newBlock(prevHash [32]byte, commitmentProof [crypto.COMM_PROOF_LENGTH]byte, height uint32) *protocol.Block {
+func newBlock(prevHash [32]byte, prevHashWithoutTx [32]byte, commitmentProof [crypto.COMM_PROOF_LENGTH]byte, height uint32) *protocol.Block {
 	block := new(protocol.Block)
 	block.PrevHash = prevHash
+	block.PrevHashWithoutTx = prevHashWithoutTx
 	block.CommitmentProof = commitmentProof
 	block.Height = height
 	block.StateCopy = make(map[[32]byte]*protocol.Account)
+	block.Aggregated = false
 
 	return block
 }
@@ -48,7 +50,6 @@ func finalizeBlock(block *protocol.Block) error {
 			block.SlashedAddress = hash
 			block.ConflictingBlockHash1 = slashingProof.ConflictingBlockHash1
 			block.ConflictingBlockHash2 = slashingProof.ConflictingBlockHash2
-			//TODO @simibac Why do you break?
 			break
 		}
 	}
@@ -71,7 +72,12 @@ func finalizeBlock(block *protocol.Block) error {
 		return err
 	}
 
+	//Block hash with MerkleTree and therefore, including all transactions
 	partialHash := block.HashBlock()
+
+	//Block hash without MerkleTree and therefore, without any transactions
+	partialHashWithoutMerkleRoot := block.HashBlockWithoutMerkleRoot()
+
 	prevProofs := GetLatestProofs(activeParameters.num_included_prev_proofs, block)
 
 	nonce, err := proofOfStake(getDifficulty(), block.PrevHash, prevProofs, block.Height, validatorAcc.Balance, commitmentProof)
@@ -95,6 +101,7 @@ func finalizeBlock(block *protocol.Block) error {
 
 	//Put pieces together to get the final hash.
 	block.Hash = sha3.Sum256(append(nonceBuf[:], partialHash[:]...))
+	block.HashWithoutTx = sha3.Sum256(append(nonceBuf[:], partialHashWithoutMerkleRoot[:]...))
 
 	//This doesn't need to be hashed, because we already have the merkle tree taking care of consistency.
 	block.NrAccTx = uint16(len(block.AccTxData))
@@ -607,7 +614,6 @@ func fetchFundsTxData(block *protocol.Block, fundsTxSlice []*protocol.FundsTx, i
 			}
 		}
 
-		//TODO Optimize code (duplicated)
 		//We check if the Transaction is in the invalidOpenTX stash. When it is in there, and it is valid now, we save
 		//it into the fundsTX and continue like usual. This additional stash does lower the amount of network requests. 
 		tx = storage.ReadOpenTx(txHash)
@@ -705,7 +711,6 @@ func fetchStakeTxData(block *protocol.Block, stakeTxSlice []*protocol.StakeTx, i
 			}
 		}
 
-		//TODO Optimize code (duplicated)
 		tx = storage.ReadOpenTx(txHash)
 		if tx != nil {
 			stakeTx = tx.(*protocol.StakeTx)
@@ -975,7 +980,6 @@ func fetchAggregatedFundsTxData(aggregatedFundsTxHashesSlice [][32]byte, aggrega
 //because there is the case that we might need to go fetch several blocks
 // and have to check the blocks first before changing the state in the correct order.
 func validate(b *protocol.Block, initialSetup bool) error {
-	//TODO Optimize code
 
 	//This mutex is necessary that own-mined blocks and received blocks from the network are not
 	//validated concurrently.
@@ -1081,8 +1085,6 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 
 	//Check block size.
 	if block.GetSize() > activeParameters.Block_size {
-		logger.Printf("BLOCK_SIZE: Blocksize %v > ActiveParam ", block.GetSize())
-		logger.Printf("BLOCK_SIZE: bloomfiltersize %v ", block.GetBloomFilterSize())
 		return nil, nil, nil, nil, nil, nil, errors.New("Block size too large.")
 	}
 
@@ -1209,7 +1211,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	}
 
 	//Merkle Tree validation
-	if protocol.BuildMerkleTree(block).MerkleRoot() != block.MerkleRoot {
+	if block.Aggregated == false && protocol.BuildMerkleTree(block).MerkleRoot() != block.MerkleRoot {
 		return nil, nil, nil, nil, nil,  nil, errors.New("Merkle Root is incorrect.")
 	}
 
@@ -1363,6 +1365,17 @@ func postValidate(data blockData, initialSetup bool) {
 		//It might be that block is not in the openblock storage, but this doesn't matter.
 		storage.DeleteOpenBlock(data.block.Hash)
 		storage.WriteClosedBlock(data.block)
+
+		//Do not empty last three blocks and only if it not aggregated already. TODO Probably rewrite this later.
+		for _, block := range storage.ReadAllClosedBlocks(){
+
+			//Empty all blocks despite the last 3 and genesis block.
+			if !block.Aggregated && block.Height > 0 {
+				if (int(block.Height)) < (int(data.block.Height) - NO_AGGREGATION_LENGTH) {
+					storage.UpdateBlocksToBlocksWithoutTx(block)
+				}
+			}
+		}
 
 		// Write last block to db and delete last block's ancestor.
 		storage.DeleteAllLastClosedBlock()

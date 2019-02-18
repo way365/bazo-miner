@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/bazo-blockchain/bazo-miner/crypto"
 	"github.com/bazo-blockchain/bazo-miner/p2p"
-	"strconv"
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
+	"strconv"
 	"time"
 )
 
@@ -85,6 +85,7 @@ func getState() (state string) {
 	for _, acc := range storage.State {
 		state += fmt.Sprintf("Is root: %v, %v\n", storage.IsRootKey(acc.Hash()), acc)
 	}
+	state += fmt.Sprintf("\n")
 	return state
 }
 
@@ -92,6 +93,9 @@ func initState() (initialBlock *protocol.Block, err error) {
 	var allClosedBlocks []*protocol.Block
 	if p2p.IsBootstrap() {
 		allClosedBlocks = storage.ReadAllClosedBlocks()
+//		for _, blockToValidate := range allClosedBlocks {
+//			logger.Printf("BLOCKS_TO_VALIDATE_ReadAllClosedBlocks (%d) <--> (%d); Aggregated = %t", blockToValidate.Hash[0:8], blockToValidate.HashWithoutTx[0:8], blockToValidate.Aggregated)
+//		}
 	} else {
 		p2p.LastBlockReq()
 		var lastBlock *protocol.Block
@@ -114,6 +118,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 
 		for {
 			p2p.BlockReq(lastBlock.PrevHash)
+			//p2p.BlockReq(lastBlock.PrevHash, lastBlock.PrevHashWithoutTx)
 			select {
 			case encodedBlock := <-p2p.BlockReqChan:
 				lastBlock = lastBlock.Decode(encodedBlock)
@@ -122,7 +127,13 @@ func initState() (initialBlock *protocol.Block, err error) {
 				logger.Println("Timed out")
 			}
 
-			storage.WriteClosedBlock(lastBlock)
+			//write aggregated blocks to the 'closedblockswithouttx' bucket. Else to the normal closedblocks bucket.
+			if lastBlock.Aggregated == true{
+				storage.WriteClosedBlockWithoutTx(lastBlock)
+			} else {
+				storage.WriteClosedBlock(lastBlock)
+			}
+
 			if len(allClosedBlocks) > 0 && allClosedBlocks[len(allClosedBlocks)-1].Hash == lastBlock.Hash {
 				fmt.Printf("Block with height %v already exists", lastBlock.Height)
 			} else {
@@ -130,19 +141,22 @@ func initState() (initialBlock *protocol.Block, err error) {
 			}
 			fmt.Println("Last block: ", lastBlock.Height)
 			if lastBlock.Height == 0 {
-				break;
+				break
 			}
 		}
 	}
 
-	//Switch array order to validate genesis block first
-	storage.AllClosedBlocksAsc = InvertBlockArray(allClosedBlocks)
 
-	if len(storage.AllClosedBlocksAsc) > 0 {
+	if len(allClosedBlocks) > 0 {
 		//Set the last closed block as the initial block
-		initialBlock = storage.AllClosedBlocksAsc[len(storage.AllClosedBlocksAsc)-1]
+		initialBlock = allClosedBlocks[0]
+		for _, blockToValidate := range allClosedBlocks {
+			if blockToValidate.Height > initialBlock.Height {
+				initialBlock = blockToValidate
+			}
+		}
 	} else {
-		initialBlock = newBlock([32]byte{}, [crypto.COMM_PROOF_LENGTH]byte{}, 0)
+		initialBlock = newBlock([32]byte{},[32]byte{}, [crypto.COMM_PROOF_LENGTH]byte{}, 0)
 
 		commitmentProof, err := crypto.SignMessageWithRSAKey(rootCommPrivKey, fmt.Sprint(initialBlock.Height))
 		if err != nil {
@@ -151,14 +165,14 @@ func initState() (initialBlock *protocol.Block, err error) {
 		copy(initialBlock.CommitmentProof[:], commitmentProof[:])
 
 		//Append genesis block to the map and save in storage
-		storage.AllClosedBlocksAsc = append(storage.AllClosedBlocksAsc, initialBlock)
+		allClosedBlocks = append(allClosedBlocks, initialBlock)
 
 		storage.WriteLastClosedBlock(initialBlock)
 		storage.WriteClosedBlock(initialBlock)
 	}
 
 	//Validate all closed blocks and update state
-	for _, blockToValidate := range storage.AllClosedBlocksAsc {
+	for _, blockToValidate := range allClosedBlocks {
 		//Prepare datastructure to fill tx payloads
 		blockDataMap := make(map[[32]byte]blockData)
 
@@ -189,9 +203,14 @@ func initState() (initialBlock *protocol.Block, err error) {
 		logger.Printf("Block validated: %d --> %x, %v", blockToValidate.Height, blockToValidate.Hash[0:8], blockToValidate.Hash[0:8])
 		//logger.Printf("Block validated: %v", blockToValidate)
 
-		//Set the last validated block as the lastBlock
-		lastBlock = blockToValidate
 	}
+
+	for _, blockToValidate := range allClosedBlocks {
+		if blockToValidate.Height > lastBlock.Height {
+			lastBlock = blockToValidate
+		}
+	}
+
 
 	logger.Printf("\n\n%v block(s) validated. Chain good to go.\n------------------------------------------------------------------------\n\n", len(storage.AllClosedBlocksAsc))
 	logger.Printf("Last Block: \n%v\n------------------------------------------------------------------------\n\n", lastBlock)

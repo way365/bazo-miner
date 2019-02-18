@@ -131,6 +131,14 @@ func DeleteAll() {
 		return nil
 	})
 	db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("closedblockswithouttx"))
+		b.ForEach(func(k, v []byte) error {
+			b.Delete(k)
+			return nil
+		})
+		return nil
+	})
+	db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("closedfunds"))
 		b.ForEach(func(k, v []byte) error {
 			b.Delete(k)

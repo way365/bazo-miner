@@ -11,21 +11,22 @@ import (
 )
 
 var (
-	logger              			*log.Logger
-	blockValidation     			= &sync.Mutex{}
-	parameterSlice      			[]Parameters
-	activeParameters    			*Parameters
-	uptodate            			bool
-	slashingDict        			= make(map[[32]byte]SlashingProof)
-	validatorAccAddress 			[64]byte
-	multisigPubKey      			*ecdsa.PublicKey
-	commPrivKey, rootCommPrivKey	*rsa.PrivateKey
-	blockchainSize int			= 0
+	logger                       *log.Logger
+	blockValidation                   			= &sync.Mutex{}
+	parameterSlice               []Parameters
+	activeParameters             *Parameters
+	uptodate                     bool
+	slashingDict                         			= make(map[[32]byte]SlashingProof)
+	validatorAccAddress          [64]byte
+	multisigPubKey               *ecdsa.PublicKey
+	commPrivKey, rootCommPrivKey *rsa.PrivateKey
+	blockchainSize               = 0
 )
 
 //Miner entry point
 func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validatorCommitment, rootCommitment *rsa.PrivateKey) {
 	var err error
+
 
 	validatorAccAddress = crypto.GetAddressFromPubKey(validatorWallet)
 	multisigPubKey = multisigWallet
@@ -34,6 +35,7 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 
 	//Set up logger.
 	logger = storage.InitLogger()
+	logger.Printf("\n\n\n-------------------- START MINER ---------------------")
 
 	parameterSlice = append(parameterSlice, NewDefaultParameters())
 	activeParameters = &parameterSlice[0]
@@ -55,7 +57,7 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 
 	logger.Printf("ActiveConfigParams: \n%v\n------------------------------------------------------------------------\n\nBAZO is Running\n", activeParameters)
 
-	//this is used to generate teh state with aggregated transactions.
+	//this is used to generate the state with aggregated transactions.
 	for _, tx := range storage.ReadAllBootstrapReceivedTransactions() {
 		storage.DeleteOpenTx(tx)
 		storage.WriteClosedTx(tx)
@@ -69,7 +71,7 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 
 //Mining is a constant process, trying to come up with a successful PoW.
 func mining(initialBlock *protocol.Block) {
-	currentBlock := newBlock(initialBlock.Hash, [crypto.COMM_PROOF_LENGTH]byte{}, initialBlock.Height+1)
+	currentBlock := newBlock(initialBlock.Hash, initialBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, initialBlock.Height+1)
 
 	for {
 		err := finalizeBlock(currentBlock)
@@ -85,6 +87,7 @@ func mining(initialBlock *protocol.Block) {
 				//Only broadcast the block if it is valid.
 				broadcastBlock(currentBlock)
 				logger.Printf("Validated block (mined): %vState:\n%v", currentBlock, getState())
+
 			} else {
 				logger.Printf("Mined block (%x) could not be validated: %v\n", currentBlock.Hash[0:8], err)
 			}
@@ -97,7 +100,7 @@ func mining(initialBlock *protocol.Block) {
 		//validated with block validation, so we wait in order to not work on tx data that is already validated
 		//when we finish the block.
 		blockValidation.Lock()
-		nextBlock := newBlock(lastBlock.Hash, [crypto.COMM_PROOF_LENGTH]byte{}, lastBlock.Height+1)
+		nextBlock := newBlock(lastBlock.Hash, lastBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, lastBlock.Height+1)
 		currentBlock = nextBlock
 		prepareBlock(currentBlock)
 		blockValidation.Unlock()
@@ -119,7 +122,7 @@ func initRootKey(rootKey *ecdsa.PublicKey) error {
 	return nil
 }
 
-func CalculateBlockchainSize(currentBlockSize int) {
-	blockchainSize = blockchainSize + currentBlockSize
-	logger.Printf("Blockchain size is: %v bytes\n", blockchainSize)
-}
+//func CalculateBlockchainSize(currentBlockSize int) {
+//	blockchainSize = blockchainSize + currentBlockSize
+//	logger.Printf("Blockchain size is: %v bytes\n", blockchainSize)
+//}

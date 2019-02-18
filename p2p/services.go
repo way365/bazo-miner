@@ -1,8 +1,8 @@
 package p2p
 
 import (
-	"time"
 	"github.com/bazo-blockchain/bazo-miner/storage"
+	"time"
 )
 
 //This is not accessed concurrently, one single goroutine. However, the "peers" are accessed concurrently, therefore the

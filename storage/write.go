@@ -27,6 +27,17 @@ func WriteClosedBlock(block *protocol.Block) (err error) {
 	return err
 }
 
+func WriteClosedBlockWithoutTx(block *protocol.Block) (err error) {
+
+	err = db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("closedblockswithouttx"))
+		err := b.Put(block.HashWithoutTx[:], block.Encode())
+		return err
+	})
+
+	return err
+}
+
 func WriteLastClosedBlock(block *protocol.Block) (err error) {
 
 	err = db.Update(func(tx *bolt.Tx) error {
