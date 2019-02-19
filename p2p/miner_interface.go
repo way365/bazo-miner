@@ -20,18 +20,15 @@ var (
 	AccTxChan    		= make(chan *protocol.AccTx)
 	ConfigTxChan 		= make(chan *protocol.ConfigTx)
 	StakeTxChan  		= make(chan *protocol.StakeTx)
-	AggSenderTxChan    	= make(chan *protocol.AggSenderTx)
-	AggReceiverTxChan  	= make(chan *protocol.AggReceiverTx)
+	AggTxChan    	= make(chan *protocol.AggTx)
 
 	BlockReqChan = make(chan []byte)
 
 	receivedTXStash = make([]*protocol.FundsTx, 0)
-	receivedAggSenderTXStash = make([]*protocol.AggSenderTx, 0)
-	receivedAggReceiverTXStash = make([]*protocol.AggReceiverTx, 0)
+	receivedAggTxStash = make([]*protocol.AggTx, 0)
 
 	fundsTxSashMutex = &sync.Mutex{}
-	aggSenderTxSashMutex = &sync.Mutex{}
-	aggReceiverTxSashMutex = &sync.Mutex{}
+	aggTxSashMutex = &sync.Mutex{}
 )
 
 //This is for blocks and txs that the miner successfully validated.
@@ -71,7 +68,7 @@ func txAlreadyInStash(slice []*protocol.FundsTx, newTXHash [32]byte) bool {
 	return false
 }
 
-func aggSenderTxAlreadyInStash(slice []*protocol.AggSenderTx, newTXHash [32]byte) bool {
+func aggTxAlreadyInStash(slice []*protocol.AggTx, newTXHash [32]byte) bool {
 	for _, txInStash := range slice {
 		if txInStash.Hash() == newTXHash {
 			return true
@@ -80,14 +77,6 @@ func aggSenderTxAlreadyInStash(slice []*protocol.AggSenderTx, newTXHash [32]byte
 	return false
 }
 
-func aggReceiverTxAlreadyInStash(slice []*protocol.AggReceiverTx, newTXHash [32]byte) bool {
-	for _, txInStash := range slice {
-		if txInStash.Hash() == newTXHash {
-			return true
-		}
-	}
-	return false
-}
 
 //These are transactions the miner specifically requested.
 func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
@@ -98,17 +87,17 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 	switch txType {
 	case FUNDSTX_RES:
 		var fundsTx *protocol.FundsTx
-		fundsTx = fundsTx.Decode(payload)
-		if fundsTx == nil {
-			return
+	fundsTx = fundsTx.Decode(payload)
+	if fundsTx == nil {
+		return
 		}
-		// If TX is not received with the last 1000 Transaction, send it through the channel to the TX_FETCH.
-		// Otherwise send nothing. This means, that the TX was sent before and we ensure, that only one TX per Broadcast
-		// request is going through to the FETCH Request. This should prevent the "Received txHash did not correspond to
-		// our request." error
-		// The Mutex Lock is needed, because sometimes the execution is too fast. And even with the stash transactions
-		// are sent multiple times through the channel.
-		// The same concept is used for the AggSenderTx below.
+	// If TX is not received with the last 1000 Transaction, send it through the channel to the TX_FETCH.
+	// Otherwise send nothing. This means, that the TX was sent before and we ensure, that only one TX per Broadcast
+	// request is going through to the FETCH Request. This should prevent the "Received txHash did not correspond to
+	// our request." error
+	// The Mutex Lock is needed, because sometimes the execution is too fast. And even with the stash transactions
+	// are sent multiple times through the channel.
+		// The same concept is used for the AggTx below.
 		fundsTxSashMutex.Lock()
 		if !txAlreadyInStash(receivedTXStash, fundsTx.Hash()) {
 			receivedTXStash = append(receivedTXStash, fundsTx)
@@ -139,39 +128,22 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 			return
 		}
 		StakeTxChan <- stakeTx
-	case AGGSENDERTX_RES:
-		var aggSenderTx *protocol.AggSenderTx
-		aggSenderTx = aggSenderTx.Decode(payload)
-		if aggSenderTx == nil {
+	case AGGTX_RES:
+		var aggTx *protocol.AggTx
+		aggTx = aggTx.Decode(payload)
+		if aggTx == nil {
 			return
 		}
 
-		aggSenderTxSashMutex.Lock()
-		if !aggSenderTxAlreadyInStash(receivedAggSenderTXStash, aggSenderTx.Hash()) {
-			receivedAggSenderTXStash = append(receivedAggSenderTXStash, aggSenderTx)
-			AggSenderTxChan <- aggSenderTx
-			if len(receivedAggSenderTXStash) > 1000 {
-				receivedAggSenderTXStash = append(receivedAggSenderTXStash[:0], receivedAggSenderTXStash[1:]...)
+		aggTxSashMutex.Lock()
+		if !aggTxAlreadyInStash(receivedAggTxStash, aggTx.Hash()) {
+			receivedAggTxStash = append(receivedAggTxStash, aggTx)
+			AggTxChan <- aggTx
+			if len(receivedAggTxStash) > 1000 {
+				receivedAggTxStash = append(receivedAggTxStash[:0], receivedAggTxStash[1:]...)
 			}
 		}
-		aggSenderTxSashMutex.Unlock()
-	case AGGRECEIVERTX_RES:
-		var aggReceiverTx *protocol.AggReceiverTx
-		aggReceiverTx = aggReceiverTx.Decode(payload)
-		if aggReceiverTx == nil {
-			return
-		}
-
-		logger.Printf("Forward: %x", aggReceiverTx.Hash())
-		aggReceiverTxSashMutex.Lock()
-		if !aggReceiverTxAlreadyInStash(receivedAggReceiverTXStash, aggReceiverTx.Hash()) {
-			receivedAggReceiverTXStash = append(receivedAggReceiverTXStash, aggReceiverTx)
-			AggReceiverTxChan <- aggReceiverTx
-			if len(receivedAggReceiverTXStash) > 1000 {
-				receivedAggReceiverTXStash = append(receivedAggReceiverTXStash[:0], receivedAggReceiverTXStash[1:]...)
-			}
-		}
-		aggReceiverTxSashMutex.Unlock()
+		aggTxSashMutex.Unlock()
 	}
 }
 

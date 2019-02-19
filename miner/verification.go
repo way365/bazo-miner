@@ -26,8 +26,8 @@ func verify(tx protocol.Transaction) bool {
 		verified = verifyConfigTx(tx.(*protocol.ConfigTx))
 	case *protocol.StakeTx:
 		verified = verifyStakeTx(tx.(*protocol.StakeTx))
-	case *protocol.AggSenderTx:
-		verified = verifyAggSenderTx(tx.(*protocol.AggSenderTx))
+	case *protocol.AggTx:
+		verified = verifyAggTx(tx.(*protocol.AggTx))
 	}
 
 	return verified
@@ -184,18 +184,18 @@ func verifyStakeTx(tx *protocol.StakeTx) bool {
 	return ecdsa.Verify(&pubKey, txHash[:], r, s)
 }
 
-func verifyAggSenderTx(tx *protocol.AggSenderTx) bool {
+func verifyAggTx(tx *protocol.AggTx) bool {
 	if tx == nil {
 		logger.Println("Transactions does not exist.")
 		return false
 	}
 
 	//Check if accounts are existent
-	accSender, err := storage.GetAccount(tx.From)
-	if tx.From != protocol.SerializeHashContent(accSender.Address) || tx.To == nil || err != nil {
-		logger.Printf("Account non existent. From: %v\nTo: %v\n%v", tx.From, tx.To, err)
-		return false
-	}
+	//accSender, err := storage.GetAccount(tx.From)
+	//if tx.From //!= protocol.SerializeHashContent(accSender.Address) || tx.To == nil || err != nil {
+	//	logger.Printf("Account non existent. From: %v\nTo: %v\n%v", tx.From, tx.To, err)
+	//	return false
+	//}
 
 	return true
 }

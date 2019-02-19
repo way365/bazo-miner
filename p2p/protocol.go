@@ -14,8 +14,7 @@ const (
 	BLOCK_BRDCST       		= 6
 	BLOCK_HEADER_BRDCST		= 7
 	TX_BRDCST_ACK      		= 8
-	AGGSENDERTX_BRDCST      = 9
-	AGGRECEIVERTX_BRDCST    = 10
+	AGGTX_BRDCST      = 9
 
 	FUNDSTX_REQ            	= 20
 	ACCTX_REQ              	= 21
@@ -26,8 +25,8 @@ const (
 	ACC_REQ                	= 26
 	ROOTACC_REQ            	= 27
 	INTERMEDIATE_NODES_REQ 	= 28
-	AGGSENDERTX_REQ			= 29 //FABIO Is new
-	AGGRECEIVERTX_REQ		= 30 //FABIO Is new
+	AGGTX_REQ			= 29
+
 
 	FUNDSTX_RES            	= 40
 	ACCTX_RES              	= 41
@@ -38,8 +37,7 @@ const (
 	ACC_RES                	= 46
 	ROOTACC_RES            	= 47
 	INTERMEDIATE_NODES_RES 	= 48
-	AGGSENDERTX_RES			= 49 //FABIO Is new
-	AGGRECEIVERTX_RES		= 50 //FABIO Is new
+	AGGTX_RES			= 49
 
 	NEIGHBOR_REQ = 130
 	NEIGHBOR_RES = 140

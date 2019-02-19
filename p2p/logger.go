@@ -24,8 +24,7 @@ func InitLogging() {
 	LogMapping[6]  = "BLOCK_BRDCST"
 	LogMapping[7]  = "BLOCK_HEADER_BRDCST"
 	LogMapping[8]  = "TX_BRDCST_ACK"
-	LogMapping[9]  = "AGGSENDERTX_BRDCST"
-	LogMapping[10] = "AGGRECEIVERTX_BRDCST"
+	LogMapping[9]  = "AGGTX_BRDCST"
 
 	LogMapping[20] = "FUNDSTX_REQ"
 	LogMapping[21] = "ACCTX_REQ"
@@ -36,8 +35,7 @@ func InitLogging() {
 	LogMapping[26] = "ACC_REQ"
 	LogMapping[27] = "ROOTACC_REQ"
 	LogMapping[28] = "INTERMEDIATE_NODES_REQ"
-	LogMapping[29] = "AGGSENDERTX_REQ"
-	LogMapping[30] = "AGGRECEIVERTX_REQ"
+	LogMapping[29] = "AGGTX_REQ"
 
 	LogMapping[40] = "FUNDSTX_RES"
 	LogMapping[41] = "ACCTX_RES"
@@ -48,8 +46,7 @@ func InitLogging() {
 	LogMapping[46] = "ACC_RES"
 	LogMapping[47] = "ROOTACC_RES"
 	LogMapping[48] = "INTERMEDIATE_NODES_RES"
-	LogMapping[49] = "AGGSENDERTX_RES"
-	LogMapping[50] = "AGGRECEIVERTX_RES"
+	LogMapping[49] = "AGGTX_RES"
 
 	LogMapping[130] = "NEIGHBOR_REQ"
 	LogMapping[140] = "NEIGHBOR_RES"

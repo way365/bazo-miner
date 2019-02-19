@@ -67,8 +67,8 @@ func BuildMerkleTree(b *Block) *MerkleTree {
 			txHashes = append(txHashes, txHash)
 		}
 	}
-	if b.AggSenderTxData != nil {
-		for _, txHash := range b.AggSenderTxData {
+	if b.AggTxData != nil {
+		for _, txHash := range b.AggTxData {
 			txHashes = append(txHashes, txHash)
 		}
 	}

@@ -27,14 +27,14 @@ func prepareBlock(block *protocol.Block) {
 	nonAggregatableTxCounter := 0
 	blockSize := block.GetSize()+block.GetBloomFilterSize()
 
-	//map where all senders from FundsTx and AggSenderTx are added to. --> this ensures that tx with same sender are only counted once.
+	//map where all senders from FundsTx and AggTx are added to. --> this ensures that tx with same sender are only counted once.
 	storage.DifferentSenders = map[[32]byte]uint32{}
 	storage.DifferentReceivers = map[[32]byte]uint32{}
 	for _, tx := range opentxs {
 		//Switch because with an if statement every transaction would need a getter-method for its type.
 		//Therefore, switch is more code-efficient.
 		switch tx.(type) {
-		case *protocol.FundsTx, *protocol.AggSenderTx:
+		case *protocol.FundsTx, *protocol.AggTx:
 			storage.DifferentSenders[tx.Sender()] = storage.DifferentSenders[tx.Sender()]+1
 			storage.DifferentReceivers[tx.Receiver()] = storage.DifferentReceivers[tx.Receiver()]+1
 		default:
@@ -94,9 +94,7 @@ func (f openTxs) Less(i, j int) bool {
 		return true
 	case *protocol.StakeTx:
 		return true
-	case *protocol.AggSenderTx:
-		return true
-	case *protocol.AggReceiverTx:
+	case *protocol.AggTx:
 		return true
 	}
 
@@ -107,9 +105,7 @@ func (f openTxs) Less(i, j int) bool {
 		return false
 	case *protocol.StakeTx:
 		return false
-	case *protocol.AggSenderTx:
-		return false
-	case *protocol.AggReceiverTx:
+	case *protocol.AggTx:
 		return false
 	}
 

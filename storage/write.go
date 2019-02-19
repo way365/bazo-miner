@@ -53,7 +53,33 @@ func WriteLastClosedBlock(block *protocol.Block) (err error) {
 func WriteOpenTx(transaction protocol.Transaction) {
 	openTxMutex.Lock()
 	defer openTxMutex.Unlock()
+	logger.Printf("writeOpenTx: %x", transaction.Hash())
+
+	if transaction != transaction {
+		logger.Printf("PROBLEM with Transaction %v", transaction)
+	}
+
+	if transaction.Hash() != transaction.Hash() {
+		logger.Printf("PROBLEM with HASH %v", transaction)
+		logger.Printf("PROBLEM with HASH %v", transaction)
+		logger.Printf("PROBLEM with HASH %v", transaction)
+	}
+
+
+
 	txMemPool[transaction.Hash()] = transaction
+	ReadMempool()
+}
+
+func WriteOpenTx2(transaction protocol.Transaction, hash [32]byte) {
+	openTxMutex.Lock()
+	defer openTxMutex.Unlock()
+	logger.Printf("writeOpenTx: %x", transaction.Hash())
+	if transaction.Hash() != hash {
+		logger.Printf("PROBLEM with HASH %v", transaction)
+	}
+	txMemPool[transaction.Hash()] = transaction
+	ReadMempool()
 }
 
 func WriteFundsTxBeforeAggregation(transaction *protocol.FundsTx) {
@@ -105,12 +131,49 @@ func WriteClosedTx(transaction protocol.Transaction) (err error) {
 		bucket = "closedconfigs"
 	case *protocol.StakeTx:
 		bucket = "closedstakes"
-	case *protocol.AggSenderTx:
-		bucket = "closedaggregationssender"
-	case *protocol.AggReceiverTx:
-		bucket = "closedaggregationsreceiver"
+	case *protocol.AggTx:
+		bucket = "closedaggregations"
 	}
 
+	logger.Printf("WriteClosedTx: %x into bucket: %v", transaction.Hash(), bucket)
+
+	if transaction.Hash() != transaction.Hash() {
+		logger.Printf("PROBLEM with HASH %v", transaction)
+	}
+
+	hash := transaction.Hash()
+	err = db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucket))
+		err := b.Put(hash[:], transaction.Encode())
+		return err
+	})
+	nrClosedTransactions = nrClosedTransactions + 1
+	totalTransactionSize = totalTransactionSize + float32(transaction.Size())
+	averageTxSize = totalTransactionSize/nrClosedTransactions
+	return err
+}
+
+func WriteClosedTx2(transaction protocol.Transaction, txhash [32]byte) (err error) {
+
+	var bucket string
+	switch transaction.(type) {
+	case *protocol.FundsTx:
+		bucket = "closedfunds"
+	case *protocol.AccTx:
+		bucket = "closedaccs"
+	case *protocol.ConfigTx:
+		bucket = "closedconfigs"
+	case *protocol.StakeTx:
+		bucket = "closedstakes"
+	case *protocol.AggTx:
+		bucket = "closedaggregations"
+	}
+
+	logger.Printf("WriteClosedTx: %x into bucket: %v", transaction.Hash(), bucket)
+
+	if transaction.Hash() != txhash {
+		logger.Printf("PROBLEM with HASH %v", transaction)
+	}
 
 	hash := transaction.Hash()
 	err = db.Update(func(tx *bolt.Tx) error {

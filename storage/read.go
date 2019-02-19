@@ -204,24 +204,14 @@ func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
 		return staketx.Decode(encodedTx)
 	}
 
-	var aggSenderTx *protocol.AggSenderTx
+	var aggTx *protocol.AggTx
 	db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("closedaggregationssender"))
+		b := tx.Bucket([]byte("closedaggregations"))
 		encodedTx = b.Get(hash[:])
 		return nil
 	})
 	if encodedTx != nil {
-		return aggSenderTx.Decode(encodedTx)
-	}
-
-	var aggReceiverTx *protocol.AggReceiverTx
-	db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("closedaggregationsreceiver"))
-		encodedTx = b.Get(hash[:])
-		return nil
-	})
-	if encodedTx != nil {
-		return aggReceiverTx.Decode(encodedTx)
+		return aggTx.Decode(encodedTx)
 	}
 
 	return nil
@@ -229,10 +219,10 @@ func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
 
 func ReadMempool(){
 	logger.Printf("MemPool_________")
-	//for key := range txMemPool {
-	//	logger.Printf("%x", key)
-	//}
-	//logger.Printf("________________")
+	for tx := range txMemPool {
+		logger.Printf("%x", tx)
+	}
+	logger.Printf("________________")
 	logger.Printf("Mempool_Size: %v", len(txMemPool))
 	logger.Printf("________________")
 

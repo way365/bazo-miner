@@ -109,14 +109,7 @@ func Init(dbname string, bootstrapIpport string) {
 		return nil
 	})
 	db.Update(func(tx *bolt.Tx) error {
-		_, err = tx.CreateBucket([]byte("closedaggregationssender"))
-		if err != nil {
-			return fmt.Errorf(ERROR_MSG+"Create bucket: %s", err)
-		}
-		return nil
-	})
-	db.Update(func(tx *bolt.Tx) error {
-		_, err = tx.CreateBucket([]byte("closedaggregationsreceiver"))
+		_, err = tx.CreateBucket([]byte("closedaggregations"))
 		if err != nil {
 			return fmt.Errorf(ERROR_MSG+"Create bucket: %s", err)
 		}
@@ -140,8 +133,4 @@ func Init(dbname string, bootstrapIpport string) {
 
 func TearDown() {
 	db.Close()
-}
-
-func PrintMemPoolSize(){
-	//logger.Printf("MEMPOOL_SIZE: %v\n", len(txMemPool))
 }
