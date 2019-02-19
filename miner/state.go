@@ -199,8 +199,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 
 
 		//CalculateBlockchainSize(int(blockToValidate.GetSize()))
-		logger.Printf("Block validated: %d --> %x, %v", blockToValidate.Height, blockToValidate.Hash[0:8], blockToValidate.Hash[0:8])
-		logger.Printf("State: %v", getState())
+		logger.Printf("Block validated: %d --> %x, %v == %x, %v", blockToValidate.Height, blockToValidate.Hash[0:8], blockToValidate.Hash[0:8], blockToValidate.HashWithoutTx[0:8], blockToValidate.HashWithoutTx[0:8])
 		//logger.Printf("Block validated: %v", blockToValidate)
 
 	}
@@ -535,7 +534,7 @@ func collectBlockReward(reward uint64, minerHash [32]byte) (err error) {
 
 func collectSlashReward(reward uint64, block *protocol.Block) (err error) {
 	//Check if proof is provided. If proof was incorrect, prevalidation would already have failed.
-	if block.SlashedAddress != [32]byte{} || block.ConflictingBlockHash1 != [32]byte{} || block.ConflictingBlockHash2 != [32]byte{} {
+	if block.SlashedAddress != [32]byte{} || block.ConflictingBlockHash1 != [32]byte{} || block.ConflictingBlockHash2 != [32]byte{} || block.ConflictingBlockHashWithoutTx1 != [32]byte{} || block.ConflictingBlockHashWithoutTx2 != [32]byte{} {
 		var minerAcc, slashedAcc *protocol.Account
 		minerAcc, err = storage.GetAccount(block.Beneficiary)
 		slashedAcc, err = storage.GetAccount(block.SlashedAddress)

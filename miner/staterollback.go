@@ -163,7 +163,7 @@ func collectBlockRewardRollback(reward uint64, minerHash [32]byte) {
 }
 
 func collectSlashRewardRollback(reward uint64, block *protocol.Block) {
-	if block.SlashedAddress != [32]byte{} || block.ConflictingBlockHash1 != [32]byte{} || block.ConflictingBlockHash2 != [32]byte{} {
+	if block.SlashedAddress != [32]byte{} || block.ConflictingBlockHash1 != [32]byte{} || block.ConflictingBlockHash2 != [32]byte{} || block.ConflictingBlockHashWithoutTx1 != [32]byte{} || block.ConflictingBlockHashWithoutTx2 != [32]byte{} {
 		minerAcc, _ := storage.GetAccount(block.Beneficiary)
 		slashedAcc, _ := storage.GetAccount(block.SlashedAddress)
 

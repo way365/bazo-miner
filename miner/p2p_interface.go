@@ -4,9 +4,14 @@ import (
 	"github.com/bazo-blockchain/bazo-miner/p2p"
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
+	"sync"
 )
 
 //The code in this source file communicates with the p2p package via channels
+
+var (
+	processBlockMutex = &sync.Mutex{}
+)
 
 //Constantly listen to incoming data from the network
 func incomingData() {
@@ -19,6 +24,8 @@ func incomingData() {
 //ReceivedBlockStash is a stash with all Blocks received such that we can prevent forking
 func processBlock(payload []byte) {
 
+	processBlockMutex.Lock()
+	defer processBlockMutex.Unlock()
 	//TODO: Maybe a mutex around this function. such that blocks are not sent twice...
 	var block *protocol.Block
 	block = block.Decode(payload)

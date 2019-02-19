@@ -46,6 +46,8 @@ type Block struct {
 	CommitmentProof       [crypto.COMM_PROOF_LENGTH]byte
 	ConflictingBlockHash1 [32]byte
 	ConflictingBlockHash2 [32]byte
+	ConflictingBlockHashWithoutTx1 [32]byte
+	ConflictingBlockHashWithoutTx2 [32]byte
 	StateCopy             map[[32]byte]*Account //won't be serialized, just keeping track of local state changes
 
 	AccTxData    		 [][32]byte
@@ -73,16 +75,18 @@ func (block *Block) HashBlock() [32]byte {
 	}
 
 	blockHash := struct {
-		prevHash              [32]byte
-		prevHashWithoutTx     [32]byte
-		timestamp             int64
-		merkleRoot            [32]byte
-		beneficiary           [32]byte
-		commitmentProof       [crypto.COMM_PROOF_LENGTH]byte
-		slashedAddress        [32]byte
-		conflictingBlockHash1 [32]byte
-		conflictingBlockHash2 [32]byte
-		Aggregated			  bool
+		prevHash              			[32]byte
+		prevHashWithoutTx     			[32]byte
+		timestamp             			int64
+		merkleRoot            			[32]byte
+		beneficiary           			[32]byte
+		commitmentProof       			[crypto.COMM_PROOF_LENGTH]byte
+		slashedAddress        			[32]byte
+		conflictingBlockHash1 			[32]byte
+		conflictingBlockHash2 			[32]byte
+		conflictingBlockHashWithoutTx1 	[32]byte
+		conflictingBlockHashWithoutTx2 	[32]byte
+		Aggregated			  			bool
 	}{
 		block.PrevHash,
 		block.PrevHashWithoutTx,
@@ -93,6 +97,8 @@ func (block *Block) HashBlock() [32]byte {
 		block.SlashedAddress,
 		block.ConflictingBlockHash1,
 		block.ConflictingBlockHash2,
+		block.ConflictingBlockHashWithoutTx1,
+		block.ConflictingBlockHashWithoutTx2,
 		false,
 	}
 	return SerializeHashContent(blockHash)
@@ -104,15 +110,17 @@ func (block *Block) HashBlockWithoutMerkleRoot() [32]byte {
 	}
 
 	blockHash := struct {
-		prevHash              [32]byte
-		prevHashWithoutTx	  [32]byte
-		timestamp             int64
-		beneficiary           [32]byte
-		commitmentProof       [crypto.COMM_PROOF_LENGTH]byte
-		slashedAddress        [32]byte
-		conflictingBlockHash1 [32]byte
-		conflictingBlockHash2 [32]byte
-		Aggregated			  bool
+		prevHash              			[32]byte
+		prevHashWithoutTx	  			[32]byte
+		timestamp             			int64
+		beneficiary           			[32]byte
+		commitmentProof       			[crypto.COMM_PROOF_LENGTH]byte
+		slashedAddress        			[32]byte
+		conflictingBlockHash1 			[32]byte
+		conflictingBlockHash2 			[32]byte
+		conflictingBlockHashWithoutTx1 	[32]byte
+		conflictingBlockHashWithoutTx2 	[32]byte
+		Aggregated			 			bool
 	}{
 		block.PrevHash,
 		block.PrevHashWithoutTx,
@@ -122,6 +130,8 @@ func (block *Block) HashBlockWithoutMerkleRoot() [32]byte {
 		block.SlashedAddress,
 		block.ConflictingBlockHash1,
 		block.ConflictingBlockHash2,
+		block.ConflictingBlockHashWithoutTx1,
+		block.ConflictingBlockHashWithoutTx2,
 		true,
 	}
 	return SerializeHashContent(blockHash)
@@ -180,7 +190,9 @@ func (block *Block) GetBodySize() uint64 {
 		reflect.TypeOf(block.SlashedAddress).Size() +
 		reflect.TypeOf(block.CommitmentProof).Size() +
 		reflect.TypeOf(block.ConflictingBlockHash1).Size() +
-		reflect.TypeOf(block.ConflictingBlockHash2).Size()) +
+		reflect.TypeOf(block.ConflictingBlockHash2).Size() +
+		reflect.TypeOf(block.ConflictingBlockHashWithoutTx1).Size() +
+		reflect.TypeOf(block.ConflictingBlockHashWithoutTx2).Size()) +
 		int(block.GetTxDataSize())
 
 	size += int(block.GetBloomFilterSize())
@@ -215,36 +227,38 @@ func (block *Block) Encode() []byte {
 	}
 
 	encoded := Block{
-		Header:                block.Header,
-		Hash:                  block.Hash,
-		PrevHash:              block.PrevHash,
-		HashWithoutTx:         block.HashWithoutTx,
-		PrevHashWithoutTx:     block.PrevHashWithoutTx,
-		Aggregated:			   block.Aggregated,
-		Nonce:                 block.Nonce,
-		Timestamp:             block.Timestamp,
-		MerkleRoot:            block.MerkleRoot,
-		Beneficiary:           block.Beneficiary,
-		NrAccTx:               block.NrAccTx,
-		NrFundsTx:             block.NrFundsTx,
-		NrConfigTx:            block.NrConfigTx,
-		NrStakeTx:             block.NrStakeTx,
-		NrAggSenderTx:         block.NrAggSenderTx,
-		NrAggReceiverTx:       block.NrAggReceiverTx,
-		NrElementsBF:          block.NrElementsBF,
-		BloomFilter:           block.BloomFilter,
-		SlashedAddress:        block.SlashedAddress,
-		Height:                block.Height,
-		CommitmentProof:	   block.CommitmentProof,
-		ConflictingBlockHash1: block.ConflictingBlockHash1,
-		ConflictingBlockHash2: block.ConflictingBlockHash2,
+		Header:                			block.Header,
+		Hash:                  			block.Hash,
+		PrevHash:              			block.PrevHash,
+		HashWithoutTx:         			block.HashWithoutTx,
+		PrevHashWithoutTx:     			block.PrevHashWithoutTx,
+		Aggregated:			   			block.Aggregated,
+		Nonce:                 			block.Nonce,
+		Timestamp:             			block.Timestamp,
+		MerkleRoot:            			block.MerkleRoot,
+		Beneficiary:           			block.Beneficiary,
+		NrAccTx:               			block.NrAccTx,
+		NrFundsTx:             			block.NrFundsTx,
+		NrConfigTx:            			block.NrConfigTx,
+		NrStakeTx:             			block.NrStakeTx,
+		NrAggSenderTx:         			block.NrAggSenderTx,
+		NrAggReceiverTx:       			block.NrAggReceiverTx,
+		NrElementsBF:          			block.NrElementsBF,
+		BloomFilter:           			block.BloomFilter,
+		SlashedAddress:        			block.SlashedAddress,
+		Height:                			block.Height,
+		CommitmentProof:	   			block.CommitmentProof,
+		ConflictingBlockHash1: 			block.ConflictingBlockHash1,
+		ConflictingBlockHash2: 			block.ConflictingBlockHash2,
+		ConflictingBlockHashWithoutTx1: block.ConflictingBlockHashWithoutTx1,
+		ConflictingBlockHashWithoutTx2: block.ConflictingBlockHashWithoutTx2,
 
-		AccTxData:    		   block.AccTxData,
-		FundsTxData:  		   block.FundsTxData,
-		ConfigTxData: 		   block.ConfigTxData,
-		StakeTxData:  		   block.StakeTxData,
-		AggSenderTxData:	   block.AggSenderTxData,
-		AggReceiverTxData:	   block.AggReceiverTxData,
+		AccTxData:    		   			block.AccTxData,
+		FundsTxData:  		   			block.FundsTxData,
+		ConfigTxData: 		   			block.ConfigTxData,
+		StakeTxData:  		   			block.StakeTxData,
+		AggSenderTxData:	   			block.AggSenderTxData,
+		AggReceiverTxData:	   			block.AggReceiverTxData,
 	}
 
 	buffer := new(bytes.Buffer)
@@ -291,7 +305,6 @@ func (block *Block) Decode(encoded []byte) (b *Block) {
 func (block Block) String() string {
 	return fmt.Sprintf("\n" +
 		"Hash: %x			"+ "Hash Without Tx: %x\n"+
-		"Hash: %d			"+ "Hash Without Tx: %d\n"+
 		"Previous Hash: %x		"+ "Previous Hash Without Tx: %x\n"+
 		"Aggregated: %t\n"+
 		"Nonce: %x\n"+
@@ -307,12 +320,10 @@ func (block Block) String() string {
 		"Total Transactions in this block: %v\n"+
 		"Height: %d\n"+
 		"Commitment Proof: %x\n"+
-		"Commitment Proof: %d\n"+
 		"Slashed Address:%x\n"+
-		"Conflicted Block Hash 1:%x\n"+
-		"Conflicted Block Hash 2:%x\n",
+		"Conflicted Block Hashes 1:%x  =  %x\n"+
+		"Conflicted Block Hashes 2:%x  =  %x\n",
 		block.Hash[0:8], block.HashWithoutTx[0:8],
-		block.Hash[0:8], block.HashWithoutTx[0:8], //TODO remove line
 		block.PrevHash[0:8], block.PrevHashWithoutTx[0:8],
 		block.Aggregated,
 		block.Nonce,
@@ -328,9 +339,8 @@ func (block Block) String() string {
 		uint16(block.NrFundsTx) + uint16(block.NrAccTx) + uint16(block.NrConfigTx) + uint16(block.NrStakeTx) + uint16(block.NrAggSenderTx)+ uint16(block.NrAggReceiverTx),
 		block.Height,
 		block.CommitmentProof[0:8],
-		block.CommitmentProof[0:8], //TODO remove line
 		block.SlashedAddress[0:8],
-		block.ConflictingBlockHash1[0:8],
-		block.ConflictingBlockHash2[0:8],
+		block.ConflictingBlockHash1[0:8], block.ConflictingBlockHashWithoutTx1[0:8],
+		block.ConflictingBlockHash2[0:8], block.ConflictingBlockHashWithoutTx2[0:8],
 	)
 }
