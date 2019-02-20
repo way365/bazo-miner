@@ -20,37 +20,29 @@ var (
 type AggTx struct {
 	Amount 				uint64
 	Fee    				uint64
-	From   				map[[32]byte]int
-	To    				map[[32]byte]int
+	From   				[][32]byte
+	To    				[][32]byte
 	AggregatedTxSlice 	[][32]byte
 	//Aggregated			bool
 }
 
 func ConstrAggTx(amount uint64, fee uint64, from [][32]byte, to [][32]byte, transactions [][32]byte) (tx *AggTx, err error) {
 	tx = new(AggTx)
-	tx.To = map[[32]byte]int{}
-	tx.From = map[[32]byte]int{}
 
 	tx.Amount = amount
 	tx.Fee = fee
+	tx.From = from
+	tx.To = to
 	tx.AggregatedTxSlice = transactions
 	//tx.Aggregated = false
 
-	//Add and count the amount a Wallet is in the receiver list.
-	for _, trx := range to {
-		tx.To[trx] = tx.To[trx] + 1
-	}
-	for _, trx := range from {
-		tx.From[trx] = tx.From[trx] + 1
-	}
+
 
 	return tx, nil
 }
 
 
 func (tx *AggTx) Hash() (hash [32]byte) {
-	hashMutex.Lock()
-	defer hashMutex.Unlock()
 	if tx == nil {
 		//is returning nil better?
 		return [32]byte{}
@@ -59,10 +51,9 @@ func (tx *AggTx) Hash() (hash [32]byte) {
 	txHash := struct {
 		Amount			 	uint64
 		Fee    				uint64
-		From   				map[[32]byte]int
-		To     				map[[32]byte]int
+		From   				[][32]byte
+		To     				[][32]byte
 		AggregatedTxSlice 	[][32]byte
-
 	}{
 		tx.Amount,
 		tx.Fee,

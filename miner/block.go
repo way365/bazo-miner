@@ -366,11 +366,13 @@ func AggregateFundsTransactions(SortedAndSelectedFundsTx []*protocol.FundsTx, bl
 			tx.Aggregated = true
 		}
 
-		//This is for visualization purposes
+		// Remove Sender or Receiver if duplicated
 		if len(nrOfSender) < len(nrOfReceivers) {
 			logger.Printf("AGGREGATE: Sender %x ready for aggregation:", SortedAndSelectedFundsTx[0].From[0:8])
+			transactionSenders = transactionSenders[:1]
 		} else if len(nrOfSender) > len(nrOfReceivers){
 			logger.Printf("AGGREGATE: Receiver %x ready for aggregation:", SortedAndSelectedFundsTx[0].To[0:8])
+			transactionReceivers = transactionReceivers[:1]
 		}
 		for _, tx := range SortedAndSelectedFundsTx {
 			logger.Printf("  From: %x To: %x, TxCnt: %d  --  %x", tx.From[0:4], tx.To[0:4], tx.TxCnt, tx.Hash())
@@ -394,9 +396,7 @@ func AggregateFundsTransactions(SortedAndSelectedFundsTx []*protocol.FundsTx, bl
 		logger.Printf("        -------")
 
 		addAggTxFinal(block, aggTx)
-		logger.Printf("SendToWriteOpenTransaction %x" ,aggTx.Hash())
 		storage.WriteOpenTx(aggTx)
-		storage.WriteOpenTx2(aggTx, aggTx.Hash())
 
 		SortedAndSelectedFundsTx = nil
 		amount = 0
@@ -1204,7 +1204,6 @@ func postValidate(data blockData, initialSetup bool) {
 			//Delete AggTx and write it to closed Tx.
 			logger.Printf("write closed and delete open Tx: %x", tx.Hash())
 			storage.WriteClosedTx(tx)
-			storage.WriteClosedTx2(tx, tx.Hash())
 			storage.DeleteOpenTx(tx)
 		}
 
