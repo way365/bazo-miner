@@ -30,6 +30,8 @@ func prepareBlock(block *protocol.Block) {
 	//map where all senders from FundsTx and AggTx are added to. --> this ensures that tx with same sender are only counted once.
 	storage.DifferentSenders = map[[32]byte]uint32{}
 	storage.DifferentReceivers = map[[32]byte]uint32{}
+
+	//TODO Better check if block is full.
 	for _, tx := range opentxs {
 		//Switch because with an if statement every transaction would need a getter-method for its type.
 		//Therefore, switch is more code-efficient.
@@ -56,12 +58,9 @@ func prepareBlock(block *protocol.Block) {
 		}
 	}
 
-	//logger.Printf("DifferentSenders:   %x", storage.DifferentSenders)
-	//logger.Printf("DifferentReceivers: %x", storage.DifferentReceivers)
-
-	// In miner\block.go --> AddFundsTx the transactions get added into storage.FundsTxBeforeAggregation.
+	// In miner\block.go --> AddFundsTx the transactions get added into storage.TxBeforeAggregation.
 	if len(storage.ReadFundsTxBeforeAggregation()) > 0 {
-		sortFundsTxBeforeAggregation(storage.ReadFundsTxBeforeAggregation())
+		sortTxBeforeAggregation(storage.ReadFundsTxBeforeAggregation())
 		splitSortedAggregatableTransactions(block)
 	}
 

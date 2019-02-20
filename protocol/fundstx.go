@@ -94,15 +94,16 @@ func (tx *FundsTx) Hash() (hash [32]byte) {
 func (tx *FundsTx) Encode() (encodedTx []byte) {
 	// Encode
 	encodeData := FundsTx{
-		Header: tx.Header,
-		Amount: tx.Amount,
-		Fee:    tx.Fee,
-		TxCnt:  tx.TxCnt,
-		From:   tx.From,
-		To:     tx.To,
-		Sig1:   tx.Sig1,
-		Sig2:   tx.Sig2,
-		Data:   tx.Data,
+		Header: 	tx.Header,
+		Amount: 	tx.Amount,
+		Fee:    	tx.Fee,
+		TxCnt:  	tx.TxCnt,
+		From:   	tx.From,
+		To:     	tx.To,
+		Sig1:   	tx.Sig1,
+		Sig2:   	tx.Sig2,
+		Data:   	tx.Data,
+		Aggregated: tx.Aggregated,
 	}
 	buffer := new(bytes.Buffer)
 	gob.NewEncoder(buffer).Encode(encodeData)
@@ -133,7 +134,8 @@ func (tx FundsTx) String() string {
 			"To: %x\n"+
 			"Sig1: %x\n"+
 			"Sig2: %x\n"+
-			"Data: %v\n",
+			"Data: %v\n"+
+			"Aggregated: %t",
 		tx.Header,
 		tx.Amount,
 		tx.Fee,
@@ -143,5 +145,6 @@ func (tx FundsTx) String() string {
 		tx.Sig1[0:8],
 		tx.Sig2[0:8],
 		tx.Data,
+		tx.Aggregated,
 	)
 }

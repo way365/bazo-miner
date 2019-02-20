@@ -261,7 +261,6 @@ func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
 	//Add the tx hash to the block header and write it to open storage (non-validated transactions).
 	//b.FundsTxData = append(b.FundsTxData, tx.Hash())
 
-	//storage.FundsTxBeforeAggregation = append(storage.FundsTxBeforeAggregation, tx)
 	storage.WriteFundsTxBeforeAggregation(tx)
 	//logger.Printf("Added tx (%x) to the slice: %v", tx.Hash(), *tx)
 	//logger.Printf("From: %x To: %x, TxCnt: %d  --  %x", tx.From[0:4], tx.To[0:4], tx.TxCnt, tx.Hash())
@@ -281,7 +280,7 @@ func addAggTxFinal(b *protocol.Block, tx *protocol.AggTx) error {
 
 func splitSortedAggregatableTransactions(b *protocol.Block){
 
-	txToAggregate := make([]*protocol.FundsTx, 0)
+	txToAggregate := make([]protocol.Transaction, 0)
 	moreTransactionsToAggregate := true
 
 	for moreTransactionsToAggregate {
@@ -301,11 +300,6 @@ func splitSortedAggregatableTransactions(b *protocol.Block){
 					storage.DifferentReceivers[tx.To] = storage.DifferentReceivers[tx.To] - 1
 				}
 			}
-			AggregateFundsTransactions(txToAggregate, b, 0)
-			for _, tx := range txToAggregate {
-				storage.DeleteFundsTxBeforeAggregation(tx.Hash())
-			}
-			txToAggregate = txToAggregate[:0]
 		} else {
 			for _, tx := range storage.ReadFundsTxBeforeAggregation() {
 				if tx.To == addressReceiver {
@@ -314,12 +308,16 @@ func splitSortedAggregatableTransactions(b *protocol.Block){
 					storage.DifferentSenders[tx.From] = storage.DifferentSenders[tx.From] - 1
 				}
 			}
-			AggregateFundsTransactions(txToAggregate, b, 1)
-			for _, tx := range txToAggregate {
-				storage.DeleteFundsTxBeforeAggregation(tx.Hash())
-			}
-			txToAggregate = txToAggregate[:0]
 		}
+
+		//Aggregate Transactions
+		AggregateTransactions(txToAggregate, b)
+
+		//Delete transaction which can be aggregated from the FundsTxBeforeTransaction Slice
+		for _, tx := range txToAggregate {
+			storage.DeleteFundsTxBeforeAggregation(tx.Hash())
+		}
+		txToAggregate = txToAggregate[:0]
 
 		if len(storage.ReadFundsTxBeforeAggregation()) > 0 {
 			moreTransactionsToAggregate = true
@@ -329,7 +327,22 @@ func splitSortedAggregatableTransactions(b *protocol.Block){
 	}
 
 	storage.DeleteAllFundsTxBeforeAggregation()
+}
 
+func searchTransactionsInHistoricBlocks(address [32]byte) (historicTransactions []protocol.Transaction) {
+
+	for _, block := range storage.ReadAllClosedBlocksWithTransactions() {
+
+		//Read all FundsTxIncluded in the block
+		for _, txHash := range block.FundsTxData {
+
+			tx := storage.ReadClosedTx(txHash)
+			if tx.(*protocol.FundsTx).Aggregated == false {
+				historicTransactions = append(historicTransactions, tx)
+			}
+		}
+	}
+	return historicTransactions
 }
 
 func getMaxKeyAndValueFormMap(m map[[32]byte]uint32) (uint32, [32]byte) {
@@ -345,7 +358,7 @@ func getMaxKeyAndValueFormMap(m map[[32]byte]uint32) (uint32, [32]byte) {
 	return max, biggestK
 }
 
-func AggregateFundsTransactions(SortedAndSelectedFundsTx []*protocol.FundsTx, block *protocol.Block, selection int ) error {
+func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, block *protocol.Block) error {
 	if len(SortedAndSelectedFundsTx) > 1 {
 
 		var transactionHashes [][32]byte
@@ -357,25 +370,45 @@ func AggregateFundsTransactions(SortedAndSelectedFundsTx []*protocol.FundsTx, bl
 
 		//Sum up Amount, copy sender and receiver to correct slices and to map to check if aggregation by sender or receiver.
 		for _, tx := range SortedAndSelectedFundsTx {
-			amount += tx.Amount
-			transactionSenders = append(transactionSenders, tx.From)
-			nrOfSender[tx.From] = nrOfSender[tx.From]
-			transactionReceivers = append(transactionReceivers, tx.To)
-			nrOfReceivers[tx.To] = nrOfReceivers[tx.To]
-			transactionHashes = append(transactionHashes, tx.Hash())
-			tx.Aggregated = true
+
+			switch tx.(type) {
+			case *protocol.AggTx:
+				trx := tx.(*protocol.AggTx)
+				amount += trx.Amount
+				transactionSenders = append(transactionSenders, trx.From...)
+				transactionReceivers = append(transactionReceivers, trx.To...)
+
+
+				if len(trx.From) == 1 {
+					nrOfSender[trx.From[0]] = nrOfSender[trx.From[0]]
+				} else if len(trx.To) == 1 {
+					nrOfSender[trx.To[0]] = nrOfSender[trx.To[0]]
+				}
+
+				transactionHashes = append(transactionHashes, trx.Hash())
+				trx.Aggregated = true
+			case *protocol.FundsTx :
+				trx := tx.(*protocol.FundsTx)
+				amount += trx.Amount
+				transactionSenders = append(transactionSenders, trx.From)
+				nrOfSender[trx.From] = nrOfSender[trx.From]
+				transactionReceivers = append(transactionReceivers, trx.To)
+				nrOfReceivers[trx.To] = nrOfReceivers[trx.To]
+				transactionHashes = append(transactionHashes, trx.Hash())
+				trx.Aggregated = true
+			}
 		}
 
 		// Remove Sender or Receiver if duplicated
 		if len(nrOfSender) < len(nrOfReceivers) {
-			logger.Printf("AGGREGATE: Sender %x ready for aggregation:", SortedAndSelectedFundsTx[0].From[0:8])
+			logger.Printf("AGGREGATE: Sender %x ready for aggregation:", transactionSenders[0])
 			transactionSenders = transactionSenders[:1]
 		} else if len(nrOfSender) > len(nrOfReceivers){
-			logger.Printf("AGGREGATE: Receiver %x ready for aggregation:", SortedAndSelectedFundsTx[0].To[0:8])
+			logger.Printf("AGGREGATE: Receiver %x ready for aggregation:", transactionReceivers[0])
 			transactionReceivers = transactionReceivers[:1]
 		}
 		for _, tx := range SortedAndSelectedFundsTx {
-			logger.Printf("  From: %x To: %x, TxCnt: %d  --  %x", tx.From[0:4], tx.To[0:4], tx.TxCnt, tx.Hash())
+			logger.Printf("  %x", tx.Hash())
 		}
 
 		//Create Transactions
@@ -405,7 +438,7 @@ func AggregateFundsTransactions(SortedAndSelectedFundsTx []*protocol.FundsTx, bl
 
 
 	} else if len(SortedAndSelectedFundsTx) > 0{
-		addFundsTxFinal(block, SortedAndSelectedFundsTx[0])
+		addFundsTxFinal(block, SortedAndSelectedFundsTx[0].(*protocol.FundsTx))
 	} else {
 		err := errors.New("NullPointer")
 		return err
@@ -459,7 +492,7 @@ func (ms *multiSorter) Less(i, j int) bool {
 	return ms.less[k](p, q)
 }
 
-func sortFundsTxBeforeAggregation(Slice []*protocol.FundsTx) {
+func sortTxBeforeAggregation(Slice []*protocol.FundsTx) {
 	//These Functions are inserted in the OrderBy function above. According to them the slice will be sorted.
 	sender := func(c1, c2 *protocol.FundsTx) bool {
 		return string(c1.From[:32]) < string(c2.From[:32])

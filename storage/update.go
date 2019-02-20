@@ -24,5 +24,27 @@ func BlockReadyToAggregate(block *protocol.Block) bool {
 		return true
 	}
 
-	return false
+	//Check if all FundsTransactions are aggregated. If not, block cannot be moved to the empty blocks bucket.
+	for _, txHash := range block.FundsTxData {
+		tx := ReadClosedTx(txHash).(*protocol.FundsTx)
+
+		if tx.Aggregated == false {
+			logger.Printf("Transaction (%x) not aggregated Yet.",txHash[0:8])
+			return false
+		}
+
+//		if tx.Aggregated == false {
+//			tx.Aggregated = true
+//			WriteClosedTx(tx)
+//			logger.Printf("UPDATE: TX %x --> Aggregated %t", txHash[0:8], tx.Aggregated)
+//		}
+//
+//		if tx.Aggregated == true {
+//			logger.Printf("UPDATE: TX %x --> Already aggregated (Aggregated %t)", txHash[0:8], tx.Aggregated)
+//		}
+	}
+
+	//TODO Same check for aggTx is needed. Tey can also be aggregated.
+
+	return true
 }

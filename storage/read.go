@@ -73,6 +73,32 @@ func ReadLastClosedBlock() (block *protocol.Block) {
 	return block
 }
 
+func ReadAllClosedBlocksWithTransactions() (allClosedBlocks []*protocol.Block) {
+
+	//This does return all blocks which are either in closedblocks or closedblockswithouttx bucket of the Database.
+	//They are not ordered at teh request, but this does actually not matter. Because it will be ordered below
+	block := ReadLastClosedBlock()
+	if  block != nil {
+		db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte("closedblocks"))
+			b.ForEach(func(k, v []byte) error {
+				if v != nil {
+					encodedBlock := v
+					block = block.Decode(encodedBlock)
+					allClosedBlocks = append(allClosedBlocks, block)
+				}
+				return nil
+			})
+			return nil
+		})
+	}
+
+	//blocks are sorted here.
+	sort.Sort(ByHeight(allClosedBlocks))
+
+	return allClosedBlocks
+}
+
 //This method does read all blocks in closedBlocks & closedblockswithouttx.
 func ReadAllClosedBlocks() (allClosedBlocks []*protocol.Block) {
 
@@ -129,13 +155,13 @@ func ReadOpenTx(hash [32]byte) (transaction protocol.Transaction) {
 	return txMemPool[hash]
 }
 
-func ReadFundsTxBeforeAggregation() ([]*protocol.FundsTx){
+func ReadFundsTxBeforeAggregation() ([]*protocol.FundsTx) {
 	openFundsTxBeforeAggregationMutex.Lock()
 	defer openFundsTxBeforeAggregationMutex.Unlock()
 	return FundsTxBeforeAggregation
 }
 
-func ReadBootstrapReceivedTransactions(hash [32]byte) (transaction protocol.Transaction) {
+	func ReadBootstrapReceivedTransactions(hash [32]byte) (transaction protocol.Transaction) {
 	return bootstrapReceivedMemPool[hash]
 }
 

@@ -23,7 +23,7 @@ type AggTx struct {
 	From   				[][32]byte
 	To    				[][32]byte
 	AggregatedTxSlice 	[][32]byte
-	//Aggregated			bool
+	Aggregated			bool
 }
 
 func ConstrAggTx(amount uint64, fee uint64, from [][32]byte, to [][32]byte, transactions [][32]byte) (tx *AggTx, err error) {
@@ -34,7 +34,7 @@ func ConstrAggTx(amount uint64, fee uint64, from [][32]byte, to [][32]byte, tran
 	tx.From = from
 	tx.To = to
 	tx.AggregatedTxSlice = transactions
-	//tx.Aggregated = false
+	tx.Aggregated = false
 
 
 
@@ -75,7 +75,7 @@ func (tx *AggTx) Encode() (encodedTx []byte) {
 		From:					tx.From,
 		To:    					tx.To,
 		AggregatedTxSlice: 		tx.AggregatedTxSlice,
-		//Aggregated:				tx.Aggregated,
+		Aggregated:				tx.Aggregated,
 	}
 	buffer := new(bytes.Buffer)
 	gob.NewEncoder(buffer).Encode(encodeData)
@@ -105,7 +105,8 @@ func (tx AggTx) String() string {
 			"From: %x\n"+
 			"To: %x\n"+
 			"Transactions: %x\n"+
-			"#Tx: %v\n",
+			"#Tx: %v\n"+
+			"Aggregated: %t",
 		tx.Hash(),
 		tx.Amount,
 		tx.Fee,
@@ -113,6 +114,7 @@ func (tx AggTx) String() string {
 		tx.To,
 		tx.AggregatedTxSlice,
 		len(tx.AggregatedTxSlice),
+		tx.Aggregated,
 	)
 }
 
