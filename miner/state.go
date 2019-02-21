@@ -283,6 +283,12 @@ func aggTxStateChange(txSlice []*protocol.AggTx) (err error) {
 
 func fundsStateChange(txSlice []*protocol.FundsTx) (err error) {
 	for _, tx := range txSlice {
+
+		//If transaction is in closed tx, the state was adjusted already.
+		if storage.ReadClosedTx(tx.Hash()) != nil {
+			continue
+		}
+
 		var rootAcc *protocol.Account
 		//Check if we have to issue new coins (in case a root account signed the tx)
 		if rootAcc, err = storage.GetRootAccount(tx.From); err != nil {
@@ -305,7 +311,7 @@ func fundsStateChange(txSlice []*protocol.FundsTx) (err error) {
 
 		//Check transaction counter
 		if tx.TxCnt != accSender.TxCnt {
-			err = errors.New(fmt.Sprintf("Sender txCnt does not match: %v (tx.txCnt) vs. %v (state txCnt).", tx.TxCnt, accSender.TxCnt))
+			err = errors.New(fmt.Sprintf("Sender txCnt in %x does not match: %v (tx.txCnt) vs. %v (state txCnt).", tx.Hash(), tx.TxCnt, accSender.TxCnt))
 		}
 
 		//Check sender balance

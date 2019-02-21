@@ -80,7 +80,7 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 		for _, block := range storage.ReadReceivedBlockStash() {
 			if block.Hash == newBlock.PrevHash {
 				newBlock = block
-				continue OUTER
+				continue OUTER //TODO instead of continue and then with an if below the for going to the for {...}
 			}
 		}
 

@@ -109,6 +109,8 @@ func WriteClosedTx(transaction protocol.Transaction) (err error) {
 		bucket = "closedaggregations"
 	}
 
+	//logger.Printf("Close Transaction: %v", transaction)
+
 	hash := transaction.Hash()
 	err = db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))

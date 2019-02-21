@@ -329,7 +329,7 @@ func splitSortedAggregatableTransactions(b *protocol.Block){
 	storage.DeleteAllFundsTxBeforeAggregation()
 }
 
-func searchTransactionsInHistoricBlocks(address [32]byte) (historicTransactions []protocol.Transaction) {
+func searchTransactionsInHistoricBlocks(searchAdressSender [32]byte, searchAdressReceiver [32]byte) (historicTransactions []protocol.Transaction) {
 
 	for _, block := range storage.ReadAllClosedBlocksWithTransactions() {
 
@@ -337,9 +337,25 @@ func searchTransactionsInHistoricBlocks(address [32]byte) (historicTransactions 
 		for _, txHash := range block.FundsTxData {
 
 			tx := storage.ReadClosedTx(txHash)
-			if tx.(*protocol.FundsTx).Aggregated == false {
-				historicTransactions = append(historicTransactions, tx)
+			switch tx.(type){
+			case *protocol.FundsTx:
+				tx := tx.(*protocol.FundsTx)
+				if tx.Aggregated == false  && (tx.From == searchAdressSender || tx.To == searchAdressReceiver) {
+					logger.Printf("   Found FundsTx (%x) in (%x) wich can be aggregated now.", tx.Hash(), block.Hash[0:8])
+					historicTransactions = append(historicTransactions, tx)
+					tx.Aggregated = true
+					storage.WriteClosedTx(tx)
+				}
+			case *protocol.AggTx:
+				tx := tx.(*protocol.AggTx)
+				if tx.Aggregated == false  && (tx.From[0] == searchAdressSender || tx.To[0] == searchAdressReceiver) {
+					logger.Printf("   Found AggTx (%x) in (%x) wich can be aggregated now.", tx.Hash(), block.Hash[0:8])
+					historicTransactions = append(historicTransactions, tx)
+					tx.Aggregated = true
+					storage.WriteClosedTx(tx)
+				}
 			}
+
 		}
 	}
 	return historicTransactions
@@ -359,14 +375,15 @@ func getMaxKeyAndValueFormMap(m map[[32]byte]uint32) (uint32, [32]byte) {
 }
 
 func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, block *protocol.Block) error {
-	if len(SortedAndSelectedFundsTx) > 1 {
+
 
 		var transactionHashes [][32]byte
 		var transactionReceivers [][32]byte
 		var transactionSenders [][32]byte
-		var nrOfSender = map[[32]byte]uint32{}
+		var nrOfSenders = map[[32]byte]uint32{}
 		var nrOfReceivers = map[[32]byte]uint32{}
 		var amount uint64
+		var historicTransactions []protocol.Transaction
 
 		//Sum up Amount, copy sender and receiver to correct slices and to map to check if aggregation by sender or receiver.
 		for _, tx := range SortedAndSelectedFundsTx {
@@ -380,38 +397,78 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 
 
 				if len(trx.From) == 1 {
-					nrOfSender[trx.From[0]] = nrOfSender[trx.From[0]]
+					nrOfSenders[trx.From[0]] = nrOfSenders[trx.From[0]]
 				} else if len(trx.To) == 1 {
-					nrOfSender[trx.To[0]] = nrOfSender[trx.To[0]]
+					nrOfSenders[trx.To[0]] = nrOfSenders[trx.To[0]]
 				}
 
 				transactionHashes = append(transactionHashes, trx.Hash())
-				trx.Aggregated = true
 			case *protocol.FundsTx :
 				trx := tx.(*protocol.FundsTx)
 				amount += trx.Amount
 				transactionSenders = append(transactionSenders, trx.From)
-				nrOfSender[trx.From] = nrOfSender[trx.From]
+				nrOfSenders[trx.From] = nrOfSenders[trx.From]
 				transactionReceivers = append(transactionReceivers, trx.To)
 				nrOfReceivers[trx.To] = nrOfReceivers[trx.To]
 				transactionHashes = append(transactionHashes, trx.Hash())
-				trx.Aggregated = true
 			}
 		}
 
-		// Remove Sender or Receiver if duplicated
-		if len(nrOfSender) < len(nrOfReceivers) {
-			logger.Printf("AGGREGATE: Sender %x ready for aggregation:", transactionSenders[0])
-			transactionSenders = transactionSenders[:1]
-		} else if len(nrOfSender) > len(nrOfReceivers){
-			logger.Printf("AGGREGATE: Receiver %x ready for aggregation:", transactionReceivers[0])
-			transactionReceivers = transactionReceivers[:1]
-		}
-		for _, tx := range SortedAndSelectedFundsTx {
-			logger.Printf("  %x", tx.Hash())
+		// Remove Sender or Receiver if duplicated, set addresses by which historic transactions should be searched.
+		// If Zero-32byte array is sent, it will not find any addresses, because BAZOAccountAddresses
+		if len(nrOfSenders) == len(nrOfReceivers){
+			//Here transactions are searched to aggregate. if one is fund, it will aggregate accordingly.
+			breakingForLoop := false
+			for _, block := range storage.ReadAllClosedBlocksWithTransactions() {
+				//Search All fundsTx
+				for _, fundsTxHash := range block.FundsTxData {
+					trx := storage.ReadClosedTx(fundsTxHash)
+					if trx.(*protocol.FundsTx).From == transactionSenders[0] {
+						historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
+						breakingForLoop = true
+						break
+					} else if trx.(*protocol.FundsTx).To == transactionReceivers[0] {
+						historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
+						breakingForLoop = true
+						break
+					}
+				}
+				if breakingForLoop == true {
+					break
+				}
+
+				//Search all aggTx
+				for _, aggTxHash := range block.AggTxData {
+					trx := storage.ReadClosedTx(aggTxHash).(*protocol.AggTx)
+					if len(trx.From) == 1 && trx.From[0] == transactionSenders[0]{
+						historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
+						breakingForLoop = true
+						break
+					} else if len(trx.To) == 1 && trx.To[0] == transactionReceivers[0]{
+						historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
+						breakingForLoop = true
+						break
+					}
+				}
+				if breakingForLoop == true {
+					break
+				}
+			}
+		} else if len(nrOfSenders) < len(nrOfReceivers) {
+			historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
+		} else if len(nrOfSenders) > len(nrOfReceivers) {
+			historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
 		}
 
-		//Create Transactions
+
+
+		for _, tx := range historicTransactions {
+			transactionHashes = append(transactionHashes, tx.Hash())
+		}
+
+	if len(transactionHashes) > 1 {
+
+		//Create Aggregated Transaction
 		aggTx, err := protocol.ConstrAggTx(
 			amount,
 			FEE_MINIMUM,
@@ -425,17 +482,19 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 			return err
 		}
 
+		//Print aggregated Transaction
 		logger.Printf("AGGTX:  -------%v", aggTx)
 		logger.Printf("        -------")
 
+		//Add Aggregated transaction and write to open storage
 		addAggTxFinal(block, aggTx)
 		storage.WriteOpenTx(aggTx)
 
+		//Sett all back to "zero"
 		SortedAndSelectedFundsTx = nil
 		amount = 0
 		transactionReceivers = nil
 		transactionHashes = nil
-
 
 	} else if len(SortedAndSelectedFundsTx) > 0{
 		addFundsTxFinal(block, SortedAndSelectedFundsTx[0].(*protocol.FundsTx))
@@ -1231,10 +1290,20 @@ func postValidate(data blockData, initialSetup bool) {
 			//delete FundsTx per aggTx in open storage and write them to the closed storage.
 			for _, aggregatedTxHash := range tx.AggregatedTxSlice {
 				trx := storage.ReadOpenTx(aggregatedTxHash)
+				if trx == nil {
+					trx = storage.ReadClosedTx(aggregatedTxHash)
+				}
+				switch trx.(type){
+				case *protocol.AggTx:
+					trx.(*protocol.AggTx).Aggregated = true
+				case *protocol.FundsTx:
+					trx.(*protocol.FundsTx).Aggregated = true
+				}
 				storage.WriteClosedTx(trx)
 				storage.DeleteOpenTx(trx)
 			}
 			//Delete AggTx and write it to closed Tx.
+			tx.Aggregated = false
 			logger.Printf("write closed and delete open Tx: %x", tx.Hash())
 			storage.WriteClosedTx(tx)
 			storage.DeleteOpenTx(tx)
