@@ -9,9 +9,9 @@ func UpdateBlocksToBlocksWithoutTx(block *protocol.Block) (err error){
 
 	if BlockReadyToAggregate(block) {
 		block.Aggregated = true
-		logger.Printf("UPDATE: Write (%x) into emptyBlockBucket as (%x)", block.Hash[0:8], block.HashWithoutTx[0:8])
 		WriteClosedBlockWithoutTx(block)
 		DeleteClosedBlock(block.Hash)
+		logger.Printf("UPDATE: Write (%x) into emptyBlockBucket as (%x)", block.Hash[0:8], block.HashWithoutTx[0:8])
 		return err
 	}
 	return
@@ -34,17 +34,23 @@ func BlockReadyToAggregate(block *protocol.Block) bool {
 		tx := ReadClosedTx(txHash).(*protocol.FundsTx)
 
 		if tx.Aggregated == false {
-			logger.Printf("Transaction (%x) not aggregated Yet.", txHash[0:8])
 			return false
 		}
-		logger.Printf("Transaction (%x) aggregated.", txHash[0:8])
 	}
 
-	logger.Printf("All Funds Transactions in %x aggregated", block.Hash[0:8])
+	for _, txHash := range block.AggTxData {
+		tx := ReadClosedTx(txHash).(*protocol.AggTx)
 
+		if tx.Aggregated == false {
+			return false
+		}
+	}
 
-
-	//TODO Same check for aggTx is needed. Tey can also be aggregated.
+	//All TX are aggregated and can be emptied.
+	block.FundsTxData = nil
+	block.NrFundsTx = 0
+	block.AggTxData = nil
+	block.NrAggTx = 0
 
 	return true
 }

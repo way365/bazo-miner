@@ -36,8 +36,6 @@ func ConstrAggTx(amount uint64, fee uint64, from [][32]byte, to [][32]byte, tran
 	tx.AggregatedTxSlice = transactions
 	tx.Aggregated = false
 
-
-
 	return tx, nil
 }
 

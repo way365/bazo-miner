@@ -7,6 +7,7 @@ import (
 	"github.com/bazo-blockchain/bazo-miner/p2p"
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -185,7 +186,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 
 			blockDataMap[blockToValidate.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, blockToValidate}
 
-			err = validateState(blockDataMap[blockToValidate.Hash])
+			err = validateState(blockDataMap[blockToValidate.Hash], true)
 			if err != nil {
 				return nil, errors.New(fmt.Sprintf("Block (%x) could not be statevalidated: %v\n", blockToValidate.Hash[0:8], err))
 			}
@@ -255,9 +256,9 @@ func accStateChange(txSlice []*protocol.AccTx) error {
 }
 
 //this method does inititate the state change for aggregated Transactions. It does
-func aggTxStateChange(txSlice []*protocol.AggTx) (err error) {
+func aggTxStateChange(txSlice []*protocol.AggTx, initialSetup bool) (err error) {
 	for _, tx1 := range txSlice {
-		var fundsFxSlice []*protocol.FundsTx
+		var fundsTxSlice []*protocol.FundsTx
 		for _, tx2 := range tx1.AggregatedTxSlice {
 			//Fetch all aggregated open Funds transactions for state validation.
 			trx := storage.ReadOpenTx(tx2)
@@ -267,25 +268,32 @@ func aggTxStateChange(txSlice []*protocol.AggTx) (err error) {
 
 			switch trx.(type) {
 			case *protocol.FundsTx:
-				fundsFxSlice = append(fundsFxSlice, trx.(*protocol.FundsTx))
+				fundsTxSlice = append(fundsTxSlice, trx.(*protocol.FundsTx))
 			}
-			//fundsFxSlice = append(fundsFxSlice, trx)
+			//fundsTxSlice = append(fundsTxSlice, trx)
 		}
 
-		if err := fundsStateChange(fundsFxSlice); err != nil {
+		sort.Sort(ByTxCount(fundsTxSlice))
+
+		if err := fundsStateChange(fundsTxSlice, initialSetup); err != nil {
 			return err
 		}
-		fundsFxSlice = nil
+		fundsTxSlice = nil
 	}
 
 	return nil
 }
 
-func fundsStateChange(txSlice []*protocol.FundsTx) (err error) {
+type ByTxCount []*protocol.FundsTx
+func (a ByTxCount) Len() int           { return len(a) }
+func (a ByTxCount) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByTxCount) Less(i, j int) bool { return a[i].TxCnt < a[j].TxCnt }
+
+func fundsStateChange(txSlice []*protocol.FundsTx, initialSetup bool) (err error) {
 	for _, tx := range txSlice {
 
 		//If transaction is in closed tx, the state was adjusted already.
-		if storage.ReadClosedTx(tx.Hash()) != nil {
+		if storage.ReadClosedTx(tx.Hash()) != nil && !initialSetup {
 			continue
 		}
 
@@ -309,14 +317,15 @@ func fundsStateChange(txSlice []*protocol.FundsTx) (err error) {
 		accSender, err = storage.GetAccount(tx.From)
 		accReceiver, err = storage.GetAccount(tx.To)
 
-		//Check transaction counter
-		if tx.TxCnt != accSender.TxCnt {
-			err = errors.New(fmt.Sprintf("Sender txCnt in %x does not match: %v (tx.txCnt) vs. %v (state txCnt).", tx.Hash(), tx.TxCnt, accSender.TxCnt))
+		//Check transaction counter //TODO TX.Aggregated == False maybe remove...
+		if tx.Aggregated == false && tx.TxCnt != accSender.TxCnt {
+			err = errors.New(fmt.Sprintf("Sender (%x) txCnt in %x does not match: %v (tx.txCnt) vs. %v (state txCnt).",accSender.Address[0:8], tx.Hash(), tx.TxCnt, accSender.TxCnt))
 		}
 
 		//Check sender balance
-		if (tx.Amount + tx.Fee) > accSender.Balance {
-			err = errors.New(fmt.Sprintf("Sender does not have enough funds for the transaction: Balance = %v, Amount = %v, Fee = %v.", accSender.Balance, tx.Amount, tx.Fee))
+		// TODO "!initialSetup" does allow a "Credit" like behaviour where there is no error, regarding the balance. In the end it should match teh wanted state.
+		if (tx.Amount + tx.Fee) > accSender.Balance && !initialSetup {
+			err = errors.New(fmt.Sprintf("Sender does not have enough funds for the Funds transaction: Balance = %v, Amount = %v, Fee = %v.", accSender.Balance, tx.Amount, tx.Fee))
 		}
 
 		//After Tx fees, account must still have more than the minimum staking amount
@@ -378,6 +387,7 @@ func stakeStateChange(txSlice []*protocol.StakeTx, height uint32) (err error) {
 			err = errors.New("IsStaking state is already set to " + strconv.FormatBool(accSender.IsStaking) + ".")
 		}
 
+
 		//Check minimum amount
 		if tx.IsStaking && accSender.Balance < tx.Fee+activeParameters.Staking_minimum {
 			err = errors.New(fmt.Sprintf("Sender wants to stake but does not have enough funds (%v) in order to fulfill the required staking minimum (%v).", accSender.Balance, STAKING_MINIMUM))
@@ -385,7 +395,7 @@ func stakeStateChange(txSlice []*protocol.StakeTx, height uint32) (err error) {
 
 		//Check sender balance
 		if tx.Fee > accSender.Balance {
-			err = errors.New(fmt.Sprintf("Sender does not have enough funds for the transaction: Balance = %v, Amount = %v, Fee = %v.", accSender.Balance, 0, tx.Fee))
+			err = errors.New(fmt.Sprintf("Sender (%x) does not have enough funds for the Stake transaction: Balance = %v, Amount = %v, Fee = %v.",accSender.Address, accSender.Balance, 0, tx.Fee))
 		}
 
 		if err != nil {
@@ -401,6 +411,24 @@ func stakeStateChange(txSlice []*protocol.StakeTx, height uint32) (err error) {
 	return nil
 }
 
+func getFundsTxFromAggTx(AggregatedTxSlice [][32]byte)(fundsTxSlice []*protocol.FundsTx){
+
+	for _, txHash := range AggregatedTxSlice {
+		trx := storage.ReadOpenTx(txHash)
+
+		//Only new funds transactions give a fee... When a transaction is in the closed state, the fee is already collected
+		if trx != nil {
+			switch trx.(type) {
+			case *protocol.FundsTx:
+				fundsTxSlice = append(fundsTxSlice, trx.(*protocol.FundsTx))
+			default:
+				continue
+			}
+		}
+	}
+	return fundsTxSlice
+}
+
 func collectTxFees(accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, aggTxSlice []*protocol.AggTx, minerHash [32]byte) (err error) {
 	var tmpAccTx []*protocol.AccTx
 	var tmpFundsTx []*protocol.FundsTx
@@ -412,22 +440,9 @@ func collectTxFees(accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsT
 		return err
 	}
 
-	//This function does grab all fundsTx and add them to the other fundsTx. With this, the miner does get the txfees
-	// for all fundsTx. SO his incentive is to gather as much transactions into one stake transaction. This
-	// enlarges his reward and no extra reward is needed for aggTx.
+	//Get all new Funds Transactions and append them to the fundsTxSlice
 	for _, tx := range aggTxSlice {
-		for _, txHash := range tx.AggregatedTxSlice {
-			trx := storage.ReadOpenTx(txHash)
-
-			if trx == nil {
-				trx = storage.ReadBootstrapReceivedTransactions(txHash)
-			}
-			if trx == nil {
-				trx = storage.ReadClosedTx(txHash)
-			}
-
-			fundsTxSlice = append(fundsTxSlice, trx.(*protocol.FundsTx))
-		}
+		fundsTxSlice = append(fundsTxSlice, getFundsTxFromAggTx(tx.AggregatedTxSlice)...)
 	}
 
 	var senderAcc *protocol.Account

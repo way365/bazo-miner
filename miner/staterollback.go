@@ -63,7 +63,7 @@ func aggregatedSenderStateRollback(txSlice []*protocol.AggTx) {
 		}
 
 		//do normal rollback for fundsTx
-		fundsStateChange(fundsTxSlice)
+		fundsStateChange(fundsTxSlice, false)
 
 		//If new coins were issued, revert
 		//if rootAcc, _ := storage.GetRootAccount(tx.From); rootAcc != nil {

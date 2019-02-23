@@ -111,6 +111,7 @@ func (block *Block) HashBlockWithoutMerkleRoot() [32]byte {
 		prevHash              			[32]byte
 		prevHashWithoutTx	  			[32]byte
 		timestamp             			int64
+		merkleRoot            			[32]byte
 		beneficiary           			[32]byte
 		commitmentProof       			[crypto.COMM_PROOF_LENGTH]byte
 		slashedAddress        			[32]byte
@@ -123,6 +124,7 @@ func (block *Block) HashBlockWithoutMerkleRoot() [32]byte {
 		block.PrevHash,
 		block.PrevHashWithoutTx,
 		block.Timestamp,
+		[32]byte{},
 		block.Beneficiary,
 		block.CommitmentProof,
 		block.SlashedAddress,
