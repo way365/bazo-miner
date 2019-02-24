@@ -36,6 +36,7 @@ func InitLogging() {
 	LogMapping[27] = "ROOTACC_REQ"
 	LogMapping[28] = "INTERMEDIATE_NODES_REQ"
 	LogMapping[29] = "AGGTX_REQ"
+	LogMapping[30] = "UNKNOWNTX_REQ"
 
 	LogMapping[40] = "FUNDSTX_RES"
 	LogMapping[41] = "ACCTX_RES"

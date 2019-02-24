@@ -179,12 +179,12 @@ func initState() (initialBlock *protocol.Block, err error) {
 		//Do not validate the genesis block, since a lot of properties are set to nil
 		if blockToValidate.Hash != [32]byte{} {
 			//Fetching payload data from the txs (if necessary, ask other miners)
-			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, err := preValidate(blockToValidate, true)
+			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice, err := preValidate(blockToValidate, true)
 			if err != nil {
 				return nil, errors.New(fmt.Sprintf("Block (%x) could not be prevalidated: %v\n", blockToValidate.Hash[0:8], err))
 			}
 
-			blockDataMap[blockToValidate.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, blockToValidate}
+			blockDataMap[blockToValidate.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice, blockToValidate}
 
 			err = validateState(blockDataMap[blockToValidate.Hash], true)
 			if err != nil {
@@ -193,7 +193,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 
 			postValidate(blockDataMap[blockToValidate.Hash], true)
 		} else {
-			blockDataMap[blockToValidate.Hash] = blockData{nil, nil, nil, nil, nil, blockToValidate}
+			blockDataMap[blockToValidate.Hash] = blockData{nil, nil, nil, nil, nil, nil,blockToValidate}
 
 			postValidate(blockDataMap[blockToValidate.Hash], true)
 		}
@@ -202,6 +202,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 		//CalculateBlockchainSize(int(blockToValidate.GetSize()))
 		logger.Printf("Block validated: %d --> %x, %v == %x, %v", blockToValidate.Height, blockToValidate.Hash[0:8], blockToValidate.Hash[0:8], blockToValidate.HashWithoutTx[0:8], blockToValidate.HashWithoutTx[0:8])
 		//logger.Printf("Block validated: %v", blockToValidate)
+		//logger.Printf("\n%v\n", getState())
 
 	}
 
@@ -256,32 +257,14 @@ func accStateChange(txSlice []*protocol.AccTx) error {
 }
 
 //this method does inititate the state change for aggregated Transactions. It does
-func aggTxStateChange(txSlice []*protocol.AggTx, initialSetup bool) (err error) {
-	for _, tx1 := range txSlice {
-		var fundsTxSlice []*protocol.FundsTx
-		for _, tx2 := range tx1.AggregatedTxSlice {
-			//Fetch all aggregated open Funds transactions for state validation.
-			trx := storage.ReadOpenTx(tx2)
-			if trx == nil {
-				trx = storage.ReadClosedTx(tx2)
-			}
+func aggTxStateChange(txSlice []*protocol.FundsTx, initialSetup bool) (err error) {
+	sort.Sort(ByTxCount(txSlice))
 
-			switch trx.(type) {
-			case *protocol.FundsTx:
-				fundsTxSlice = append(fundsTxSlice, trx.(*protocol.FundsTx))
-			}
-			//fundsTxSlice = append(fundsTxSlice, trx)
-		}
-
-		sort.Sort(ByTxCount(fundsTxSlice))
-
-		if err := fundsStateChange(fundsTxSlice, initialSetup); err != nil {
-			return err
-		}
-		fundsTxSlice = nil
+	if err := fundsStateChange(txSlice, initialSetup); err != nil {
+		return err
+	} else {
+		return nil
 	}
-
-	return nil
 }
 
 type ByTxCount []*protocol.FundsTx
@@ -377,7 +360,7 @@ func configStateChange(configTxSlice []*protocol.ConfigTx, blockHash [32]byte) {
 	}
 }
 
-func stakeStateChange(txSlice []*protocol.StakeTx, height uint32) (err error) {
+func stakeStateChange(txSlice []*protocol.StakeTx, height uint32, initialSetup bool) (err error) {
 	for _, tx := range txSlice {
 		var accSender *protocol.Account
 		accSender, err = storage.GetAccount(tx.Account)
@@ -389,13 +372,13 @@ func stakeStateChange(txSlice []*protocol.StakeTx, height uint32) (err error) {
 
 
 		//Check minimum amount
-		if tx.IsStaking && accSender.Balance < tx.Fee+activeParameters.Staking_minimum {
+		if !initialSetup && tx.IsStaking && accSender.Balance < tx.Fee+activeParameters.Staking_minimum {
 			err = errors.New(fmt.Sprintf("Sender wants to stake but does not have enough funds (%v) in order to fulfill the required staking minimum (%v).", accSender.Balance, STAKING_MINIMUM))
 		}
 
 		//Check sender balance
-		if tx.Fee > accSender.Balance {
-			err = errors.New(fmt.Sprintf("Sender (%x) does not have enough funds for the Stake transaction: Balance = %v, Amount = %v, Fee = %v.",accSender.Address, accSender.Balance, 0, tx.Fee))
+		if !initialSetup && tx.Fee > accSender.Balance {
+			err = errors.New(fmt.Sprintf("Sender (%x) does not have enough funds for the Stake transaction: Balance = %v, Amount = %v, Fee = %v.",accSender.Address[0:8], accSender.Balance, 0, tx.Fee))
 		}
 
 		if err != nil {
@@ -520,11 +503,11 @@ func collectTxFees(accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsT
 	return nil
 }
 
-func collectBlockReward(reward uint64, minerHash [32]byte) (err error) {
+func collectBlockReward(reward uint64, minerHash [32]byte, initialSetup bool) (err error) {
 	var miner *protocol.Account
 	miner, err = storage.GetAccount(minerHash)
 
-	if miner.Balance+reward > MAX_MONEY {
+	if !initialSetup && miner.Balance+reward > MAX_MONEY {
 		err = errors.New("Block reward would lead to balance overflow at the miner account.")
 	}
 

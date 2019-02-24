@@ -25,7 +25,8 @@ const (
 	ACC_REQ                	= 26
 	ROOTACC_REQ            	= 27
 	INTERMEDIATE_NODES_REQ 	= 28
-	AGGTX_REQ			= 29
+	AGGTX_REQ				= 29
+	UNKNOWNTX_REQ			= 30
 
 
 	FUNDSTX_RES            	= 40

@@ -14,7 +14,7 @@ func rollback(b *protocol.Block) error {
 		return err
 	}
 
-	data := blockData{accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggTxSlice, b}
+	data := blockData{accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggTxSlice, nil,b}
 
 	//Going back to pre-block system parameters before the state is rolled back.
 	configStateChangeRollback(data.configTxSlice, b.Hash)
