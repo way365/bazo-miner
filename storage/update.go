@@ -11,7 +11,7 @@ func UpdateBlocksToBlocksWithoutTx(block *protocol.Block) (err error){
 		block.Aggregated = true
 		WriteClosedBlockWithoutTx(block)
 		DeleteClosedBlock(block.Hash)
-		logger.Printf("UPDATE: Write (%x) into emptyBlockBucket as (%x)", block.Hash[0:8], block.HashWithoutTx[0:8])
+		logger.Printf("UPDATE: Write (%x) into closedBlockWithoutTransactions-Bucket as (%x)", block.Hash[0:8], block.HashWithoutTx[0:8])
 		return err
 	}
 	return

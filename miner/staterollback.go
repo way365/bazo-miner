@@ -47,29 +47,87 @@ func fundsStateChangeRollback(txSlice []*protocol.FundsTx) {
 	}
 }
 
-func aggregatedSenderStateRollback(txSlice []*protocol.AggTx) {
-	//Rollback in reverse order than original state change
+//This method does search historic blocks which do not have any transactions inside and now have to be reactivated
+// because a transaction validated in this block was aggregated later in a block which now is rolled back. Thus all the
+// transactions in this block need ot be reactivated such that they are visible in the chain.
+func reactivateHistoricBlockDueToRollback(tx protocol.Transaction)() {
+	var fundsTx *protocol.FundsTx
+	var aggTx *protocol.AggTx
+	var blockHash [32]byte
 
+	switch tx.(type){
+	case *protocol.FundsTx:
+		fundsTx = tx.(*protocol.FundsTx)
+		blockHash = fundsTx.Block
+	case *protocol.AggTx:
+		aggTx = tx.(*protocol.AggTx)
+		blockHash = aggTx.Block
+	}
+
+	//Search block in bucket & Change aggregated to false.
+	block := storage.ReadClosedBlockWithoutTx(blockHash)
+	if block == nil {
+		//Block is still in closed blocks but not aggregated --> nothing more to do, because all tx are still visible in the block
+		return
+	}
+
+	//Search all transactions which were validated in the "empty" block. This may be very time consuming.
+	for _, tx := range storage.ReadAllClosedFundsAndAggTransactions() {
+		switch tx.(type){
+		case *protocol.FundsTx:
+			fundsTx = tx.(*protocol.FundsTx)
+			if fundsTx.Block == blockHash {
+				//Reactivate this transaction --> it is still closed but it has to be visible in the block and chain again.
+				fundsTx.Aggregated = false
+				block.FundsTxData = append(block.FundsTxData, tx.Hash())
+				storage.WriteClosedTx(fundsTx)
+			}
+		case *protocol.AggTx:
+			aggTx = tx.(*protocol.AggTx)
+			if aggTx.Block == blockHash {
+				//Reactivate this transaction
+				aggTx.Aggregated = false
+				block.AggTxData = append(block.AggTxData, tx.Hash())
+				storage.WriteClosedTx(aggTx)
+			}
+		}
+	}
+
+	//Write block back to bucket with closed blocks with transactions.
+	block.Aggregated = false
+	storage.WriteClosedBlock(block)
+	storage.DeleteClosedBlockWithoutTx(blockHash)
+	logger.Printf("UPDATE: Write (%x) into closedBlockBucket as (%x)", block.HashWithoutTx[0:8], block.Hash[0:8])
+}
+
+func aggregatedStateRollback(txSlice []*protocol.AggTx, blockHash [32]byte) {
+	//Rollback in reverse order than original state change
 	var fundsTxSlice []*protocol.FundsTx
 	for cnt := len(txSlice) - 1; cnt >= 0; cnt-- {
 		tx := txSlice[cnt]
 
-		//accSender, _ := storage.GetAccount(tx.From)
 
 		//Adding all Aggregated FundsTx in reverse order.
 		for _, txHash := range tx.AggregatedTxSlice {
-			fundsTxSlice = append([]*protocol.FundsTx{storage.ReadClosedTx(txHash).(*protocol.FundsTx)},fundsTxSlice...)
+			tx := storage.ReadClosedTx(txHash)
 
+			switch tx.(type) {
+			case *protocol.FundsTx:
+				//Only rollback FundsTx which are validated in the current block.
+				if tx.(*protocol.FundsTx).Block == blockHash {
+					fundsTxSlice = append([]*protocol.FundsTx{tx.(*protocol.FundsTx)},fundsTxSlice...)
+				} else {
+					//Transaction is not validated in the current block --> Need to be reactivated in the historic block.
+					reactivateHistoricBlockDueToRollback(tx)
+				}
+			case *protocol.AggTx:
+				//AggTx can only be historic and therefore need to be reactivated in the historic block.
+				reactivateHistoricBlockDueToRollback(tx)
+			}
 		}
 
 		//do normal rollback for fundsTx
-		fundsStateChange(fundsTxSlice, false)
-
-		//If new coins were issued, revert
-		//if rootAcc, _ := storage.GetRootAccount(tx.From); rootAcc != nil {
-		//	rootAcc.Balance -= tx.Amount
-		//	rootAcc.Balance -= tx.Fee
-		//}
+		fundsStateChangeRollback(fundsTxSlice)
 	}
 }
 

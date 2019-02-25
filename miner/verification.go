@@ -184,6 +184,7 @@ func verifyStakeTx(tx *protocol.StakeTx) bool {
 	return ecdsa.Verify(&pubKey, txHash[:], r, s)
 }
 
+//TODO Update this function
 func verifyAggTx(tx *protocol.AggTx) bool {
 	if tx == nil {
 		logger.Println("Transactions does not exist.")

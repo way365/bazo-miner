@@ -333,6 +333,7 @@ func splitSortedAggregatableTransactions(b *protocol.Block){
 func searchTransactionsInHistoricBlocks(searchAddressSender [32]byte, searchAddressReceiver [32]byte) (historicTransactions []protocol.Transaction) {
 
 	for _, block := range storage.ReadAllClosedBlocksWithTransactions() {
+		//TODO Probably also only for height - NO_Aggregation
 
 		//Read all FundsTxIncluded in the block
 		for _, txHash := range block.FundsTxData {
@@ -406,7 +407,7 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 	if len(nrOfSenders) == len(nrOfReceivers){
 		//Here transactions are searched to aggregate. if one is fund, it will aggregate accordingly.
 		breakingForLoop := false
-		for _, block := range storage.ReadAllClosedBlocksWithTransactions() {
+		for _, block := range storage.ReadAllClosedBlocksWithTransactions() { //TODO Probably also only for height - NO_Aggregation
 			//Search All fundsTx to check if there are transactions with the same sender orrReceiver
 			for _, fundsTxHash := range block.FundsTxData {
 				trx := storage.ReadClosedTx(fundsTxHash)
@@ -895,6 +896,11 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 		//Now all transactions aggregated in the specific aggTx are handled. This are either new FundsTx which are
 		//needed for the state update or other aggTx again aggregated. The later ones are validated in an older block.
 		if initialSetup {
+			//If this AggTx is Aggregated, all funds will be fetched later... --> take teh next AggTx.
+			if aggTx.(*protocol.AggTx).Aggregated == true {
+				continue
+			}
+
 			//All FundsTransactions are needed. Fetch them recursively. If an error occurs --> return.
 			var err error
 			transactions, err = fetchFundsTxRecursively(aggTx.(*protocol.AggTx).AggregatedTxSlice)
@@ -1024,8 +1030,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 			}
 			//logger.Printf("Rolled back block: %vState:\n%v", block, getState())
 			logger.Printf("Rolled back block: %v", block.Hash)
-			//logger.Printf("Total Transactions in this block: %v", -1*int(uint16(block.NrFundsTx) + uint16(block.NrAccTx) + uint16(block.NrConfigTx) + uint16(block.NrStakeTx)))
-		}
+			}
 		for _, block := range blocksToValidate {
 			//Fetching payload data from the txs (if necessary, ask other miners).
 			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice, err := preValidate(block, initialSetup)
@@ -1163,6 +1168,9 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	//PoS validation
 	if !validateProofOfStake(getDifficulty(), prevProofs, block.Height, acc.Balance, block.CommitmentProof, block.Timestamp) {
 		logger.Printf("NONCE: %x",block.Nonce)
+		for _, i := range prevProofs {
+			logger.Printf("  PP: %x",i[0:8])
+		}
 		return nil, nil, nil, nil, nil, nil, errors.New("The nonce is incorrect.")
 	}
 
@@ -1205,7 +1213,6 @@ func validateState(data blockData, initialSetup bool) error {
 		return err
 	}
 
-	//TODO Send aggregatedFundsTxSlice into method
 	if err := aggTxStateChange(data.aggregatedFundsTxSlice, initialSetup); err != nil {
 		fundsStateChangeRollback(data.fundsTxSlice)
 		accStateChangeRollback(data.accTxSlice)
@@ -1215,14 +1222,14 @@ func validateState(data blockData, initialSetup bool) error {
 	if err := stakeStateChange(data.stakeTxSlice, data.block.Height, initialSetup); err != nil {
 		fundsStateChangeRollback(data.fundsTxSlice)
 		accStateChangeRollback(data.accTxSlice)
-		aggregatedSenderStateRollback(data.aggTxSlice)
+		aggregatedStateRollback(data.aggTxSlice, data.block.HashWithoutTx)
 		return err
 	}
 
 	if err := collectTxFees(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.aggTxSlice, data.block.Beneficiary); err != nil {
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
-		aggregatedSenderStateRollback(data.aggTxSlice)
+		aggregatedStateRollback(data.aggTxSlice, data.block.HashWithoutTx)
 		accStateChangeRollback(data.accTxSlice)
 		return err
 	}
@@ -1231,7 +1238,7 @@ func validateState(data blockData, initialSetup bool) error {
 		collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
-		aggregatedSenderStateRollback(data.aggTxSlice)
+		aggregatedStateRollback(data.aggTxSlice, data.block.HashWithoutTx)
 		accStateChangeRollback(data.accTxSlice)
 		return err
 	}
@@ -1241,7 +1248,7 @@ func validateState(data blockData, initialSetup bool) error {
 		collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
-		aggregatedSenderStateRollback(data.aggTxSlice)
+		aggregatedStateRollback(data.aggTxSlice, data.block.HashWithoutTx)
 		accStateChangeRollback(data.accTxSlice)
 		return err
 	}
@@ -1252,7 +1259,7 @@ func validateState(data blockData, initialSetup bool) error {
 		collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
-		aggregatedSenderStateRollback(data.aggTxSlice)
+		aggregatedStateRollback(data.aggTxSlice, data.block.HashWithoutTx)
 		accStateChangeRollback(data.accTxSlice)
 		return err
 	}
@@ -1282,6 +1289,7 @@ func postValidate(data blockData, initialSetup bool) {
 
 		for _, tx := range data.fundsTxSlice {
 			storage.WriteClosedTx(tx)
+			tx.Block = data.block.HashWithoutTx
 			storage.DeleteOpenTx(tx)
 			storage.DeleteINVALIDOpenTx(tx)
 		}
@@ -1309,22 +1317,32 @@ func postValidate(data blockData, initialSetup bool) {
 
 			//delete FundsTx per aggTx in open storage and write them to the closed storage.
 			for _, aggregatedTxHash := range tx.AggregatedTxSlice {
-				trx := storage.ReadOpenTx(aggregatedTxHash)
-				if trx == nil {
-					trx = storage.ReadClosedTx(aggregatedTxHash)
+				trx := storage.ReadClosedTx(aggregatedTxHash)
+				if trx != nil {
+					switch trx.(type){
+					case *protocol.AggTx:
+						trx.(*protocol.AggTx).Aggregated = true
+					case *protocol.FundsTx:
+						trx.(*protocol.FundsTx).Aggregated = true
+					}
+				} else {
+					trx = storage.ReadOpenTx(aggregatedTxHash)
+					switch trx.(type){
+					case *protocol.AggTx:
+						trx.(*protocol.AggTx).Aggregated = true
+					case *protocol.FundsTx:
+						//Only funds transactions which are in the mempool at this point are newly added to the aggTx.
+						trx.(*protocol.FundsTx).Block = data.block.HashWithoutTx
+						trx.(*protocol.FundsTx).Aggregated = true
+					}
 				}
-				switch trx.(type){
-				case *protocol.AggTx:
-					trx.(*protocol.AggTx).Aggregated = true
-				case *protocol.FundsTx:
-					trx.(*protocol.FundsTx).Aggregated = true
-				}
+
 				storage.WriteClosedTx(trx)
 				storage.DeleteOpenTx(trx)
 			}
 			//Delete AggTx and write it to closed Tx.
+			tx.Block = data.block.HashWithoutTx
 			tx.Aggregated = false
-			logger.Printf("write closed and delete open Tx: %x", tx.Hash())
 			storage.WriteClosedTx(tx)
 			storage.DeleteOpenTx(tx)
 		}

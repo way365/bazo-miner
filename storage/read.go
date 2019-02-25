@@ -99,6 +99,35 @@ func ReadAllClosedBlocksWithTransactions() (allClosedBlocks []*protocol.Block) {
 	return allClosedBlocks
 }
 
+func ReadAllClosedFundsAndAggTransactions() (allClosedTransactions []protocol.Transaction) {
+
+	var transaction protocol.Transaction
+	db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("closedfunds"))
+		b.ForEach(func(k, v []byte) error {
+			if v != nil {
+				encodedFundsTx := v
+				allClosedTransactions = append(allClosedTransactions, transaction.(*protocol.FundsTx).Decode(encodedFundsTx))
+			}
+			return nil
+		})
+		return nil
+	})
+	db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("closedaggregations"))
+		b.ForEach(func(k, v []byte) error {
+			if v != nil {
+				encodedAggTx := v
+				allClosedTransactions = append(allClosedTransactions, transaction.(*protocol.AggTx).Decode(encodedAggTx))
+			}
+			return nil
+		})
+		return nil
+	})
+
+	return allClosedTransactions
+}
+
 //This method does read all blocks in closedBlocks & closedblockswithouttx.
 func ReadAllClosedBlocks() (allClosedBlocks []*protocol.Block) {
 

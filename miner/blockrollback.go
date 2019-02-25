@@ -94,7 +94,7 @@ func validateStateRollback(data blockData) {
 	collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 	stakeStateChangeRollback(data.stakeTxSlice)
 	fundsStateChangeRollback(data.fundsTxSlice)
-	aggregatedSenderStateRollback(data.aggTxSlice)
+	aggregatedStateRollback(data.aggTxSlice, data.block.HashWithoutTx)
 	accStateChangeRollback(data.accTxSlice)
 }
 

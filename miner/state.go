@@ -136,7 +136,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 			} else {
 				allClosedBlocks = append(allClosedBlocks, lastBlock)
 			}
-			fmt.Println("Last block: ", lastBlock.Height)
+			//fmt.Println("Last block: ", lastBlock.Height)
 			if lastBlock.Height == 0 {
 				break
 			}
@@ -317,7 +317,7 @@ func fundsStateChange(txSlice []*protocol.FundsTx, initialSetup bool) (err error
 		}
 
 		//Overflow protection
-		if tx.Amount+accReceiver.Balance > MAX_MONEY {
+		if !initialSetup && tx.Amount+accReceiver.Balance > MAX_MONEY {
 			err = errors.New("Transaction amount would lead to balance overflow at the receiver account.")
 		}
 

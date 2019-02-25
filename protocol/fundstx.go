@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	FUNDSTX_SIZE = 213
+	FUNDSTX_SIZE = 246
 )
 
 //when we broadcast transactions we need a way to distinguish with a type
@@ -24,6 +24,7 @@ type FundsTx struct {
 	Sig1   		[64]byte
 	Sig2   		[64]byte
 	Aggregated 	bool
+	Block		[32]byte //This saves the blockHashWithoutTransactions into which the transaction was usually validated. Needed for rollback.
 	Data   		[]byte
 }
 
@@ -38,6 +39,7 @@ func ConstrFundsTx(header byte, amount uint64, fee uint64, txCnt uint32, from, t
 	tx.TxCnt = txCnt
 	tx.Aggregated = false
 	tx.Data = data
+	tx.Block = [32]byte{}
 
 	txHash := tx.Hash()
 
@@ -104,6 +106,7 @@ func (tx *FundsTx) Encode() (encodedTx []byte) {
 		Sig2:   	tx.Sig2,
 		Data:   	tx.Data,
 		Aggregated: tx.Aggregated,
+		Block: 		tx.Block,
 	}
 	buffer := new(bytes.Buffer)
 	gob.NewEncoder(buffer).Encode(encodeData)
@@ -135,7 +138,8 @@ func (tx FundsTx) String() string {
 			"Sig1: %x\n"+
 			"Sig2: %x\n"+
 			"Data: %v\n"+
-			"Aggregated: %t",
+			"Aggregated: %t\n"+
+			"Block: %x",
 		tx.Header,
 		tx.Amount,
 		tx.Fee,
@@ -146,5 +150,6 @@ func (tx FundsTx) String() string {
 		tx.Sig2[0:8],
 		tx.Data,
 		tx.Aggregated,
+		tx.Block,
 	)
 }

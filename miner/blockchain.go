@@ -36,7 +36,6 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 
 	//Set up logger.
 	logger = storage.InitLogger()
-	//TODO Uncomment this
 	logger.Printf("\n\n\n" +
 		"BBBBBBBBBBBBBBBBB               AAA               ZZZZZZZZZZZZZZZZZZZ     OOOOOOOOO\n" +
 		"B::::::::::::::::B             A:::A              Z:::::::::::::::::Z   OO:::::::::OO\n" +

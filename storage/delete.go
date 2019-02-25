@@ -22,6 +22,14 @@ func DeleteClosedBlock(hash [32]byte) {
 	})
 }
 
+func DeleteClosedBlockWithoutTx(hash [32]byte) {
+	db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("closedblockswithouttx"))
+		err := b.Delete(hash[:])
+		return err
+	})
+}
+
 func DeleteLastClosedBlock(hash [32]byte) {
 	db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("lastclosedblock"))

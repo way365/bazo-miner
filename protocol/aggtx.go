@@ -4,15 +4,10 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"sync"
 )
 
 const (
-	AGGTX_SIZE = 53 //Only constant Values --> Without To & AggregatedTxSlice
-)
-
-var (
-	hashMutex = &sync.Mutex{}
+	AGGTX_SIZE = 85 //Only constant Values --> Without To, From & AggregatedTxSlice
 )
 
 //when we broadcast transactions we need a way to distinguish with a type
@@ -24,6 +19,7 @@ type AggTx struct {
 	To    				[][32]byte
 	AggregatedTxSlice 	[][32]byte
 	Aggregated			bool
+	Block				[32]byte //This saves the blockHashWithoutTransactions into which the transaction was usually validated. Needed for rollback.
 }
 
 func ConstrAggTx(amount uint64, fee uint64, from [][32]byte, to [][32]byte, transactions [][32]byte) (tx *AggTx, err error) {
@@ -74,6 +70,7 @@ func (tx *AggTx) Encode() (encodedTx []byte) {
 		To:    					tx.To,
 		AggregatedTxSlice: 		tx.AggregatedTxSlice,
 		Aggregated:				tx.Aggregated,
+		Block: 					tx.Block,
 	}
 	buffer := new(bytes.Buffer)
 	gob.NewEncoder(buffer).Encode(encodeData)
@@ -104,7 +101,8 @@ func (tx AggTx) String() string {
 			"To: %x\n"+
 			"Transactions: %x\n"+
 			"#Tx: %v\n"+
-			"Aggregated: %t",
+			"Aggregated: %t\n"+
+			"Block: %x",
 		tx.Hash(),
 		tx.Amount,
 		tx.Fee,
@@ -113,6 +111,7 @@ func (tx AggTx) String() string {
 		tx.AggregatedTxSlice,
 		len(tx.AggregatedTxSlice),
 		tx.Aggregated,
+		tx.Block,
 	)
 }
 
