@@ -23,6 +23,10 @@ func getBlockSequences(newBlock *protocol.Block) (blocksToRollback, blocksToVali
 	//Count how many blocks there are on the currently active chain.
 	tmpBlock := lastBlock
 
+	if tmpBlock == nil {
+		tmpBlock = storage.ReadLastClosedBlock()
+	}
+
 	for {
 		if tmpBlock.Hash == ancestor.Hash {
 			break
@@ -68,8 +72,8 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 		}
 
 		//It might be the case that we already started a sync and the block is in the openblock storage.
-		newBlock = storage.ReadOpenBlock(newBlock.PrevHash)
-		if newBlock != nil {
+		openBlock := storage.ReadOpenBlock(newBlock.PrevHash)
+		if openBlock != nil {
 			continue
 		}
 

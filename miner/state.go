@@ -256,7 +256,7 @@ func accStateChange(txSlice []*protocol.AccTx) error {
 	return nil
 }
 
-//this method does inititate the state change for aggregated Transactions. It does
+//this method does inititate the state change for aggregated Transactions.
 func aggTxStateChange(txSlice []*protocol.FundsTx, initialSetup bool) (err error) {
 	sort.Sort(ByTxCount(txSlice))
 
@@ -333,7 +333,13 @@ func fundsStateChange(txSlice []*protocol.FundsTx, initialSetup bool) (err error
 
 		//We're manipulating pointer, no need to write back
 		accSender.TxCnt += 1
+		if accSender.Balance + tx.Amount < 0 {
+			logger.Printf(" AccountOverflow Sender: %x + %x (from: %x)", accSender.Balance, tx.Amount, tx.Hash())
+		}
 		accSender.Balance -= tx.Amount
+		if accReceiver.Balance + tx.Amount > 10000000 {
+			logger.Printf(" AccountOverflow Receiver: %x + %x (from: %x)", accReceiver.Balance, tx.Amount, tx.Hash())
+		}
 		accReceiver.Balance += tx.Amount
 	}
 

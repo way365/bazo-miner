@@ -101,24 +101,28 @@ func ReadAllClosedBlocksWithTransactions() (allClosedBlocks []*protocol.Block) {
 
 func ReadAllClosedFundsAndAggTransactions() (allClosedTransactions []protocol.Transaction) {
 
-	var transaction protocol.Transaction
+	var fundsTx protocol.FundsTx
 	db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("closedfunds"))
 		b.ForEach(func(k, v []byte) error {
 			if v != nil {
 				encodedFundsTx := v
-				allClosedTransactions = append(allClosedTransactions, transaction.(*protocol.FundsTx).Decode(encodedFundsTx))
+				allClosedTransactions = append(allClosedTransactions, fundsTx.Decode(encodedFundsTx))
 			}
 			return nil
 		})
 		return nil
 	})
+
+	var aggTx protocol.AggTx
 	db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("closedaggregations"))
 		b.ForEach(func(k, v []byte) error {
 			if v != nil {
 				encodedAggTx := v
-				allClosedTransactions = append(allClosedTransactions, transaction.(*protocol.AggTx).Decode(encodedAggTx))
+				if encodedAggTx != nil{
+					allClosedTransactions = append(allClosedTransactions, aggTx.Decode(encodedAggTx))
+				}
 			}
 			return nil
 		})
@@ -188,10 +192,6 @@ func ReadFundsTxBeforeAggregation() ([]*protocol.FundsTx) {
 	openFundsTxBeforeAggregationMutex.Lock()
 	defer openFundsTxBeforeAggregationMutex.Unlock()
 	return FundsTxBeforeAggregation
-}
-
-	func ReadBootstrapReceivedTransactions(hash [32]byte) (transaction protocol.Transaction) {
-	return bootstrapReceivedMemPool[hash]
 }
 
 func ReadAllBootstrapReceivedTransactions() (allOpenTxs []protocol.Transaction) {
@@ -273,13 +273,13 @@ func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
 }
 
 func ReadMempool(){
-	logger.Printf("MemPool_________")
-	for tx := range txMemPool {
-		logger.Printf("%x", tx)
-	}
-	logger.Printf("________________")
-	logger.Printf("Mempool_Size: %v", len(txMemPool))
-	logger.Printf("________________")
+	logger.Printf("MemPool__________")
+	//for tx := range txMemPool {
+	//	logger.Printf("%x", tx)
+	//}
+	//logger.Printf("________________")
+	logger.Printf("|   Mempool_Size: %v", len(txMemPool))
+	logger.Printf("L________________")
 
 }
 

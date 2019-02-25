@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"github.com/bazo-blockchain/bazo-miner/crypto"
+	"github.com/bazo-blockchain/bazo-miner/p2p"
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
 	"log"
@@ -113,16 +114,24 @@ func mining(initialBlock *protocol.Block) {
 		}
 
 		storage.ReadMempool()
+		//Prints miner connections
+		p2p.PrintMinerCons()
 
 		//This is the same mutex that is claimed at the beginning of a block validation. The reason we do this is
 		//that before start mining a new block we empty the mempool which contains tx data that is likely to be
 		//validated with block validation, so we wait in order to not work on tx data that is already validated
 		//when we finish the block.
+		logger.Printf("^^^^ New Mining Round")
 		blockValidation.Lock()
+		logger.Printf("~~~~Blockvalidation LOCK")
 		nextBlock := newBlock(lastBlock.Hash, lastBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, lastBlock.Height+1)
+		logger.Printf("~~~~ (1)")
 		currentBlock = nextBlock
+		logger.Printf("~~~~ (2)")
 		prepareBlock(currentBlock)
+		logger.Printf("~~~~ (3)")
 		blockValidation.Unlock()
+		logger.Printf("~~~~Blockvalidation UNLOCK")
 	}
 }
 

@@ -3,6 +3,7 @@ package miner
 import (
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
+	"sort"
 )
 
 func accStateChangeRollback(txSlice []*protocol.AccTx) {
@@ -58,37 +59,66 @@ func reactivateHistoricBlockDueToRollback(tx protocol.Transaction)() {
 	switch tx.(type){
 	case *protocol.FundsTx:
 		fundsTx = tx.(*protocol.FundsTx)
+		logger.Printf("      Need to rollback historic FundsTx: %x", fundsTx.Hash())
 		blockHash = fundsTx.Block
 	case *protocol.AggTx:
 		aggTx = tx.(*protocol.AggTx)
+		logger.Printf("      Need to rollback historic AggTx: %x", aggTx.Hash())
 		blockHash = aggTx.Block
 	}
 
 	//Search block in bucket & Change aggregated to false.
 	block := storage.ReadClosedBlockWithoutTx(blockHash)
 	if block == nil {
-		//Block is still in closed blocks but not aggregated --> nothing more to do, because all tx are still visible in the block
+		//Block is still in closed blocks but not aggregated --> only change transactions to aggregated = false such that the block does not get aggregated.
+		logger.Printf("Block does still contain transactions which are not aggregated yet or is in security zone...")
+
+		for _, tx := range storage.ReadAllClosedFundsAndAggTransactions() {
+			switch tx.(type){
+			case *protocol.FundsTx:
+				FTX := tx.(*protocol.FundsTx)
+				if FTX.Block == blockHash {
+					//Reactivate this transaction --> it is still closed but not aggregated.
+					logger.Printf("            Un-Aggregate fundsTx %x", FTX.Hash())
+					FTX.Aggregated = false
+					storage.WriteClosedTx(FTX)
+				}
+			case *protocol.AggTx:
+				ATX := tx.(*protocol.AggTx)
+				if ATX.Block == blockHash {
+					//Reactivate this transaction
+					logger.Printf("            Un-Aggregate aggTX %x", ATX.Hash())
+					ATX.Aggregated = false
+					storage.WriteClosedTx(ATX)
+				}
+			}
+		}
 		return
 	}
+
+
+	logger.Printf("  Found Block (%x) for which Tx's have to been found. \n", block.Hash)
 
 	//Search all transactions which were validated in the "empty" block. This may be very time consuming.
 	for _, tx := range storage.ReadAllClosedFundsAndAggTransactions() {
 		switch tx.(type){
 		case *protocol.FundsTx:
-			fundsTx = tx.(*protocol.FundsTx)
-			if fundsTx.Block == blockHash {
+			FTX := tx.(*protocol.FundsTx)
+			if FTX.Block == blockHash {
 				//Reactivate this transaction --> it is still closed but it has to be visible in the block and chain again.
-				fundsTx.Aggregated = false
+				logger.Printf("            ReActivate fundsTx %x", FTX.Hash())
+				FTX.Aggregated = false
 				block.FundsTxData = append(block.FundsTxData, tx.Hash())
-				storage.WriteClosedTx(fundsTx)
+				storage.WriteClosedTx(FTX)
 			}
 		case *protocol.AggTx:
-			aggTx = tx.(*protocol.AggTx)
-			if aggTx.Block == blockHash {
+			ATX := tx.(*protocol.AggTx)
+			if ATX.Block == blockHash {
 				//Reactivate this transaction
-				aggTx.Aggregated = false
+				logger.Printf("            ReActivate aggTX %x", ATX.Hash())
+				ATX.Aggregated = false
 				block.AggTxData = append(block.AggTxData, tx.Hash())
-				storage.WriteClosedTx(aggTx)
+				storage.WriteClosedTx(ATX)
 			}
 		}
 	}
@@ -97,7 +127,8 @@ func reactivateHistoricBlockDueToRollback(tx protocol.Transaction)() {
 	block.Aggregated = false
 	storage.WriteClosedBlock(block)
 	storage.DeleteClosedBlockWithoutTx(blockHash)
-	logger.Printf("UPDATE: Write (%x) into closedBlockBucket as (%x)", block.HashWithoutTx[0:8], block.Hash[0:8])
+	logger.Printf("UPDATE: Rollback Write (%x) into closedBlockBucket as (%x)", block.HashWithoutTx[0:8], block.Hash[0:8])
+	logger.Printf("UPDATE: Rollback %v", block)
 }
 
 func aggregatedStateRollback(txSlice []*protocol.AggTx, blockHash [32]byte) {
@@ -106,28 +137,38 @@ func aggregatedStateRollback(txSlice []*protocol.AggTx, blockHash [32]byte) {
 	for cnt := len(txSlice) - 1; cnt >= 0; cnt-- {
 		tx := txSlice[cnt]
 
-
+		logger.Printf("In tx: %x following transactions need to be rolled back: ", tx.Hash())
 		//Adding all Aggregated FundsTx in reverse order.
 		for _, txHash := range tx.AggregatedTxSlice {
-			tx := storage.ReadClosedTx(txHash)
+			trx := storage.ReadClosedTx(txHash)
 
-			switch tx.(type) {
+			switch trx.(type) {
 			case *protocol.FundsTx:
 				//Only rollback FundsTx which are validated in the current block.
-				if tx.(*protocol.FundsTx).Block == blockHash {
-					fundsTxSlice = append([]*protocol.FundsTx{tx.(*protocol.FundsTx)},fundsTxSlice...)
+				if trx.(*protocol.FundsTx).Block == blockHash {
+					logger.Printf("  Need to rollback FundsTx: %x", trx.Hash())
+					fundsTxSlice = append([]*protocol.FundsTx{trx.(*protocol.FundsTx)},fundsTxSlice...)
 				} else {
 					//Transaction is not validated in the current block --> Need to be reactivated in the historic block.
-					reactivateHistoricBlockDueToRollback(tx)
+					logger.Printf("  Need to rollback historic Tx: %x", trx.Hash())
+					reactivateHistoricBlockDueToRollback(trx)
 				}
 			case *protocol.AggTx:
 				//AggTx can only be historic and therefore need to be reactivated in the historic block.
-				reactivateHistoricBlockDueToRollback(tx)
+				reactivateHistoricBlockDueToRollback(trx)
 			}
 		}
 
 		//do normal rollback for fundsTx
+		logger.Printf("STATE BEFORE ROLLBACK: \n%v", getState())
+
+		sort.Sort(ByTxCount(fundsTxSlice))
+
+		for _, i := range fundsTxSlice {
+			logger.Printf("|--- Rollback: %x, A: %v, F: %x, T: %x, cnt: %v", i.Hash(), i.Amount, i.From[0:4], i.To[0:4], i.TxCnt)
+		}
 		fundsStateChangeRollback(fundsTxSlice)
+		logger.Printf("STATE AFTER ROLLBACK: \n%v", getState())
 	}
 }
 

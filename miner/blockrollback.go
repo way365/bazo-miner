@@ -94,6 +94,10 @@ func validateStateRollback(data blockData) {
 	collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 	stakeStateChangeRollback(data.stakeTxSlice)
 	fundsStateChangeRollback(data.fundsTxSlice)
+	logger.Printf("AggStateRollback --> block: %x ", data.block.Hash)
+	for _, i := range data.aggTxSlice {
+		logger.Printf("  contains: %x", i.Hash())
+	}
 	aggregatedStateRollback(data.aggTxSlice, data.block.HashWithoutTx)
 	accStateChangeRollback(data.accTxSlice)
 }
@@ -130,7 +134,7 @@ func postValidateRollback(data blockData) {
 		}
 
 		//Delete AggTx. No need to write in OpenTx, because it will be created newly.
-		logger.Printf("Rolled Back AggTx: %x, %v", tx.Hash(), tx.Hash())
+		logger.Printf("Rolled Back and delted AggTx: %x, %v", tx.Hash(), tx.Hash())
 		storage.DeleteClosedTx(tx)
 	}
 

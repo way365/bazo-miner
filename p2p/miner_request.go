@@ -56,3 +56,11 @@ func TxReq(hash [32]byte, reqType uint8) error {
 
 	return nil
 }
+
+func PrintMinerCons() {
+	logger.Printf("Neighbors: _________________")
+	for p := range peers.minerConns {
+		logger.Printf("|-- Miner: %v", p.getIPPort())
+	}
+	logger.Printf("L___________________________")
+}

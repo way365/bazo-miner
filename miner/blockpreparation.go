@@ -17,6 +17,7 @@ func prepareBlock(block *protocol.Block) {
 	//Fetch all txs from mempool (opentxs).
 	opentxs := storage.ReadAllOpenTxs()
 
+	logger.Printf("+++++++++++++ Preparblock Start")
 	//This copy is strange, but seems to be necessary to leverage the sort interface.
 	//Shouldn't be too bad because no deep copy.
 	var tmpCopy openTxs
@@ -68,7 +69,8 @@ func prepareBlock(block *protocol.Block) {
 	storage.DifferentSenders = nil
 	storage.DifferentReceivers = nil
 	nonAggregatableTxCounter = 0
-
+	logger.Printf("+++++++++++++ Preparblock End")
+	return
 }
 
 //Implement the sort interface

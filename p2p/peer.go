@@ -133,7 +133,6 @@ func (peers peersStruct) getAllPeers(peerType uint) []*peer {
 			peerList = append(peerList, p)
 		}
 	}
-
 	return peerList
 }
 
