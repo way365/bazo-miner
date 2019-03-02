@@ -28,20 +28,36 @@ func getBlockSequences(newBlock *protocol.Block) (blocksToRollback, blocksToVali
 	}
 
 	for {
-		if tmpBlock.Hash == ancestor.Hash {
+		if tmpBlock.Hash == ancestor.Hash || tmpBlock.HashWithoutTx == ancestor.HashWithoutTx {
 			break
 		}
 		blocksToRollback = append(blocksToRollback, tmpBlock)
 		//The block needs to be in closed storage.
-		tmpBlock = storage.ReadClosedBlock(tmpBlock.PrevHash)
+		newTmpBlock := storage.ReadClosedBlock(tmpBlock.PrevHash)
+
+		//Search in blocks withoutTx.
+		if newTmpBlock == nil {
+			newTmpBlock = storage.ReadClosedBlockWithoutTx(tmpBlock.PrevHashWithoutTx)
+		}
+		if newTmpBlock == nil {
+			logger.Printf("Block not found: %x, %x", tmpBlock.Hash, tmpBlock.HashWithoutTx)
+			return nil, nil, errors.New(fmt.Sprintf("Block not found in both closed storages"))
+		}
+		tmpBlock = newTmpBlock
+
 	}
 
 	//Compare current length with new chain length.
 	if len(blocksToRollback) >= len(newChain) {
 		//Current chain length is longer or equal (our consensus protocol states that in this case we reject the block).
-		return nil, nil, errors.New(fmt.Sprintf("Block belongs to shorter or equally long chain --> NO ROLLBACK (blocks to rollback %d vs block of new chain %d)", len(blocksToRollback), len(newChain)))
+		return nil, nil, errors.New(fmt.Sprintf("Block belongs to shorter or equally long chain --> NO Rollback (blocks to rollback %d vs block of new chain %d)", len(blocksToRollback), len(newChain)))
 	} else {
 		//New chain is longer, rollback and validate new chain.
+		if len(blocksToRollback) != 0 {
+			logger.Printf("... ROLLBACK ...")
+			logger.Printf("... ANCESTOR ...%v", ancestor)
+
+		}
 		return blocksToRollback, newChain, nil
 	}
 }
@@ -84,7 +100,7 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 		for _, block := range storage.ReadReceivedBlockStash() {
 			if block.Hash == newBlock.PrevHash {
 				newBlock = block
-				continue OUTER //TODO instead of continue and then with an if below the for going to the for {...}
+				continue OUTER //TODO instead of continue, with an if below the for going to the for {...}
 			}
 		}
 

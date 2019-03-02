@@ -94,15 +94,16 @@ func (tx *AggTx) Receiver() [32]byte { return [32]byte{} }
 
 func (tx AggTx) String() string {
 	return fmt.Sprintf(
-		"\nHash: %x\n" +
-			"Amount: %v\n"+
-			"Fee: %v\n"+
-			"From: %x\n"+
-			"To: %x\n"+
-			"Transactions: %x\n"+
-			"#Tx: %v\n"+
-			"Aggregated: %t\n"+
-			"Block: %x",
+		"\n ________\n| AGGTX: |____________________________________________________________________\n" +
+			"|  Hash: %x\n" +
+			"|  Amount: %v\n"+
+			"|  Fee: %v\n"+
+			"|  From: %x\n"+
+			"|  To: %x\n"+
+			"|  Transactions: %x\n"+
+			"|  #Tx: %v\n"+
+			"|  Aggregated: %t\n" +
+			"|_________________________________________________________________________________",
 		tx.Hash(),
 		tx.Amount,
 		tx.Fee,
@@ -111,7 +112,6 @@ func (tx AggTx) String() string {
 		tx.AggregatedTxSlice,
 		len(tx.AggregatedTxSlice),
 		tx.Aggregated,
-		tx.Block,
 	)
 }
 

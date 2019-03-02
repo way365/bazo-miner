@@ -37,9 +37,7 @@ func processBlock(payload []byte) {
 	storage.WriteToReceivedStash(block)
 
 	//Start validation process
-	logger.Printf("::::::Received Block: %x --> Start Validation", block.Hash)
 	err := validate(block, false)
-	logger.Printf("::::::Received Block: %x --> END Validation", block.Hash)
 	if err == nil {
 		logger.Printf("Validated block (received): %vState:\n%v", block, getState())
 		broadcastBlock(block)
@@ -50,7 +48,6 @@ func processBlock(payload []byte) {
 
 //p2p.BlockOut is a channel whose data get consumed by the p2p package
 func broadcastBlock(block *protocol.Block) {
-	logger.Printf(".... Broadcast Block: %x", block.Hash)
 	p2p.BlockOut <- block.Encode()
 
 	//Make a deep copy of the block (since it is a pointer and will be saved to db later).

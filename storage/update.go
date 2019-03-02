@@ -31,17 +31,25 @@ func BlockReadyToAggregate(block *protocol.Block) bool {
 
 	//Check if all FundsTransactions are aggregated. If not, block cannot be moved to the empty blocks bucket.
 	for _, txHash := range block.FundsTxData {
-		tx := ReadClosedTx(txHash).(*protocol.FundsTx)
+		tx := ReadClosedTx(txHash)
 
-		if tx.Aggregated == false {
+		if tx == nil {
+			return false
+		}
+
+		if tx.(*protocol.FundsTx).Aggregated == false {
 			return false
 		}
 	}
 
 	for _, txHash := range block.AggTxData {
-		tx := ReadClosedTx(txHash).(*protocol.AggTx)
+		tx := ReadClosedTx(txHash)
 
-		if tx.Aggregated == false {
+		if tx == nil {
+			return false
+		}
+
+		if tx.(*protocol.AggTx).Aggregated == false {
 			return false
 		}
 	}

@@ -78,6 +78,11 @@ func preValidateRollback(b *protocol.Block) (accTxSlice []*protocol.AccTx, funds
 		var aggTx *protocol.AggTx
 		tx := storage.ReadClosedTx(hash)
 		if tx == nil {
+			logger.Printf("Tx %x was not in closed Bucket", hash)
+			tx = storage.ReadOpenTx(hash)
+			 if tx != nil {
+			 	logger.Printf("Tx %x was in open instead of closed Bucket", hash)
+			 }
 			return nil, nil, nil, nil, nil, errors.New("CRITICAL: Aggregated Transaction was not in the confirmed tx storage")
 		} else {
 			aggTx = tx.(*protocol.AggTx)
@@ -94,11 +99,7 @@ func validateStateRollback(data blockData) {
 	collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 	stakeStateChangeRollback(data.stakeTxSlice)
 	fundsStateChangeRollback(data.fundsTxSlice)
-	logger.Printf("AggStateRollback --> block: %x ", data.block.Hash)
-	for _, i := range data.aggTxSlice {
-		logger.Printf("  contains: %x", i.Hash())
-	}
-	aggregatedStateRollback(data.aggTxSlice, data.block.HashWithoutTx)
+	aggregatedStateRollback(data.aggTxSlice, data.block.HashWithoutTx,  data.block.Beneficiary)
 	accStateChangeRollback(data.accTxSlice)
 }
 
@@ -129,16 +130,24 @@ func postValidateRollback(data blockData) {
 		//Reopen FundsTx per aggTx
 		for _, aggregatedTxHash := range tx.AggregatedTxSlice {
 			trx := storage.ReadClosedTx(aggregatedTxHash)
-			storage.WriteOpenTx(trx)
-			storage.DeleteClosedTx(trx)
+			//Only move transactions which are validated the first time in this block to the Mempool.
+			switch trx.(type) {
+			case *protocol.FundsTx:
+				if trx.(*protocol.FundsTx).Block == data.block.HashWithoutTx {
+					storage.WriteOpenTx(trx)
+					storage.DeleteClosedTx(trx)
+				}
+			case *protocol.AggTx:
+				if trx.(*protocol.AggTx).Block == data.block.HashWithoutTx {
+					storage.WriteOpenTx(trx)
+					storage.DeleteClosedTx(trx)
+				}
+			}
 		}
 
 		//Delete AggTx. No need to write in OpenTx, because it will be created newly.
-		logger.Printf("Rolled Back and delted AggTx: %x, %v", tx.Hash(), tx.Hash())
 		storage.DeleteClosedTx(tx)
 	}
-
-	//CalculateBlockchainSize(-int(data.block.GetSize()))
 
 	collectStatisticsRollback(data.block)
 
@@ -149,5 +158,12 @@ func postValidateRollback(data blockData) {
 
 	//Save the previous block as the last closed block.
 	storage.DeleteAllLastClosedBlock()
-	storage.WriteLastClosedBlock(storage.ReadClosedBlock(data.block.PrevHash))
+	prevBlock := storage.ReadClosedBlock(data.block.PrevHash)
+	if prevBlock == nil {
+		prevBlock = storage.ReadClosedBlock(data.block.PrevHashWithoutTx)
+	}
+	if prevBlock == nil {
+		return
+	}
+	storage.WriteLastClosedBlock(prevBlock)
 }

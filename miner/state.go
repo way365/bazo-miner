@@ -200,10 +200,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 
 
 		//CalculateBlockchainSize(int(blockToValidate.GetSize()))
-		logger.Printf("Block validated: %d --> %x, %v == %x, %v", blockToValidate.Height, blockToValidate.Hash[0:8], blockToValidate.Hash[0:8], blockToValidate.HashWithoutTx[0:8], blockToValidate.HashWithoutTx[0:8])
-		//logger.Printf("Block validated: %v", blockToValidate)
-		//logger.Printf("\n%v\n", getState())
-
+		logger.Printf("Block validated: %d --> %x, %x", blockToValidate.Height, blockToValidate.Hash[0:8], blockToValidate.HashWithoutTx[0:8])
 	}
 
 	for _, blockToValidate := range allClosedBlocks {
@@ -270,7 +267,7 @@ func aggTxStateChange(txSlice []*protocol.FundsTx, initialSetup bool) (err error
 type ByTxCount []*protocol.FundsTx
 func (a ByTxCount) Len() int           { return len(a) }
 func (a ByTxCount) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByTxCount) Less(i, j int) bool { return a[i].TxCnt < a[j].TxCnt }
+func (a ByTxCount) Less(i, j int) bool { return a[i].TxCnt <= a[j].TxCnt }
 
 func fundsStateChange(txSlice []*protocol.FundsTx, initialSetup bool) (err error) {
 	for _, tx := range txSlice {
@@ -306,7 +303,7 @@ func fundsStateChange(txSlice []*protocol.FundsTx, initialSetup bool) (err error
 		}
 
 		//Check sender balance
-		// TODO "!initialSetup" does allow a "Credit" like behaviour where there is no error, regarding the balance. In the end it should match teh wanted state.
+		// TODO "!initialSetup" does allow a "Credit" like behaviour where there is no error, regarding the balance. In the end it should match the wanted state.
 		if (tx.Amount + tx.Fee) > accSender.Balance && !initialSetup {
 			err = errors.New(fmt.Sprintf("Sender does not have enough funds for the Funds transaction: Balance = %v, Amount = %v, Fee = %v.", accSender.Balance, tx.Amount, tx.Fee))
 		}
@@ -333,16 +330,9 @@ func fundsStateChange(txSlice []*protocol.FundsTx, initialSetup bool) (err error
 
 		//We're manipulating pointer, no need to write back
 		accSender.TxCnt += 1
-		if accSender.Balance + tx.Amount < 0 {
-			logger.Printf(" AccountOverflow Sender: %x + %x (from: %x)", accSender.Balance, tx.Amount, tx.Hash())
-		}
 		accSender.Balance -= tx.Amount
-		if accReceiver.Balance + tx.Amount > 10000000 {
-			logger.Printf(" AccountOverflow Receiver: %x + %x (from: %x)", accReceiver.Balance, tx.Amount, tx.Hash())
-		}
 		accReceiver.Balance += tx.Amount
 	}
-
 	return nil
 }
 
@@ -418,111 +408,111 @@ func getFundsTxFromAggTx(AggregatedTxSlice [][32]byte)(fundsTxSlice []*protocol.
 	return fundsTxSlice
 }
 
-func collectTxFees(accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, aggTxSlice []*protocol.AggTx, minerHash [32]byte) (err error) {
+func collectTxFees(accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, aggTxSlice []*protocol.AggTx, minerHash [32]byte, initialSetup bool) (err error) {
 	var tmpAccTx []*protocol.AccTx
 	var tmpFundsTx []*protocol.FundsTx
 	var tmpConfigTx []*protocol.ConfigTx
 	var tmpStakeTx []*protocol.StakeTx
 
-	minerAcc, err := storage.GetAccount(minerHash)
-	if err != nil {
-		return err
-	}
-
-	//Get all new Funds Transactions and append them to the fundsTxSlice
-	for _, tx := range aggTxSlice {
-		fundsTxSlice = append(fundsTxSlice, getFundsTxFromAggTx(tx.AggregatedTxSlice)...)
-	}
-
-	var senderAcc *protocol.Account
-
-	for _, tx := range accTxSlice {
-		if minerAcc.Balance+tx.Fee > MAX_MONEY {
-			err = errors.New("Fee amount would lead to balance overflow at the miner account.")
-		}
-
+	//if initialSetup { //TODO DELETE THIS
+		minerAcc, err := storage.GetAccount(minerHash)
 		if err != nil {
-			//Rollback of all perviously transferred transaction fees to the protocol's account
-			collectTxFeesRollback(tmpAccTx, tmpFundsTx, tmpConfigTx, tmpStakeTx, minerHash)
 			return err
 		}
 
-		//Money gets created from thin air, no need to subtract money from root key
-		minerAcc.Balance += tx.Fee
-		tmpAccTx = append(tmpAccTx, tx)
-	}
-
-	//subtract fees from sender (check if that is allowed has already been done in the block validation)
-	for _, tx := range fundsTxSlice {
-		//Prevent protocol account from overflowing
-		if minerAcc.Balance+tx.Fee > MAX_MONEY {
-			err = errors.New("Fee amount would lead to balance overflow at the miner account.")
+		//Get all new Funds Transactions and append them to the fundsTxSlice
+		for _, tx := range aggTxSlice {
+			fundsTxSlice = append(fundsTxSlice, getFundsTxFromAggTx(tx.AggregatedTxSlice)...)
 		}
 
-		senderAcc, err = storage.GetAccount(tx.From)
+		var senderAcc *protocol.Account
 
-		if err != nil {
-			//Rollback of all perviously transferred transaction fees to the protocol's account
-			collectTxFeesRollback(tmpAccTx, tmpFundsTx, tmpConfigTx, tmpStakeTx, minerHash)
-			return err
+		for _, tx := range accTxSlice {
+			if minerAcc.Balance+tx.Fee > MAX_MONEY {
+				err = errors.New("Fee amount would lead to balance overflow at the miner account.")
+			}
+
+			if err != nil {
+				//Rollback of all perviously transferred transaction fees to the protocol's account
+				collectTxFeesRollback(tmpAccTx, tmpFundsTx, tmpConfigTx, tmpStakeTx, minerHash)
+				return err
+			}
+
+			//Money gets created from thin air, no need to subtract money from root key
+			minerAcc.Balance += tx.Fee
+			tmpAccTx = append(tmpAccTx, tx)
 		}
 
-		minerAcc.Balance += tx.Fee
-		senderAcc.Balance -= tx.Fee
-		tmpFundsTx = append(tmpFundsTx, tx)
-	}
+		//subtract fees from sender (check if that is allowed has already been done in the block validation)
+		for _, tx := range fundsTxSlice {
+			//Prevent protocol account from overflowing
+			if minerAcc.Balance+tx.Fee > MAX_MONEY {
+				err = errors.New("Fee amount would lead to balance overflow at the miner account.")
+			}
 
-	for _, tx := range configTxSlice {
-		if minerAcc.Balance+tx.Fee > MAX_MONEY {
-			err = errors.New("Fee amount would lead to balance overflow at the miner account.")
+			senderAcc, err = storage.GetAccount(tx.From)
+
+			if err != nil {
+				//Rollback of all perviously transferred transaction fees to the protocol's account
+				collectTxFeesRollback(tmpAccTx, tmpFundsTx, tmpConfigTx, tmpStakeTx, minerHash)
+				return err
+			}
+
+			minerAcc.Balance += tx.Fee
+			senderAcc.Balance -= tx.Fee
+			tmpFundsTx = append(tmpFundsTx, tx)
 		}
 
-		if err != nil {
-			//Rollback of all perviously transferred transaction fees to the protocol's account
-			collectTxFeesRollback(tmpAccTx, tmpFundsTx, tmpConfigTx, tmpStakeTx, minerHash)
-			return err
+		for _, tx := range configTxSlice {
+			if minerAcc.Balance+tx.Fee > MAX_MONEY {
+				err = errors.New("Fee amount would lead to balance overflow at the miner account.")
+			}
+
+			if err != nil {
+				//Rollback of all perviously transferred transaction fees to the protocol's account
+				collectTxFeesRollback(tmpAccTx, tmpFundsTx, tmpConfigTx, tmpStakeTx, minerHash)
+				return err
+			}
+
+			//No need to subtract money because signed by root account
+			minerAcc.Balance += tx.Fee
+			tmpConfigTx = append(tmpConfigTx, tx)
 		}
 
-		//No need to subtract money because signed by root account
-		minerAcc.Balance += tx.Fee
-		tmpConfigTx = append(tmpConfigTx, tx)
-	}
+		for _, tx := range stakeTxSlice {
+			if minerAcc.Balance+tx.Fee > MAX_MONEY {
+				err = errors.New("Fee amount would lead to balance overflow at the miner account.")
+			}
 
-	for _, tx := range stakeTxSlice {
-		if minerAcc.Balance+tx.Fee > MAX_MONEY {
-			err = errors.New("Fee amount would lead to balance overflow at the miner account.")
+			senderAcc, err = storage.GetAccount(tx.Account)
+
+			if err != nil {
+				//Rollback of all perviously transferred transaction fees to the protocol's account
+				collectTxFeesRollback(tmpAccTx, tmpFundsTx, tmpConfigTx, tmpStakeTx, minerHash)
+				return err
+			}
+
+			senderAcc.Balance -= tx.Fee
+			minerAcc.Balance += tx.Fee
+			tmpStakeTx = append(tmpStakeTx, tx)
 		}
-
-		senderAcc, err = storage.GetAccount(tx.Account)
-
-		if err != nil {
-			//Rollback of all perviously transferred transaction fees to the protocol's account
-			collectTxFeesRollback(tmpAccTx, tmpFundsTx, tmpConfigTx, tmpStakeTx, minerHash)
-			return err
-		}
-
-		senderAcc.Balance -= tx.Fee
-		minerAcc.Balance += tx.Fee
-		tmpStakeTx = append(tmpStakeTx, tx)
-	}
-
 	return nil
 }
 
 func collectBlockReward(reward uint64, minerHash [32]byte, initialSetup bool) (err error) {
-	var miner *protocol.Account
-	miner, err = storage.GetAccount(minerHash)
+	//if initialSetup {
+		var miner *protocol.Account
+		miner, err = storage.GetAccount(minerHash)
 
-	if !initialSetup && miner.Balance+reward > MAX_MONEY {
-		err = errors.New("Block reward would lead to balance overflow at the miner account.")
-	}
+		if !initialSetup && miner.Balance+reward > MAX_MONEY {
+			err = errors.New("Block reward would lead to balance overflow at the miner account.")
+		}
 
-	if err != nil {
-		return err
-	}
+		if err != nil {
+			return err
+		}
 
-	miner.Balance += reward
-
+		miner.Balance += reward
 	return nil
 }
 

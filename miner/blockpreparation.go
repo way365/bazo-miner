@@ -17,7 +17,6 @@ func prepareBlock(block *protocol.Block) {
 	//Fetch all txs from mempool (opentxs).
 	opentxs := storage.ReadAllOpenTxs()
 
-	logger.Printf("+++++++++++++ Preparblock Start")
 	//This copy is strange, but seems to be necessary to leverage the sort interface.
 	//Shouldn't be too bad because no deep copy.
 	var tmpCopy openTxs
@@ -31,8 +30,9 @@ func prepareBlock(block *protocol.Block) {
 	//map where all senders from FundsTx and AggTx are added to. --> this ensures that tx with same sender are only counted once.
 	storage.DifferentSenders = map[[32]byte]uint32{}
 	storage.DifferentReceivers = map[[32]byte]uint32{}
+	storage.FundsTxBeforeAggregation = nil
 
-	//TODO Better check if block is full.
+	//TODO Better check if block is full. Really big TODO to be honest.
 	for _, tx := range opentxs {
 		//Switch because with an if statement every transaction would need a getter-method for its type.
 		//Therefore, switch is more code-efficient.
@@ -69,7 +69,6 @@ func prepareBlock(block *protocol.Block) {
 	storage.DifferentSenders = nil
 	storage.DifferentReceivers = nil
 	nonAggregatableTxCounter = 0
-	logger.Printf("+++++++++++++ Preparblock End")
 	return
 }
 

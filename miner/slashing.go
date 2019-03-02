@@ -62,11 +62,12 @@ func IsInSameChain(b1, b2 *protocol.Block) bool {
 	}
 
 	for higherBlock.Height > 0 {
-		higherBlock = storage.ReadClosedBlock(higherBlock.PrevHash)
+		newHigherBlock := storage.ReadClosedBlock(higherBlock.PrevHash)
 		//Check blocks without transactions
-		if higherBlock == nil {
-			higherBlock = storage.ReadClosedBlockWithoutTx(higherBlock.PrevHashWithoutTx)
+		if newHigherBlock == nil {
+			newHigherBlock = storage.ReadClosedBlockWithoutTx(higherBlock.PrevHashWithoutTx)
 		}
+		higherBlock = newHigherBlock
 		if higherBlock.Hash == lowerBlock.Hash {
 			return true
 		}

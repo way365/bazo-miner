@@ -121,17 +121,12 @@ func mining(initialBlock *protocol.Block) {
 		//that before start mining a new block we empty the mempool which contains tx data that is likely to be
 		//validated with block validation, so we wait in order to not work on tx data that is already validated
 		//when we finish the block.
-		logger.Printf("^^^^ New Mining Round")
+		logger.Printf("\n\n __________________________________________________ New Mining Round __________________________________________________")
 		blockValidation.Lock()
-		logger.Printf("~~~~Blockvalidation LOCK")
 		nextBlock := newBlock(lastBlock.Hash, lastBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, lastBlock.Height+1)
-		logger.Printf("~~~~ (1)")
 		currentBlock = nextBlock
-		logger.Printf("~~~~ (2)")
 		prepareBlock(currentBlock)
-		logger.Printf("~~~~ (3)")
 		blockValidation.Unlock()
-		logger.Printf("~~~~Blockvalidation UNLOCK")
 	}
 }
 
@@ -149,8 +144,3 @@ func initRootKey(rootKey *ecdsa.PublicKey) error {
 
 	return nil
 }
-
-//func CalculateBlockchainSize(currentBlockSize int) {
-//	blockchainSize = blockchainSize + currentBlockSize
-//	logger.Printf("Blockchain size is: %v bytes\n", blockchainSize)
-//}

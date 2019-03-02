@@ -83,24 +83,26 @@ func (*Account) Decode(encoded []byte) (acc *Account) {
 func (acc Account) String() string {
 	addressHash := acc.Hash()
 	return fmt.Sprintf(
-		"Hash: %x, " +
+		"Hash: %x, " +			//TODO: uncomment this
 			"Address: %x, " +
-			"Issuer: %x, " +
+			//"Issuer: %x, " +
 			"TxCnt: %v, " +
 			"Balance: %v, " +
-			"IsStaking: %v, " +
-			"CommitmentKey: %x, " +
-			"StakingBlockHeight: %v, " +
-			"Contract: %v, " +
-			"ContractVariables: %v",
+			"IsStaking: %v, " ,
+			//+
+			//"CommitmentKey: %x, " +
+			//"StakingBlockHeight: %v, " +
+			//"Contract: %v, " +
+			//"ContractVariables: %v",
 		addressHash[0:8],
 		acc.Address[0:8],
-		acc.Issuer[0:8],
+		//acc.Issuer[0:8],
 		acc.TxCnt,
 		acc.Balance,
 		acc.IsStaking,
-		acc.CommitmentKey[0:8],
-		acc.StakingBlockHeight,
-		acc.Contract,
-		acc.ContractVariables)
+		//acc.CommitmentKey[0:8],
+		//acc.StakingBlockHeight,
+		//acc.Contract,
+		//acc.ContractVariables)
+	)
 }

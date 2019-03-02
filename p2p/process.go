@@ -74,7 +74,7 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 	}
 
 	//Write to mempool and rebroadcast
-	logger.Printf("Writing transaction (%x) in the mempool.\n", tx.Hash())
+	// (%x) in the mempool.\n", tx.Hash())
 	storage.WriteOpenTx(tx)
 	toBrdcst := BuildPacket(brdcstType, payload)
 	minerBrdcstMsg <- toBrdcst
@@ -96,7 +96,7 @@ func processNeighborRes(p *peer, payload []byte) {
 	ipportList := _processNeighborRes(payload)
 
 	for _, ipportIter := range ipportList {
-		logger.Printf("IP/Port received: %v\n", ipportIter)
+		//logger.Printf("IP/Port received: %v\n", ipportIter)
 		//iplistChan is a buffered channel to handle ips asynchronously.
 		iplistChan <- ipportIter
 	}

@@ -65,15 +65,6 @@ func DeleteINVALIDOpenTx(transaction protocol.Transaction) {
 	delete(txINVALIDMemPool, transaction.Hash())
 }
 
-func DeleteFundsTxBeforeAggregation(hash [32]byte) bool {
-	for i, tx := range FundsTxBeforeAggregation {
-		if hash == tx.Hash() {
-			FundsTxBeforeAggregation = append(FundsTxBeforeAggregation[:i], FundsTxBeforeAggregation[i+1:]...)
-			return true
-		}
-	}
-	return false
-}
 
 func DeleteAllFundsTxBeforeAggregation(){
 	FundsTxBeforeAggregation = nil

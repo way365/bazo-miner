@@ -173,6 +173,9 @@ func GetLatestProofs(n int, block *protocol.Block) (prevProofs [][crypto.COMM_PR
 		if closedBlock == nil {
 			closedBlock = storage.ReadClosedBlockWithoutTx(block.PrevHashWithoutTx)
 		}
+		if closedBlock == nil {
+			return
+		}
 		prevProofs = append(prevProofs, closedBlock.CommitmentProof)
 		n -= 1
 		block = closedBlock
