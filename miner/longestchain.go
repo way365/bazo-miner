@@ -6,6 +6,7 @@ import (
 	"github.com/bazo-blockchain/bazo-miner/p2p"
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
+	"sync"
 	"time"
 )
 
@@ -27,7 +28,13 @@ func getBlockSequences(newBlock *protocol.Block) (blocksToRollback, blocksToVali
 		tmpBlock = storage.ReadLastClosedBlock()
 	}
 
+	if tmpBlock == nil {
+		return nil, nil, errors.New("Last Block not found")
+	}
+
+	var blocksToRollbackMutex = sync.Mutex{}
 	for {
+		blocksToRollbackMutex.Lock()
 		if tmpBlock.Hash == ancestor.Hash || tmpBlock.HashWithoutTx == ancestor.HashWithoutTx {
 			break
 		}
@@ -41,10 +48,11 @@ func getBlockSequences(newBlock *protocol.Block) (blocksToRollback, blocksToVali
 		}
 		if newTmpBlock == nil {
 			logger.Printf("Block not found: %x, %x", tmpBlock.Hash, tmpBlock.HashWithoutTx)
+			blocksToRollbackMutex.Unlock()
 			return nil, nil, errors.New(fmt.Sprintf("Block not found in both closed storages"))
 		}
 		tmpBlock = newTmpBlock
-
+		blocksToRollbackMutex.Unlock()
 	}
 
 	//Compare current length with new chain length.
@@ -55,6 +63,7 @@ func getBlockSequences(newBlock *protocol.Block) (blocksToRollback, blocksToVali
 		//New chain is longer, rollback and validate new chain.
 		if len(blocksToRollback) != 0 {
 			logger.Printf("... ROLLBACK ...")
+			logger.Printf("... Rollback (blocks to rollback %d vs block of new chain %d)", len(blocksToRollback), len(newChain))
 			logger.Printf("... ANCESTOR ...%v", ancestor)
 
 		}

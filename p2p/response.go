@@ -18,11 +18,16 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 	//Check closed and open storage if the tx is available
 	openTx := storage.ReadOpenTx(txHash)
 	closedTx := storage.ReadClosedTx(txHash)
+	invalidTx := storage.ReadINVALIDOpenTx(txHash)
 
 	if openTx != nil {
 		tx = openTx
-	} else if closedTx != nil {
+	}
+	if closedTx != nil {
 		tx = closedTx
+	}
+	if invalidTx != nil {
+		tx = invalidTx
 	}
 
 	//In case it was not found, send a corresponding message back
@@ -56,6 +61,52 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 	sendData(p, packet)
 }
 
+func specialTxRes(p *peer, payload []byte, txKind uint8) {
+	//Search Transaction based on the txcnt and sender address.
+
+	var senderHash [32]byte
+	var searchedTransaction protocol.Transaction
+
+	txcnt := binary.BigEndian.Uint32(payload[1:9])
+	copy(senderHash[:], payload[10:42])
+
+	for _,tx := range storage.ReadAllClosedFundsAndAggTransactions() {
+		switch tx.(type) {
+		case *protocol.FundsTx:
+			trx := tx.(*protocol.FundsTx)
+			if trx != nil && trx.From == senderHash && trx.TxCnt == txcnt {
+				searchedTransaction = trx
+				break
+			}
+		default:
+			continue
+		}
+	}
+
+	if searchedTransaction == nil {
+		for _,tx := range storage.ReadAllOpenTxs() {
+			switch tx.(type) {
+			case *protocol.FundsTx:
+				trx := tx.(*protocol.FundsTx)
+				if trx != nil && trx.From == senderHash && trx.TxCnt == txcnt {
+					searchedTransaction = trx
+					break
+				}
+			default:
+				continue
+			}
+		}
+	}
+
+	if searchedTransaction != nil {
+		packet := BuildPacket(FUNDSTX_RES, searchedTransaction.Encode())
+		sendData(p, packet)
+	} else {
+		packet := BuildPacket(NOT_FOUND, nil)
+		sendData(p, packet)
+	}
+}
+
 //Here as well, checking open and closed block storage
 func blockRes(p *peer, payload []byte) {
 	var packet []byte
@@ -68,8 +119,6 @@ func blockRes(p *peer, payload []byte) {
 		copy(blockHash[:], payload[:32])
 		copy(blockHashWithoutTx[:], payload[32:])
 
-		//TODO Block Response need to be searched in the closedBlockwithouthtx as well... therefore probably the
-		//hash without tx needs to be sent in the Payload as well...
 		if block = storage.ReadClosedBlock(blockHash); block == nil {
 			if block = storage.ReadClosedBlockWithoutTx(blockHashWithoutTx); block == nil {
 				block = storage.ReadOpenBlock(blockHash)

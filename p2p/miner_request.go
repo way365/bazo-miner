@@ -43,7 +43,7 @@ func LastBlockReq() error {
 //Request specific transaction
 func TxReq(hash [32]byte, reqType uint8) error {
 
-	// Tx Request also as brodcast so that teh possibility of an answer is higher.
+	// Tx Request also as brodcast so that the possibility of an answer is higher.
 	for p := range peers.minerConns {
 		//Write to the channel, which the peerBroadcast(*peer) running in a seperate goroutine consumes right away.
 
@@ -51,6 +51,24 @@ func TxReq(hash [32]byte, reqType uint8) error {
 			return errors.New("Couldn't get a connection, request not transmitted.")
 		}
 		packet := BuildPacket(reqType, hash[:])
+		sendData(p, packet)
+	}
+
+	return nil
+}
+
+//Request specific transaction
+func TxWithTxCntReq(payload []byte, reqType uint8) error { //TODO
+
+	// Tx Request also as brodcast so that the possibility of an answer is higher.
+	for p := range peers.minerConns {
+		//Write to the channel, which the peerBroadcast(*peer) running in a seperate goroutine consumes right away.
+
+		if p == nil {
+			return errors.New("Couldn't get a connection, request not transmitted.")
+		}
+
+		packet := BuildPacket(reqType, payload)
 		sendData(p, packet)
 	}
 

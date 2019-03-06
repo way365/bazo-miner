@@ -195,6 +195,8 @@ func ReadFundsTxBeforeAggregation() ([]*protocol.FundsTx) {
 }
 
 func ReadAllBootstrapReceivedTransactions() (allOpenTxs []protocol.Transaction) {
+	openTxMutex.Lock()
+	defer openTxMutex.Unlock()
 
 	for key := range bootstrapReceivedMemPool {
 		allOpenTxs = append(allOpenTxs, txMemPool[key])
@@ -203,12 +205,22 @@ func ReadAllBootstrapReceivedTransactions() (allOpenTxs []protocol.Transaction) 
 }
 
 func ReadINVALIDOpenTx(hash [32]byte) (transaction protocol.Transaction) {
-
 	return txINVALIDMemPool[hash]
+}
+
+func ReadAllINVALIDOpenTx() (allOpenInvalidTxs []protocol.Transaction) {
+
+	for key := range txINVALIDMemPool {
+		allOpenInvalidTxs = append(allOpenInvalidTxs, txINVALIDMemPool[key])
+	}
+
+	return allOpenInvalidTxs
 }
 
 //Needed for the miner to prepare a new block
 func ReadAllOpenTxs() (allOpenTxs []protocol.Transaction) {
+	openTxMutex.Lock()
+	defer openTxMutex.Unlock()
 
 	for key := range txMemPool {
 		allOpenTxs = append(allOpenTxs, txMemPool[key])

@@ -14,7 +14,7 @@ const (
 	BLOCK_BRDCST       		= 6
 	BLOCK_HEADER_BRDCST		= 7
 	TX_BRDCST_ACK      		= 8
-	AGGTX_BRDCST      = 9
+	AGGTX_BRDCST      		= 9
 
 	FUNDSTX_REQ            	= 20
 	ACCTX_REQ              	= 21
@@ -27,6 +27,7 @@ const (
 	INTERMEDIATE_NODES_REQ 	= 28
 	AGGTX_REQ				= 29
 	UNKNOWNTX_REQ			= 30
+	SPECIALTX_REQ			= 31
 
 
 	FUNDSTX_RES            	= 40

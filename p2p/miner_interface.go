@@ -14,6 +14,7 @@ var (
 	BlockHeaderOut = make(chan []byte)
 
 	VerifiedTxsOut = make(chan []byte)
+	VerifiedTxsBrdcstOut = make(chan []byte)
 
 	//Data requested by miner, to allow parallelism, we have a chan for every tx type.
 	FundsTxChan  		= make(chan *protocol.FundsTx)
@@ -28,7 +29,7 @@ var (
 	receivedAggTxStash = make([]*protocol.AggTx, 0)
 
 	fundsTxSashMutex = &sync.Mutex{}
-	aggTxSashMutex = &sync.Mutex{}
+	aggTxStashMutex = &sync.Mutex{}
 )
 
 //This is for blocks and txs that the miner successfully validated.
@@ -51,6 +52,13 @@ func forwardVerifiedTxsToMiner() {
 	for {
 		verifiedTxs := <- VerifiedTxsOut
 		clientBrdcstMsg <- BuildPacket(VERIFIEDTX_BRDCST, verifiedTxs)
+	}
+}
+
+func forwardVerifiedTxsBrdcstToMiner() {
+	for {
+		verifiedTx := <- VerifiedTxsBrdcstOut
+		minerBrdcstMsg <- verifiedTx
 	}
 }
 
@@ -102,7 +110,7 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		if !txAlreadyInStash(receivedTXStash, fundsTx.Hash()) {
 			receivedTXStash = append(receivedTXStash, fundsTx)
 			FundsTxChan <- fundsTx
-			if len(receivedTXStash) > 1000 {
+			if len(receivedTXStash) > 5000 {
 				receivedTXStash = append(receivedTXStash[:0], receivedTXStash[1:]...)
 			}
 		}
@@ -135,7 +143,7 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 			return
 		}
 
-		aggTxSashMutex.Lock()
+		aggTxStashMutex.Lock()
 		if !aggTxAlreadyInStash(receivedAggTxStash, aggTx.Hash()) {
 			receivedAggTxStash = append(receivedAggTxStash, aggTx)
 			AggTxChan <- aggTx
@@ -143,7 +151,7 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 				receivedAggTxStash = append(receivedAggTxStash[:0], receivedAggTxStash[1:]...)
 			}
 		}
-		aggTxSashMutex.Unlock()
+		aggTxStashMutex.Unlock()
 	}
 }
 

@@ -58,19 +58,18 @@ func WriteOpenTx(transaction protocol.Transaction) {
 
 func WriteFundsTxBeforeAggregation(transaction *protocol.FundsTx) {
 	openFundsTxBeforeAggregationMutex.Lock()
-	defer openFundsTxBeforeAggregationMutex.Unlock()
 	FundsTxBeforeAggregation = append(FundsTxBeforeAggregation, transaction)
+	openFundsTxBeforeAggregationMutex.Unlock()
 }
 
 func WriteBootstrapTxReceived(transaction protocol.Transaction) {
-
 	bootstrapReceivedMemPool[transaction.Hash()] = transaction
 }
 
 func WriteINVALIDOpenTx(transaction protocol.Transaction) {
-
 	txINVALIDMemPool[transaction.Hash()] = transaction
 }
+
 func WriteToReceivedStash(block *protocol.Block) {
 
 	//Only write it to stash if it is not in there already.
@@ -108,7 +107,6 @@ func WriteClosedTx(transaction protocol.Transaction) (err error) {
 	case *protocol.AggTx:
 		bucket = "closedaggregations"
 	}
-
 
 	hash := transaction.Hash()
 	err = db.Update(func(tx *bolt.Tx) error {

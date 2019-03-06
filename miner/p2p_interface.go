@@ -39,8 +39,8 @@ func processBlock(payload []byte) {
 	//Start validation process
 	err := validate(block, false)
 	if err == nil {
-		logger.Printf("Validated block (received): %vState:\n%v", block, getState())
 		broadcastBlock(block)
+		logger.Printf("Validated block (received): %vState:\n%v", block, getState())
 	} else {
 		logger.Printf("Received block (%x) could not be validated: %v\n", block.Hash[0:8], err)
 	}
@@ -57,7 +57,7 @@ func broadcastBlock(block *protocol.Block) {
 	p2p.BlockHeaderOut <- blockCopy.EncodeHeader()
 }
 
-func broadcastVerifiedTxs(txs []*protocol.FundsTx) {
+func broadcastVerifiedFundsTxs(txs []*protocol.FundsTx) {
 	var verifiedTxs [][]byte
 
 	for _, tx := range txs {
@@ -65,4 +65,20 @@ func broadcastVerifiedTxs(txs []*protocol.FundsTx) {
 	}
 
 	p2p.VerifiedTxsOut <- protocol.Encode(verifiedTxs, protocol.FUNDSTX_SIZE)
+}
+
+func broadcastVerifiedAggTxsToOtherMiners(txs []*protocol.AggTx) {
+
+	for _, tx := range txs {
+		toBrdcst := p2p.BuildPacket(p2p.AGGTX_BRDCST, tx.Encode())
+		p2p.VerifiedTxsBrdcstOut <- toBrdcst
+	}
+}
+
+func broadcastVerifiedFundsTxsToOtherMiners(txs []*protocol.FundsTx) {
+
+	for _, tx := range txs {
+		toBrdcst := p2p.BuildPacket(p2p.FUNDSTX_BRDCST, tx.Encode())
+		p2p.VerifiedTxsBrdcstOut <- toBrdcst
+	}
 }

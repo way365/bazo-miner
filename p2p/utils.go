@@ -133,6 +133,7 @@ func ReadHeader(reader *bufio.Reader) (*Header, error) {
 
 	//Check if the payload length does not exceed the MAX_BLOCK_SIZE defined in configtx.go
 	if header.Len > protocol.MAX_BLOCK_SIZE {
+		logger.Printf("Header.Len: %v > %v", header.Len, protocol.MAX_BLOCK_SIZE)
 		return nil, errors.New("Header: Payload exceeds MAX_BLOCK_SIZE")
 	}
 

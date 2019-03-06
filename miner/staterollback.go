@@ -59,40 +59,32 @@ func reactivateHistoricBlockDueToRollback(tx protocol.Transaction)() {
 	switch tx.(type){
 	case *protocol.FundsTx:
 		fundsTx = tx.(*protocol.FundsTx)
+		fundsTx.Aggregated = false
+		storage.WriteClosedTx(fundsTx)
 		blockHash = fundsTx.Block
 	case *protocol.AggTx:
 		aggTx = tx.(*protocol.AggTx)
+		aggTx.Aggregated = false
+		storage.WriteClosedTx(aggTx)
 		blockHash = aggTx.Block
 	}
 
 	//Search block in bucket & Change aggregated to false.
 	block := storage.ReadClosedBlockWithoutTx(blockHash)
 	if block == nil {
-		//Block is in closed blocks but not aggregated --> only change transactions to aggregated = false. Such that the block does not get aggregated now.
-
-		if fundsTx != nil {
-			fundsTx.Aggregated = false
-			storage.WriteClosedTx(fundsTx)
-		} else {
-			aggTx.Aggregated = false
-			storage.WriteClosedTx(aggTx)
-			logger.Printf("%v", aggTx)
-		}
+		//Block is in closed blocks but not aggregated --> only change transactions to aggregated = false what is done above.
 		return
 	}
 
-	logger.Printf(" | Found Block (%x) for which Tx's have to been found and un-aggregated", block.Hash)
+	logger.Printf(" | Found Block (%x) for which Tx's have to been found and written into the block again. ", block.Hash)
 
 	//Search all transactions which were validated in the "empty" block. This may be very time consuming.
-	//TODO: This is not correct, because maybe not all transactions will be Un-Aggrgated. --> Only reopen block and add all transactions. and then un-aggregate the ones I know about.
 	for _, tx := range storage.ReadAllClosedFundsAndAggTransactions() {
 		switch tx.(type){
 		case *protocol.FundsTx:
 			FTX := tx.(*protocol.FundsTx)
 			if FTX.Block == blockHash {
 				//Reactivate this transaction --> it is still closed but it has to be visible in the block and chain again.
-				logger.Printf(" | ReActivate fundsTx %x", FTX.Hash())
-				FTX.Aggregated = false
 				block.FundsTxData = append(block.FundsTxData, tx.Hash())
 				storage.WriteClosedTx(FTX)
 			}
@@ -100,8 +92,6 @@ func reactivateHistoricBlockDueToRollback(tx protocol.Transaction)() {
 			ATX := tx.(*protocol.AggTx)
 			if ATX.Block == blockHash {
 				//Reactivate this transaction
-				logger.Printf(" | ReActivate aggTX %x", ATX.Hash())
-				ATX.Aggregated = false
 				block.AggTxData = append(block.AggTxData, tx.Hash())
 				storage.WriteClosedTx(ATX)
 			}
@@ -111,7 +101,7 @@ func reactivateHistoricBlockDueToRollback(tx protocol.Transaction)() {
 
 	sort.Sort(ByHash(block.AggTxData))
 
-	//Write block back to bucket with closed blocks with transactions.
+	//Write block back to bucket closed blocks with transactions.
 	block.Aggregated = false
 	storage.WriteClosedBlock(block)
 	storage.DeleteClosedBlockWithoutTx(blockHash)

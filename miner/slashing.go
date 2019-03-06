@@ -2,8 +2,11 @@ package miner
 
 import (
 	"errors"
+	"github.com/bazo-blockchain/bazo-miner/p2p"
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
+	"sync"
+	"time"
 )
 
 type SlashingProof struct {
@@ -12,6 +15,8 @@ type SlashingProof struct {
 	ConflictingBlockHashWithoutTx1 [32]byte
 	ConflictingBlockHashWithoutTx2 [32]byte
 }
+
+var SameChainMutex = sync.Mutex{}
 
 //Find a proof where a validator votes on two different chains within the slashing window
 func seekSlashingProof(block *protocol.Block) error {
@@ -47,6 +52,9 @@ func seekSlashingProof(block *protocol.Block) error {
 
 //Check if two blocks are part of the same chain or if they appear in two competing chains
 func IsInSameChain(b1, b2 *protocol.Block) bool {
+
+	SameChainMutex.Lock()
+	defer SameChainMutex.Unlock()
 	var higherBlock, lowerBlock  *protocol.Block
 
 	if b1.Height == b2.Height {
@@ -66,6 +74,20 @@ func IsInSameChain(b1, b2 *protocol.Block) bool {
 		//Check blocks without transactions
 		if newHigherBlock == nil {
 			newHigherBlock = storage.ReadClosedBlockWithoutTx(higherBlock.PrevHashWithoutTx)
+		}
+		if newHigherBlock == nil {
+			p2p.BlockReq(higherBlock.PrevHash, higherBlock.PrevHashWithoutTx)
+
+			//Blocking wait
+			select {
+			case encodedBlock := <-p2p.BlockReqChan:
+				newHigherBlock = newHigherBlock.Decode(encodedBlock)
+				storage.WriteToReceivedStash(newHigherBlock)
+				//Limit waiting time to BLOCKFETCH_TIMEOUT seconds before aborting.
+			case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
+				logger.Printf("Higher Block %x, %x  is nil --> maybe Problem ", higherBlock.PrevHash, higherBlock.PrevHashWithoutTx)
+				break
+			}
 		}
 		higherBlock = newHigherBlock
 		if higherBlock.Hash == lowerBlock.Hash {

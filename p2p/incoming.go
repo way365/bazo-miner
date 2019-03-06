@@ -33,6 +33,8 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 		txRes(p, payload, AGGTX_REQ)
 	case UNKNOWNTX_REQ:
 		txRes(p, payload, UNKNOWNTX_REQ)
+	case SPECIALTX_REQ:
+		specialTxRes(p, payload, SPECIALTX_REQ)
 	case BLOCK_REQ:
 		blockRes(p, payload)
 	case BLOCK_HEADER_REQ:

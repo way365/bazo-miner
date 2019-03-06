@@ -50,12 +50,12 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 		}
 		tx = sTx
 	case AGGTX_BRDCST:
-		var fTx *protocol.AggTx
-		fTx = fTx.Decode(payload)
-		if fTx == nil {
+		var aTx *protocol.AggTx
+		aTx = aTx.Decode(payload)
+		if aTx == nil {
 			return
 		}
-		tx = fTx
+		tx = aTx
 	}
 
 	//Response tx acknowledgment if the peer is a client
@@ -74,7 +74,6 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 	}
 
 	//Write to mempool and rebroadcast
-	// (%x) in the mempool.\n", tx.Hash())
 	storage.WriteOpenTx(tx)
 	toBrdcst := BuildPacket(brdcstType, payload)
 	minerBrdcstMsg <- toBrdcst

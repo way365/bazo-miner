@@ -41,6 +41,7 @@ func Init(ipport string) {
 	go forwardBlockBrdcstToMiner()
 	go forwardBlockHeaderBrdcstToMiner()
 	go forwardVerifiedTxsToMiner()
+	go forwardVerifiedTxsBrdcstToMiner()
 
 	if !IsBootstrap() {
 		bootstrap()

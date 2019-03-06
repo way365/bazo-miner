@@ -84,7 +84,7 @@ func DeleteClosedTx(transaction protocol.Transaction) {
 	case *protocol.AggTx:
 		bucket = "closedaggregations"
 	}
-
+	
 	hash := transaction.Hash()
 	db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))

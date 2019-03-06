@@ -43,6 +43,7 @@ func newBlock(prevHash [32]byte, prevHashWithoutTx [32]byte, commitmentProof [cr
 
 var (
 	aggregationMutex = &sync.Mutex{}
+	addFundsTxMutex = &sync.Mutex{}
 )
 
 //This function prepares the block to broadcast into the network. No new txs are added at this point.
@@ -89,11 +90,9 @@ func finalizeBlock(block *protocol.Block) error {
 
 	nonce, err := proofOfStake(getDifficulty(), block.PrevHash, prevProofs, block.Height, validatorAcc.Balance, commitmentProof)
 	if err != nil {
-		//Delete created AggTx From OpenTx.
+		//Delete all partially added transactions.
 		if nonce == -2 {
-			for _, txHash := range block.AggTxData {
-				storage.DeleteOpenTxWithHash(txHash)
-			}
+			storage.DeleteAllFundsTxBeforeAggregation()
 		}
 		return err
 	}
@@ -129,6 +128,7 @@ func addTx(b *protocol.Block, tx protocol.Transaction) error {
 	//Switch this becasue aggtx fee is zero and otherwise this would lead to problems.
 	switch tx.(type) {
 	case *protocol.AggTx:
+		return nil
 	default :
 		if tx.TxFee() < activeParameters.Fee_minimum {
 			logger.Printf("Transaction fee too low: %v (minimum is: %v)\n", tx.TxFee(), activeParameters.Fee_minimum)
@@ -198,6 +198,9 @@ func addAccTx(b *protocol.Block, tx *protocol.AccTx) error {
 }
 
 func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
+
+	addFundsTxMutex.Lock()
+
 	//Checking if the sender account is already in the local state copy. If not and account exist, create local copy.
 	//If account does not exist in state, abort.
 	if _, exists := b.StateCopy[tx.From]; !exists {
@@ -209,6 +212,8 @@ func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
 				b.StateCopy[tx.From] = &newAcc
 			}
 		} else {
+			storage.WriteINVALIDOpenTx(tx)
+			addFundsTxMutex.Unlock()
 			return errors.New(fmt.Sprintf("Sender account not present in the state: %x\n", tx.From))
 		}
 	}
@@ -223,6 +228,8 @@ func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
 				b.StateCopy[tx.To] = &newAcc
 			}
 		} else {
+			storage.WriteINVALIDOpenTx(tx)
+			addFundsTxMutex.Unlock()
 			return errors.New(fmt.Sprintf("Receiver account not present in the state: %x\n", tx.To))
 		}
 	}
@@ -231,19 +238,30 @@ func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
 	//fee + amount to spend as balance available.
 	if !storage.IsRootKey(tx.From) {
 		if (tx.Amount + tx.Fee) > b.StateCopy[tx.From].Balance {
+			storage.WriteINVALIDOpenTx(tx)
+			addFundsTxMutex.Unlock()
 			return errors.New("Not enough funds to complete the transaction!")
 		}
 	}
 
 	//Transaction count need to match the state, preventing replay attacks.
 	if b.StateCopy[tx.From].TxCnt != tx.TxCnt {
-		err := fmt.Sprintf("Sender txCnt does not match: %v (tx.txCnt) vs. %v (state txCnt)", tx.TxCnt, b.StateCopy[tx.From].TxCnt)
+		if tx.TxCnt < b.StateCopy[tx.From].TxCnt {
+			storage.DeleteOpenTx(tx)
+			storage.DeleteINVALIDOpenTx(tx)
+		} else {
+			storage.WriteINVALIDOpenTx(tx)
+		}
+		err := fmt.Sprintf("Sender %x txCnt does not match: %v (tx.txCnt) vs. %v (state txCnt)\nAggrgated: %t",tx.From, tx.TxCnt, b.StateCopy[tx.From].TxCnt, tx.Aggregated)
+		addFundsTxMutex.Unlock()
 		return errors.New(err)
 	}
 
 	//Prevent balance overflow in receiver account.
 	if b.StateCopy[tx.To].Balance+tx.Amount > MAX_MONEY {
 		err := fmt.Sprintf("Transaction amount (%v) leads to overflow at receiver account balance (%v).\n", tx.Amount, b.StateCopy[tx.To].Balance)
+		storage.WriteINVALIDOpenTx(tx)
+		addFundsTxMutex.Unlock()
 		return errors.New(err)
 	}
 
@@ -254,6 +272,8 @@ func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
 
 		// Check if vm execution run without error
 		if !virtualMachine.Exec(false) {
+			storage.WriteINVALIDOpenTx(tx)
+			addFundsTxMutex.Unlock()
 			return errors.New(virtualMachine.GetErrorMsg())
 		}
 
@@ -269,10 +289,10 @@ func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
 	accReceiver := b.StateCopy[tx.To]
 	accReceiver.Balance += tx.Amount
 
-	//Add the tx hash to the block header and write it to open storage (non-validated transactions).
-	//TODO Better Comment
+	//Add teh transaction to the storage where all Funds-transactions are stored before they where aggregated.
 	storage.WriteFundsTxBeforeAggregation(tx)
 
+	addFundsTxMutex.Unlock()
 	return nil
 }
 
@@ -292,6 +312,8 @@ func splitSortedAggregatableTransactions(b *protocol.Block){
 	moreTransactionsToAggregate := true
 
 	PossibleTransactionsToAggregate := storage.ReadFundsTxBeforeAggregation()
+
+	sortTxBeforeAggregation(PossibleTransactionsToAggregate)
 	cnt := 0
 
 	for moreTransactionsToAggregate {
@@ -430,6 +452,7 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 		transactionReceivers = append(transactionReceivers, trx.To)
 		nrOfReceivers[trx.To] = nrOfReceivers[trx.To] + 1
 		transactionHashes = append(transactionHashes, trx.Hash())
+		storage.WriteOpenTx(trx)
 
 	}
 
@@ -842,6 +865,10 @@ func fetchFundsTxRecursively(AggregatedTxSlice [][32]byte) (aggregatedFundsTxSli
 			tx = storage.ReadOpenTx(txHash)
 		}
 		if tx == nil {
+			//Read invalid storage when not found in closed & open Transactions
+			tx = storage.ReadINVALIDOpenTx(txHash)
+		}
+		if tx == nil {
 			//Fetch it from the network.
 			err := p2p.TxReq(txHash, p2p.UNKNOWNTX_REQ)
 			if err != nil {
@@ -892,7 +919,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 		aggTx := storage.ReadClosedTx(aggTxHash)
 
 		//Check if transaction was already in another block, expect it is aggregated.
-		if !initialSetup && aggTx != nil{
+		if !initialSetup && aggTx != nil && aggTx.(*protocol.AggTx).Aggregated == false{
 			if !aggTx.(*protocol.AggTx).Aggregated {
 				logger.Printf("Block validation had AggTx (%x) that was already in a previous block.", aggTx.Hash())
 				errChan <- errors.New("Block validation had AggTx that was already in a previous block.")
@@ -901,11 +928,18 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 		}
 
 		if aggTx == nil {
-			//Read open storage when not found in closedTransactions
+			//Read invalid storage when not found in closed & open Transactions
 			aggTx = storage.ReadOpenTx(aggTxHash)
+		}
+
+		if aggTx == nil {
+			//Read open storage when not found in closedTransactions
+			aggTx = storage.ReadINVALIDOpenTx(aggTxHash)
 		}
 		if aggTx == nil {
 			//Transaction need to be fetched from the network.
+			cnt := 0
+			HERE:
 			err := p2p.TxReq(aggTxHash, p2p.AGGTX_REQ)
 			if err != nil {
 				errChan <- errors.New(fmt.Sprintf("AggTx could not be read: %v", err))
@@ -916,6 +950,11 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 			case aggTx = <-p2p.AggTxChan:
 				storage.WriteOpenTx(aggTx)
 			case <-time.After(TXFETCH_TIMEOUT * time.Second):
+				logger.Printf("Fetching (%x) timed out, next chance", aggTxHash)
+				if cnt < 2 {
+					cnt ++
+					goto HERE
+				}
 				logger.Printf("Fetching (%x) timed out...", aggTxHash)
 				errChan <- errors.New("AggTx fetch timed out")
 				return
@@ -923,6 +962,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 			if aggTx.Hash() != aggTxHash {
 				errChan <- errors.New("Received AggTxHash did not correspond to our request.")
 			}
+			logger.Printf("Received requested AggTX %x", aggTx.Hash())
 		}
 
 		//At this point the aggTx visible in the blocks body should be received.
@@ -964,33 +1004,48 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 						//Found Open new Agg Transaction
 						switch tx.(type) {
 						case *protocol.AggTx:
-						continue
+							continue
 						}
 						transactions = append(transactions, tx.(*protocol.FundsTx))
 					} else {
-						//Need to fetch transaction from the network. At this point it is unknown what type of tx we request.
-						err := p2p.TxReq(txHash, p2p.UNKNOWNTX_REQ)
-						if err != nil {
-							errChan <- errors.New(fmt.Sprintf("Tx could not be read: %v", err))
-							return
-						}
-
-						//Depending on which channel the transaction is received, the type of the transaction is known.
-						select {
-						case tx = <-p2p.AggTxChan:
-							//Received an Aggregated Transaction which was already validated in an older block.
-							continue
-						case tx = <-p2p.FundsTxChan:
-							//Received a fundsTransaction, which needs to be handled further.
-							storage.WriteOpenTx(tx)
+						if tx != nil {
+							tx = storage.ReadINVALIDOpenTx(txHash)
+							switch tx.(type) {
+							case *protocol.AggTx:
+								continue
+							}
 							transactions = append(transactions, tx.(*protocol.FundsTx))
-						case <-time.After(TXFETCH_TIMEOUT * time.Second):
-							logger.Printf("Fetching (%x) timed out...", txHash)
-							errChan <- errors.New("UnknownTx fetch timed out")
-							return
-						}
-						if tx.Hash() != txHash {
-							errChan <- errors.New("Received TxHash did not correspond to our request.")
+						} else {
+							//Need to fetch transaction from the network. At this point it is unknown what type of tx we request.
+							cnt := 0
+							NEXTTRY:
+							err := p2p.TxReq(txHash, p2p.UNKNOWNTX_REQ)
+							if err != nil {
+								errChan <- errors.New(fmt.Sprintf("Tx could not be read: %v", err))
+								return
+							}
+
+							//Depending on which channel the transaction is received, the type of the transaction is known.
+							select {
+							case tx = <-p2p.AggTxChan:
+								//Received an Aggregated Transaction which was already validated in an older block.
+								storage.WriteOpenTx(tx)
+							case tx = <-p2p.FundsTxChan:
+								//Received a fundsTransaction, which needs to be handled further.
+								storage.WriteOpenTx(tx)
+								transactions = append(transactions, tx.(*protocol.FundsTx))
+							case <-time.After(TXFETCH_TIMEOUT * time.Second):
+								logger.Printf("Fetching (%x) timed out...", txHash)
+								if cnt < 2 {
+									cnt ++
+									goto NEXTTRY
+								}
+								errChan <- errors.New("UnknownTx fetch timed out")
+								return
+							}
+							if tx.Hash() != txHash {
+								errChan <- errors.New("Received TxHash did not correspond to our request.")
+							}
 						}
 					}
 				}
@@ -1188,7 +1243,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 		select {
 		case aggregatedFundsTxSlice = <- aggregatedFundsChan:
 		case <-time.After(120 * time.Second):
-			return nil, nil, nil, nil, nil, nil, errors.New("Fetching FundsTx from AggTx Failed.")
+			return nil, nil, nil, nil, nil, nil, errors.New("Fetching FundsTx aggregated in AggTx failed.")
 		}
 	}
 
@@ -1221,11 +1276,9 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 
 	//PoS validation
 	if !validateProofOfStake(getDifficulty(), prevProofs, block.Height, acc.Balance, block.CommitmentProof, block.Timestamp) {
-		logger.Printf("NONCE Problem: %x",block.Nonce)
-		for _, i := range prevProofs {
-			logger.Printf("|  PP: %x",i[0:8])
-		}
-		logger.Printf("|___block.Height: %d, acc.Balance %v, block.CommitmentProf: %x, block.Timestamp %v ", block.Height, acc.Balance, block.CommitmentProof[0:8], block.Timestamp)
+		logger.Printf("NONCE (%x) in block %x is problematic", block.Nonce, block.Hash[0:8])
+		logger.Printf("|  block.Height: %d, acc.Address %x, acc.txCount %v, acc.Balance %v, block.CommitmentProf: %x, block.Timestamp %v ", block.Height, acc.Address[0:8], acc.TxCnt,  acc.Balance, block.CommitmentProof[0:8], block.Timestamp)
+		logger.Printf("|_________")
 
 		return nil, nil, nil, nil, nil, nil, errors.New("The nonce is incorrect.")
 	}
@@ -1384,6 +1437,13 @@ func postValidate(data blockData, initialSetup bool) {
 					}
 				} else {
 					trx = storage.ReadOpenTx(aggregatedTxHash)
+					if trx == nil {
+						for _, i := range data.aggregatedFundsTxSlice {
+							if i.Hash() == aggregatedTxHash {
+								trx = i
+							}
+						}
+					}
 					switch trx.(type){
 					case *protocol.AggTx:
 						trx.(*protocol.AggTx).Aggregated = true
@@ -1393,13 +1453,14 @@ func postValidate(data blockData, initialSetup bool) {
 					}
 				}
 				if trx == nil {
-					logger.Printf("TRX == NIL --> PROBLEM --> %x", aggregatedTxHash)
-					return
+					logger.Printf("TRX == NIL --> PROBLEM --> %x in blokc %x", aggregatedTxHash, data.block.Hash[0:8])
+					break
 				}
 
 				storage.WriteClosedTx(trx)
 				storage.DeleteOpenTx(trx)
 			}
+
 			//Delete AggTx and write it to closed Tx.
 			tx.Block = data.block.HashWithoutTx
 			tx.Aggregated = false
@@ -1408,7 +1469,14 @@ func postValidate(data blockData, initialSetup bool) {
 		}
 
 		if len(data.fundsTxSlice) > 0 {
-			broadcastVerifiedTxs(data.fundsTxSlice)
+			broadcastVerifiedFundsTxs(data.fundsTxSlice)
+			broadcastVerifiedFundsTxsToOtherMiners(data.fundsTxSlice)
+			broadcastVerifiedFundsTxsToOtherMiners(data.aggregatedFundsTxSlice)
+		}
+
+		//Broadcast AggTx to the neighbors, such that they do not have to request them later.
+		if len(data.aggTxSlice) > 0 {
+			broadcastVerifiedAggTxsToOtherMiners(data.aggTxSlice)
 		}
 
 
@@ -1416,7 +1484,7 @@ func postValidate(data blockData, initialSetup bool) {
 		storage.DeleteOpenBlock(data.block.Hash)
 		storage.WriteClosedBlock(data.block)
 
-		//Do not empty last three blocks and only if it not aggregated already. TODO Probably rewrite this later.
+		//Do not empty last three blocks and only if it not aggregated already.
 		for _, block := range storage.ReadAllClosedBlocks(){
 
 			//Empty all blocks despite the last 3 and genesis block.

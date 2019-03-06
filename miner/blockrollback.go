@@ -78,7 +78,7 @@ func preValidateRollback(b *protocol.Block) (accTxSlice []*protocol.AccTx, funds
 		var aggTx *protocol.AggTx
 		tx := storage.ReadClosedTx(hash)
 		if tx == nil {
-			logger.Printf("Tx %x was not in closed Bucket", hash)
+			logger.Printf("Tx %x form block (%x) was not in closed Bucket", hash, b.Hash[0:8])
 			tx = storage.ReadOpenTx(hash)
 			 if tx != nil {
 			 	logger.Printf("Tx %x was in open instead of closed Bucket", hash)
@@ -145,7 +145,7 @@ func postValidateRollback(data blockData) {
 			}
 		}
 
-		//Delete AggTx. No need to write in OpenTx, because it will be created newly.
+		storage.WriteOpenTx(tx)
 		storage.DeleteClosedTx(tx)
 	}
 

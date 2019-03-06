@@ -5,13 +5,14 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/bazo-blockchain/bazo-miner/crypto"
+	"sync"
 	"time"
 
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
 	"golang.org/x/crypto/sha3"
 )
-
+var validateMutex = sync.Mutex{}
 //Tests whether the first diff bits are zero
 func validateProofOfStake(diff uint8,
 	prevProofs [][crypto.COMM_PROOF_LENGTH]byte,
@@ -19,6 +20,9 @@ func validateProofOfStake(diff uint8,
 	balance uint64,
 	commitmentProof [crypto.COMM_PROOF_LENGTH]byte,
 	timestamp int64) bool {
+
+	validateMutex.Lock()
+	defer validateMutex.Unlock()
 
 	var (
 		heightBuf    [4]byte
@@ -51,6 +55,8 @@ func validateProofOfStake(diff uint8,
 
 	data := binary.BigEndian.Uint64(pos[:])
 	data = data / balance
+	logger.Printf("   balance: %x, %v", balance, balance)
+	logger.Printf("   data: %x, %v", data, data)
 	var buf bytes.Buffer
 	binary.Write(&buf, binary.BigEndian, data)
 
@@ -60,11 +66,13 @@ func validateProofOfStake(diff uint8,
 	//Bytes check
 	for byteNr = 0; byteNr < (uint8)(diff/8); byteNr++ {
 		if pos[byteNr] != 0 {
+			logger.Printf("     Bytes check failed")
 			return false
 		}
 	}
 	//Bits check
 	if diff%8 != 0 && pos[byteNr] >= 1<<(8-diff%8) {
+		logger.Printf("     Bits check failed")
 		return false
 	}
 	return true
@@ -117,6 +125,13 @@ func proofOfStake(diff uint8,
 	for range time.Tick(time.Second) {
 		// lastBlock is a global variable which points to the last block. This check makes sure we abort if another
 		// block has been validated
+
+		if lastBlock == nil {
+			lastBlock = storage.ReadLastClosedBlock()
+		}
+		if lastBlock == nil {
+			return -1, errors.New("Abort mining, No Last Block Found")
+		}
 		if prevHash != lastBlock.Hash {
 			//Error code -2 initiates that probably a aggTx Should be deleted from open storage.
 			return -2, errors.New("Abort mining, another block has been successfully validated in the meantime")
