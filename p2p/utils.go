@@ -158,6 +158,8 @@ func IsBootstrap() bool {
 	bootstrapPort := strings.Split(storage.Bootstrap_Server, ":")[1]
 	thisPort := strings.Split(Ipport, ":")[1]
 	if thisPort == bootstrapPort {
+		//Only the port is checked if it is bootstrapping... Not the whole IP-Address
+		//All Clients need to run on another port than teh bootstrap server....
 		return true
 	}
 	return false

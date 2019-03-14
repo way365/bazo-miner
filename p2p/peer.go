@@ -45,6 +45,7 @@ type peersStruct struct {
 }
 
 func (peers peersStruct) contains(ipport string, peerType uint) bool {
+
 	var peerConns map[*peer]bool
 
 	if peerType == PEERTYPE_MINER {

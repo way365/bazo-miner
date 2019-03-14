@@ -55,8 +55,6 @@ func validateProofOfStake(diff uint8,
 
 	data := binary.BigEndian.Uint64(pos[:])
 	data = data / balance
-	logger.Printf("   balance: %x, %v", balance, balance)
-	logger.Printf("   data: %x, %v", data, data)
 	var buf bytes.Buffer
 	binary.Write(&buf, binary.BigEndian, data)
 
@@ -134,7 +132,8 @@ func proofOfStake(diff uint8,
 		}
 		if prevHash != lastBlock.Hash {
 			//Error code -2 initiates that probably a aggTx Should be deleted from open storage.
-			return -2, errors.New("Abort mining, another block has been successfully validated in the meantime")
+			logger.Printf("Abort mining, another block has been successfully validated in the meantime LastBlock: %x", lastBlock.Hash[0:8])
+			return -2, errors.New("Abort mining, another block has been successfully validated in the meantime:")
 		}
 
 		abort = false

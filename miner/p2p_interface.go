@@ -4,14 +4,9 @@ import (
 	"github.com/bazo-blockchain/bazo-miner/p2p"
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
-	"sync"
 )
 
 //The code in this source file communicates with the p2p package via channels
-
-var (
-	processBlockMutex = &sync.Mutex{}
-)
 
 //Constantly listen to incoming data from the network
 func incomingData() {
@@ -37,7 +32,9 @@ func processBlock(payload []byte) {
 	storage.WriteToReceivedStash(block)
 
 	//Start validation process
+	logger.Printf("~~~~ Start Validating Block received with received block %x", block.Hash)
 	err := validate(block, false)
+	logger.Printf("~~~~ End Validating Block received")
 	if err == nil {
 		broadcastBlock(block)
 		logger.Printf("Validated block (received): %vState:\n%v", block, getState())

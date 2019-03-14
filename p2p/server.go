@@ -8,6 +8,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -22,6 +23,7 @@ var (
 	clientBrdcstMsg = make(chan []byte)
 	register        = make(chan *peer)
 	disconnect      = make(chan *peer)
+	minerBrdcstMsgMutex = &sync.Mutex{}
 )
 
 //Entry point for p2p package
@@ -169,12 +171,27 @@ func peerConn(p *peer) {
 		if err != nil {
 			if p.peerType == PEERTYPE_MINER {
 				logger.Printf("Miner disconnected: %v\n", err)
+				disconnect <- p
+
+				time.Sleep(time.Second)
+				if !peers.contains(p.getIPPort(), PEERTYPE_MINER) {
+					logger.Printf("Trying to imediately reconnect to %v", p.getIPPort())
+					p, err := initiateNewMinerConnection(p.getIPPort())
+					if err != nil || p == nil {
+						logger.Printf("%v\n", err)
+					}
+					if err == nil && p != nil {
+						//logger.Printf("  RECURSIVE peerCon for %v", p.getIPPort())
+						//go peerConn(p)
+					}
+				}
 			} else if p.peerType == PEERTYPE_CLIENT {
 				//logger.Printf("Client disconnected: %v\n", err)
+				disconnect <- p
 			}
 
 			//In case of a comm fail, disconnect cleanly from the broadcast service
-			disconnect <- p
+
 			return
 		}
 

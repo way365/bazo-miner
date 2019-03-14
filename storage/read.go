@@ -205,11 +205,15 @@ func ReadAllBootstrapReceivedTransactions() (allOpenTxs []protocol.Transaction) 
 }
 
 func ReadINVALIDOpenTx(hash [32]byte) (transaction protocol.Transaction) {
+	openINVALIDTxMutex.Lock()
+	defer openINVALIDTxMutex.Unlock()
 	return txINVALIDMemPool[hash]
 }
 
 func ReadAllINVALIDOpenTx() (allOpenInvalidTxs []protocol.Transaction) {
 
+	openINVALIDTxMutex.Lock()
+	defer openINVALIDTxMutex.Unlock()
 	for key := range txINVALIDMemPool {
 		allOpenInvalidTxs = append(allOpenInvalidTxs, txINVALIDMemPool[key])
 	}

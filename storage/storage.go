@@ -28,6 +28,7 @@ var (
 	totalTransactionSize float32 		= 0
 	nrClosedTransactions float32 		= 0
 	openTxMutex 						= &sync.Mutex{}
+	openINVALIDTxMutex 					= &sync.Mutex{}
 	openFundsTxBeforeAggregationMutex	= &sync.Mutex{}
 )
 

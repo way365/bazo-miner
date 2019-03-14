@@ -54,9 +54,10 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 		"B:::::::::::::::::BA:::::A               A:::::A  Z:::::::::::::::::Z OO:::::::::::::OO\n" +
 		"B::::::::::::::::BA:::::A                 A:::::A Z:::::::::::::::::Z   OO:::::::::OO\n" +
 		"BBBBBBBBBBBBBBBBBAAAAAAA                   AAAAAAAZZZZZZZZZZZZZZZZZZZ     OOOOOOOOO\n\n\n")
-	time.Sleep(2*time.Second)
-	logger.Printf("\n\n\n-------------------- START MINER ---------------------")
 
+	logger.Printf("\n\n\n-------------------- START MINER ---------------------")
+	logger.Printf("This Miners ip address: %v\n\n", p2p.Ipport)
+	time.Sleep(2*time.Second)
 	parameterSlice = append(parameterSlice, NewDefaultParameters())
 	activeParameters = &parameterSlice[0]
 
@@ -79,8 +80,8 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 
 	//this is used to generate the state with aggregated transactions.
 	for _, tx := range storage.ReadAllBootstrapReceivedTransactions() {
-		storage.DeleteOpenTx(tx)
-		storage.WriteClosedTx(tx)
+		storage.DeleteOpenTx(tx, 1000)
+		storage.WriteClosedTx(tx,8010)
 	}
 	storage.DeleteBootstrapReceivedMempool()
 
@@ -94,7 +95,9 @@ func mining(initialBlock *protocol.Block) {
 	currentBlock := newBlock(initialBlock.Hash, initialBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, initialBlock.Height+1)
 
 	for {
+		logger.Printf("~~~~ Start Finalizing Block")
 		err := finalizeBlock(currentBlock)
+		logger.Printf("~~~~ End Finalizing Block")
 		if err != nil {
 			logger.Printf("%v\n", err)
 		} else {
@@ -102,7 +105,9 @@ func mining(initialBlock *protocol.Block) {
 		}
 
 		if err == nil {
+			logger.Printf("~~~~ Start Validating Block with mined block %x", currentBlock.Hash)
 			err := validate(currentBlock, false)
+			logger.Printf("~~~~ End Finalizing Block")
 			if err == nil {
 				//Only broadcast the block if it is valid.
 				broadcastBlock(currentBlock)
@@ -122,11 +127,18 @@ func mining(initialBlock *protocol.Block) {
 		//validated with block validation, so we wait in order to not work on tx data that is already validated
 		//when we finish the block.
 		logger.Printf("\n\n __________________________________________________ New Mining Round __________________________________________________")
+		logger.Printf("~~~~ Start New Block")
 		blockValidation.Lock()
+		logger.Printf("~~~~ (1)")
 		nextBlock := newBlock(lastBlock.Hash, lastBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, lastBlock.Height+1)
+		logger.Printf("~~~~ (2)")
 		currentBlock = nextBlock
+		logger.Printf("~~~~ (3)")
 		prepareBlock(currentBlock)
+		logger.Printf("~~~~ (4)")
 		blockValidation.Unlock()
+		logger.Printf("~~~~ (5)")
+		logger.Printf("~~~~ Start New Block")
 	}
 }
 

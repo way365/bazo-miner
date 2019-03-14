@@ -74,7 +74,7 @@ func getBlockSequences(newBlock *protocol.Block) (blocksToRollback, blocksToVali
 //Returns the ancestor from which the split occurs (if a split occurred, if not it's just our last block) and a list
 //of blocks that belong to a new chain.
 func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain []*protocol.Block) {
-	OUTER:
+	found := false
 	for {
 		newChain = append(newChain, newBlock)
 
@@ -109,18 +109,29 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 		for _, block := range storage.ReadReceivedBlockStash() {
 			if block.Hash == newBlock.PrevHash {
 				newBlock = block
-				continue OUTER //TODO instead of continue, with an if below the for going to the for {...}
+				found = true
+				break
 			}
+		}
+
+		if found {
+			found = false
+			continue
 		}
 
 		//Fetch the block we apparently missed from the network.
 		//p2p.BlockReq(newBlock.PrevHash, newBlock.PrevHashWithoutTx)
-		p2p.BlockReq(newBlock.PrevHash, newBlock.PrevHashWithoutTx)
+		requestHash := newBlock.PrevHash
+		requestHashWithoutTx := newBlock.PrevHashWithoutTx
+		logger.Printf("Request Block %x, %x from the network for longest chain", requestHash[0:8],  requestHashWithoutTx[0:8])
+		p2p.BlockReq(requestHash, requestHashWithoutTx)
 
 		//Blocking wait
 		select {
 		case encodedBlock := <-p2p.BlockReqChan:
 			newBlock = newBlock.Decode(encodedBlock)
+			logger.Printf("Received Block by request in getNewChain %x for %x ==> (%x for %x)", newBlock.Hash[0:8], requestHash[0:8], newBlock.HashWithoutTx[0:8], requestHashWithoutTx[0:8])
+
 			storage.WriteToReceivedStash(newBlock)
 		//Limit waiting time to BLOCKFETCH_TIMEOUT seconds before aborting.
 		case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):

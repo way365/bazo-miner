@@ -50,10 +50,11 @@ func WriteLastClosedBlock(block *protocol.Block) (err error) {
 }
 
 //Changing the "tx" shortcut here and using "transaction" to distinguish between bolt's transactions
-func WriteOpenTx(transaction protocol.Transaction) {
+func WriteOpenTx(transaction protocol.Transaction, nr int) {
 	openTxMutex.Lock()
-	defer openTxMutex.Unlock()
 	txMemPool[transaction.Hash()] = transaction
+	logger.Printf("  (%v) -->  Write Open Tx: %x", nr, txMemPool[transaction.Hash()].Hash())
+	openTxMutex.Unlock()
 }
 
 func WriteFundsTxBeforeAggregation(transaction *protocol.FundsTx) {
@@ -67,7 +68,9 @@ func WriteBootstrapTxReceived(transaction protocol.Transaction) {
 }
 
 func WriteINVALIDOpenTx(transaction protocol.Transaction) {
+	openINVALIDTxMutex.Lock()
 	txINVALIDMemPool[transaction.Hash()] = transaction
+	openINVALIDTxMutex.Unlock()
 }
 
 func WriteToReceivedStash(block *protocol.Block) {
@@ -92,7 +95,7 @@ func blockAlreadyInStash(slice []*protocol.Block, newBlockHash [32]byte) bool {
 	return false
 }
 
-func WriteClosedTx(transaction protocol.Transaction) (err error) {
+func WriteClosedTx(transaction protocol.Transaction, nr int) (err error) {
 
 	var bucket string
 	switch transaction.(type) {
@@ -114,6 +117,8 @@ func WriteClosedTx(transaction protocol.Transaction) (err error) {
 		err := b.Put(hash[:], transaction.Encode())
 		return err
 	})
+
+	logger.Printf("  (%v) -->  Write closed Tx: %x", nr, hash)
 	nrClosedTransactions = nrClosedTransactions + 1
 	totalTransactionSize = totalTransactionSize + float32(transaction.Size())
 	averageTxSize = totalTransactionSize/nrClosedTransactions

@@ -32,6 +32,7 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 
 	//In case it was not found, send a corresponding message back
 	if tx == nil {
+		logger.Printf("TX %x for %v nowhere found in my storages", txHash, p.getIPPort())
 		packet := BuildPacket(NOT_FOUND, nil)
 		sendData(p, packet)
 		return

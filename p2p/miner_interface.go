@@ -27,9 +27,11 @@ var (
 
 	receivedTXStash = make([]*protocol.FundsTx, 0)
 	receivedAggTxStash = make([]*protocol.AggTx, 0)
+	receivedBlockStash = make([]*protocol.Block, 0)
 
 	fundsTxSashMutex = &sync.Mutex{}
 	aggTxStashMutex = &sync.Mutex{}
+	blockStashMutex = &sync.Mutex{}
 )
 
 //This is for blocks and txs that the miner successfully validated.
@@ -37,6 +39,7 @@ func forwardBlockBrdcstToMiner() {
 	for {
 		block := <-BlockOut
 		toBrdcst := BuildPacket(BLOCK_BRDCST, block)
+		minerBrdcstMsgMutex.Lock()
 		minerBrdcstMsg <- toBrdcst
 	}
 }
@@ -58,11 +61,15 @@ func forwardVerifiedTxsToMiner() {
 func forwardVerifiedTxsBrdcstToMiner() {
 	for {
 		verifiedTx := <- VerifiedTxsBrdcstOut
+		minerBrdcstMsgMutex.Lock()
 		minerBrdcstMsg <- verifiedTx
 	}
 }
 
 func forwardBlockToMiner(p *peer, payload []byte) {
+	var block *protocol.Block
+	block = block.Decode(payload)
+	logger.Printf("received Block %x from miner %v", block.Hash, p.getIPPort())
 	BlockIn <- payload
 }
 
@@ -79,6 +86,15 @@ func txAlreadyInStash(slice []*protocol.FundsTx, newTXHash [32]byte) bool {
 func aggTxAlreadyInStash(slice []*protocol.AggTx, newTXHash [32]byte) bool {
 	for _, txInStash := range slice {
 		if txInStash.Hash() == newTXHash {
+			return true
+		}
+	}
+	return false
+}
+
+func blockAlreadyReceived(slice []*protocol.Block, newBlockHash [32]byte) bool {
+	for _, block := range slice {
+		if block.Hash == newBlockHash {
 			return true
 		}
 	}
@@ -156,7 +172,18 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 }
 
 func forwardBlockReqToMiner(p *peer, payload []byte) {
-	BlockReqChan <- payload
+	var block *protocol.Block
+	block = block.Decode(payload)
+
+	blockStashMutex.Lock()
+	if !blockAlreadyReceived(receivedBlockStash, block.Hash) {
+		receivedBlockStash = append(receivedBlockStash, block)
+		BlockReqChan <- payload
+		if len(receivedBlockStash) > 10 {
+			receivedBlockStash = append(receivedBlockStash[:0], receivedBlockStash[1:]...)
+		}
+	}
+	blockStashMutex.Unlock()
 }
 
 func ReadSystemTime() int64 {
