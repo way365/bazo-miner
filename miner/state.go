@@ -200,7 +200,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 
 
 		//CalculateBlockchainSize(int(blockToValidate.GetSize()))
-		logger.Printf("Block validated: %d --> %x, %x", blockToValidate.Height, blockToValidate.Hash[0:8], blockToValidate.HashWithoutTx[0:8])
+		logger.Printf("Block validated: %d --> %x", blockToValidate.Height, blockToValidate.Hash[0:8])
 	}
 
 	for _, blockToValidate := range allClosedBlocks {
@@ -298,7 +298,7 @@ func fundsStateChange(txSlice []*protocol.FundsTx, initialSetup bool) (err error
 		accReceiver, err = storage.GetAccount(tx.To)
 
 		//Check transaction counter
-		if tx.Aggregated == false && tx.TxCnt != accSender.TxCnt {
+		if initialSetup == false && tx.Aggregated == false && tx.TxCnt != accSender.TxCnt {
 			err = errors.New(fmt.Sprintf("Sender (%x) txCnt in %x does not match: %v (tx.txCnt) vs. %v (state txCnt).",accSender.Address[0:8], tx.Hash(), tx.TxCnt, accSender.TxCnt))
 		}
 

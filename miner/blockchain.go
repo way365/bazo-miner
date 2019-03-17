@@ -95,9 +95,7 @@ func mining(initialBlock *protocol.Block) {
 	currentBlock := newBlock(initialBlock.Hash, initialBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, initialBlock.Height+1)
 
 	for {
-		logger.Printf("~~~~ Start Finalizing Block")
 		err := finalizeBlock(currentBlock)
-		logger.Printf("~~~~ End Finalizing Block")
 		if err != nil {
 			logger.Printf("%v\n", err)
 		} else {
@@ -105,9 +103,7 @@ func mining(initialBlock *protocol.Block) {
 		}
 
 		if err == nil {
-			logger.Printf("~~~~ Start Validating Block with mined block %x", currentBlock.Hash)
 			err := validate(currentBlock, false)
-			logger.Printf("~~~~ End Finalizing Block")
 			if err == nil {
 				//Only broadcast the block if it is valid.
 				broadcastBlock(currentBlock)
@@ -118,7 +114,6 @@ func mining(initialBlock *protocol.Block) {
 			}
 		}
 
-		storage.ReadMempool()
 		//Prints miner connections
 		p2p.PrintMinerCons()
 
@@ -127,18 +122,11 @@ func mining(initialBlock *protocol.Block) {
 		//validated with block validation, so we wait in order to not work on tx data that is already validated
 		//when we finish the block.
 		logger.Printf("\n\n __________________________________________________ New Mining Round __________________________________________________")
-		logger.Printf("~~~~ Start New Block")
 		blockValidation.Lock()
-		logger.Printf("~~~~ (1)")
 		nextBlock := newBlock(lastBlock.Hash, lastBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, lastBlock.Height+1)
-		logger.Printf("~~~~ (2)")
 		currentBlock = nextBlock
-		logger.Printf("~~~~ (3)")
 		prepareBlock(currentBlock)
-		logger.Printf("~~~~ (4)")
 		blockValidation.Unlock()
-		logger.Printf("~~~~ (5)")
-		logger.Printf("~~~~ Start New Block")
 	}
 }
 

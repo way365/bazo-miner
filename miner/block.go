@@ -51,8 +51,6 @@ func finalizeBlock(block *protocol.Block) error {
 	//Check if we have a slashing proof that we can add to the block.
 	//The slashingDict is updated when a new block is received and when a slashing proof is provided.
 
-	logger.Printf("Finalize Block xyz with tx %x", block.AggTxData)
-
 	if len(slashingDict) != 0 {
 		//Get the first slashing proof.
 		for hash, slashingProof := range slashingDict {
@@ -95,7 +93,6 @@ func finalizeBlock(block *protocol.Block) error {
 	if err != nil {
 		//Delete all partially added transactions.
 		if nonce == -2 {
-			logger.Printf("Abort Finalizing Block xyz with tx %x", block.AggTxData)
 			storage.DeleteAllFundsTxBeforeAggregation()
 		}
 		return err
@@ -119,7 +116,6 @@ func finalizeBlock(block *protocol.Block) error {
 
 	copy(block.CommitmentProof[0:crypto.COMM_PROOF_LENGTH], commitmentProof[:])
 
-	logger.Printf("Finalize Block %x with tx %x", block.Hash[0:8], block.AggTxData)
 	return nil
 }
 
@@ -136,7 +132,6 @@ func addTx(b *protocol.Block, tx protocol.Transaction) error {
 		return nil
 	default :
 		if tx.TxFee() < activeParameters.Fee_minimum {
-			logger.Printf("Transaction fee too low: %v (minimum is: %v)\n", tx.TxFee(), activeParameters.Fee_minimum)
 			err := fmt.Sprintf("Transaction fee too low: %v (minimum is: %v)\n", tx.TxFee(), activeParameters.Fee_minimum)
 			return errors.New(err)
 		}
@@ -259,18 +254,7 @@ func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
 				addFundsTxMutex.Unlock()
 				return nil
 			} else {
-				openTx := storage.ReadOpenTx(tx.Hash())
-				if openTx != nil {
-					logger.Printf("-> -> Found %x in open storage", openTx.Hash())
-				} else {
-					openInvalidTx := storage.ReadINVALIDOpenTx(tx.Hash())
-					if openInvalidTx != nil {
-						logger.Printf("-> -> Found %x in open Invalid storage", openInvalidTx.Hash())
-					}
-				}
-
 				addFundsTxMutex.Unlock()
-
 				return nil
 			}
 		} else {
@@ -332,7 +316,6 @@ func addAggTxFinal(b *protocol.Block, tx *protocol.AggTx) error {
 }
 
 func splitSortedAggregatableTransactions(b *protocol.Block){
-	logger.Printf("::::::::  Start Split&Sorting Tx")
 	txToAggregate := make([]protocol.Transaction, 0)
 	moreTransactionsToAggregate := true
 
@@ -390,7 +373,6 @@ func splitSortedAggregatableTransactions(b *protocol.Block){
 
 		if len(PossibleTransactionsToAggregate) > 0 && len(storage.DifferentSenders) > 0 && len(storage.DifferentReceivers) > 0  {
 			if cnt > 20 {
-				logger.Printf("COUNTER Stopped the Split Function... ")
 				moreTransactionsToAggregate = false
 			}
 			cnt ++
@@ -403,7 +385,6 @@ func splitSortedAggregatableTransactions(b *protocol.Block){
 	}
 
 	storage.DeleteAllFundsTxBeforeAggregation()
-	logger.Printf("::::::::  End Split&Sorting Tx")
 }
 
 func searchTransactionsInHistoricBlocks(searchAddressSender [32]byte, searchAddressReceiver [32]byte) (historicTransactions []protocol.Transaction) {
@@ -416,13 +397,11 @@ func searchTransactionsInHistoricBlocks(searchAddressSender [32]byte, searchAddr
 			if tx != nil {
 				trx := tx.(*protocol.FundsTx)
 				if trx != nil && trx.Aggregated == false && (trx.From == searchAddressSender || trx.To == searchAddressReceiver) {
-					logger.Printf("Found FundsTx (%x) in (%x) which can be aggregated now.", trx.Hash(), block.Hash[0:8])
 					historicTransactions = append(historicTransactions, trx)
 					trx.Aggregated = true
 					storage.WriteClosedTx(trx, 8001)
 				}
 			} else {
-				logger.Printf("FundsTransaction %x  in block %x was not closed... ", txHash, block.Hash[0:8])
 				return nil
 			}
 		}
@@ -461,8 +440,6 @@ func getMaxKeyAndValueFormMap(m map[[32]byte]uint32) (uint32, [32]byte) {
 func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, block *protocol.Block) error {
 	aggregationMutex.Lock()
 	defer aggregationMutex.Unlock()
-
-	logger.Printf("::::::::::::::::  Start Aggregating Tx")
 
 	var transactionHashes, transactionReceivers, transactionSenders [][32]byte
 	var nrOfSenders = map[[32]byte]int{}
@@ -561,7 +538,7 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 		}
 
 		//Print aggregated Transaction
-		logger.Printf("%v", aggTx)
+		//logger.Printf("%v", aggTx)
 
 		//Add Aggregated transaction and write to open storage
 		addAggTxFinal(block, aggTx)
@@ -580,7 +557,6 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 		return err
 	}
 
-	logger.Printf("::::::::::::::::  End Aggregating Tx")
 	return nil
 }
 
@@ -752,7 +728,7 @@ func fetchFundsTxData(block *protocol.Block, fundsTxSlice []*protocol.FundsTx, i
 				fundsTxSlice[cnt] = fundsTx
 				continue
 			} else {
-				logger.Printf("Block validation had fundsTx (%x, %v) that was already in a previous block.", closedTx.Hash(), closedTx.Hash())
+				logger.Printf("Block validation had fundsTx (%x) that was already in a previous block.", closedTx.Hash())
 				errChan <- errors.New("Block validation had fundsTx that was already in a previous block.")
 				return
 			}
@@ -979,7 +955,6 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 			case aggTx = <-p2p.AggTxChan:
 				storage.WriteOpenTx(aggTx,12)
 			case <-time.After(TXFETCH_TIMEOUT * time.Second):
-				logger.Printf("Fetching (%x) timed out, next chance", aggTxHash)
 				if cnt < 2 {
 					cnt ++
 					goto HERE
@@ -1098,7 +1073,6 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 // and have to check the blocks first before changing the state in the correct order.
 func validate(b *protocol.Block, initialSetup bool) error {
 
-	logger.Printf("^^^^^^ (1)")
 	//This mutex is necessary that own-mined blocks and received blocks from the network are not
 	//validated concurrently.
 	blockValidation.Lock()
@@ -1113,7 +1087,6 @@ func validate(b *protocol.Block, initialSetup bool) error {
 		return err
 	}
 
-	logger.Printf("^^^^^^ (2)")
 	if len(blocksToRollback) > 0 {
 		logger.Printf(" _____________________")
 		logger.Printf("| Blocks To Rollback: |________________________________________________")
@@ -1139,10 +1112,8 @@ func validate(b *protocol.Block, initialSetup bool) error {
 		uptodate = true
 	}
 
-	logger.Printf("^^^^^^ (3)")
 	//No rollback needed, just a new block to validate.
 	if len(blocksToRollback) == 0 {
-		logger.Printf("^^^^^^ (3)")
 		for _, block := range blocksToValidate {
 			//Fetching payload data from the txs (if necessary, ask other miners).
 			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice, err := preValidate(block, initialSetup)
@@ -1165,13 +1136,14 @@ func validate(b *protocol.Block, initialSetup bool) error {
 			postValidate(blockDataMap[block.Hash], initialSetup)
 		}
 	} else {
-		logger.Printf("^^^^^^ (4)")
+		//Rollback
 		for _, block := range blocksToRollback {
 			if err := rollback(block); err != nil {
 				return err
 			}
-			logger.Printf("Rolled back block: %x", block.Hash)
-			}
+		}
+
+		//Validation of new chain
 		for _, block := range blocksToValidate {
 			//Fetching payload data from the txs (if necessary, ask other miners).
 			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice, err := preValidate(block, initialSetup)
@@ -1196,7 +1168,6 @@ func validate(b *protocol.Block, initialSetup bool) error {
 			logger.Printf("Validated block (after rollback): %vState:\n%v", block, getState())
 		}
 	}
-	logger.Printf("^^^^^^ (5)")
 	return nil
 }
 
@@ -1204,7 +1175,6 @@ func validate(b *protocol.Block, initialSetup bool) error {
 func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, aggTxSlice []*protocol.AggTx, aggregatedFundsTxSlice []*protocol.FundsTx, err error) {
 	//This dynamic check is only done if we're up-to-date with syncing, otherwise timestamp is not checked.
 	//Other miners (which are up-to-date) made sure that this is correct.
-	logger.Printf("^^^^^^ Start Prevalidate")
 	if !initialSetup && uptodate {
 		if err := timestampCheck(block.Timestamp); err != nil {
 			return nil, nil, nil, nil, nil, nil, err
@@ -1313,9 +1283,9 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 
 	//PoS validation
 	if !validateProofOfStake(getDifficulty(), prevProofs, block.Height, acc.Balance, block.CommitmentProof, block.Timestamp) {
-		logger.Printf("NONCE (%x) in block %x is problematic", block.Nonce, block.Hash[0:8])
+		logger.Printf("____________________NONCE (%x) in block %x is problematic", block.Nonce, block.Hash[0:8])
 		logger.Printf("|  block.Height: %d, acc.Address %x, acc.txCount %v, acc.Balance %v, block.CommitmentProf: %x, block.Timestamp %v ", block.Height, acc.Address[0:8], acc.TxCnt,  acc.Balance, block.CommitmentProof[0:8], block.Timestamp)
-		logger.Printf("|_________")
+		logger.Printf("|_____________________________________________________")
 
 		return nil, nil, nil, nil, nil, nil, errors.New("The nonce is incorrect.")
 	}
@@ -1343,13 +1313,11 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 		return nil, nil, nil, nil, nil, nil, errors.New("Merkle Root is incorrect.")
 	}
 
-	logger.Printf("^^^^^^ End Prevalidate")
 	return accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggTxSlice, aggregatedFundsTxSlice, err
 }
 
 //Dynamic state check.
 func validateState(data blockData, initialSetup bool) error {
-	logger.Printf("^^^^^^ Start Validate State")
 	//The sequence of validation matters. If we start with accs, then fund/stake transactions can be done in the same block
 	//even though the accounts did not exist before the block validation.
 
@@ -1413,12 +1381,10 @@ func validateState(data blockData, initialSetup bool) error {
 		return err
 	}
 
-	logger.Printf("^^^^^^ End Validate State")
 	return nil
 }
 
 func postValidate(data blockData, initialSetup bool) {
-	logger.Printf("^^^^^^ Start Postvalidate")
 	//The new system parameters get active if the block was successfully validated
 	//This is done after state validation (in contrast to accTx/fundsTx).
 	//Conversely, if blocks are rolled back, the system parameters are changed first.
@@ -1494,7 +1460,6 @@ func postValidate(data blockData, initialSetup bool) {
 					}
 				}
 				if trx == nil {
-					logger.Printf("TRX == NIL --> PROBLEM --> %x in block %x", aggregatedTxHash, data.block.Hash[0:8])
 					break
 				}
 
@@ -1542,7 +1507,6 @@ func postValidate(data blockData, initialSetup bool) {
 		storage.DeleteAllLastClosedBlock()
 		storage.WriteLastClosedBlock(data.block)
 	}
-	logger.Printf("^^^^^^ End Postvalidate")
 }
 
 //Only blocks with timestamp not diverging from system time (past or future) more than one hour are accepted.

@@ -32,7 +32,6 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 
 	//In case it was not found, send a corresponding message back
 	if tx == nil {
-		logger.Printf("TX %x for %v nowhere found in my storages", txHash, p.getIPPort())
 		packet := BuildPacket(NOT_FOUND, nil)
 		sendData(p, packet)
 		return
@@ -71,30 +70,28 @@ func specialTxRes(p *peer, payload []byte, txKind uint8) {
 	txcnt := binary.BigEndian.Uint32(payload[1:9])
 	copy(senderHash[:], payload[10:42])
 
-	for _,tx := range storage.ReadAllClosedFundsAndAggTransactions() {
-		switch tx.(type) {
-		case *protocol.FundsTx:
-			trx := tx.(*protocol.FundsTx)
-			if trx != nil && trx.From == senderHash && trx.TxCnt == txcnt {
-				searchedTransaction = trx
+	for _, txhash := range storage.ReadTxcntToTx(txcnt) {
+		tx := storage.ReadOpenTx(txhash)
+		if tx != nil {
+			if tx.Sender() == senderHash {
+				searchedTransaction = tx
 				break
 			}
-		default:
-			continue
-		}
-	}
-
-	if searchedTransaction == nil {
-		for _,tx := range storage.ReadAllOpenTxs() {
-			switch tx.(type) {
-			case *protocol.FundsTx:
-				trx := tx.(*protocol.FundsTx)
-				if trx != nil && trx.From == senderHash && trx.TxCnt == txcnt {
-					searchedTransaction = trx
+		} else {
+			tx = storage.ReadINVALIDOpenTx(txhash)
+			if tx != nil {
+				if tx.Sender() == senderHash {
+					searchedTransaction = tx
 					break
 				}
-			default:
-				continue
+			} else {
+				tx = storage.ReadClosedTx(txhash)
+				if tx != nil {
+					if tx.Sender() == senderHash {
+						searchedTransaction = tx
+						break
+					}
+				}
 			}
 		}
 	}

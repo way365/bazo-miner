@@ -1,16 +1,19 @@
 package p2p
 
 import (
-	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
 	"time"
 )
 
 
 var (
-	messages    [][]byte
-	sendingMap  map[*peer][][]byte
+	sendingMap  map[string]*delayedMessagesPerSender
 )
+
+type delayedMessagesPerSender struct {
+	peer *peer
+	delayedMessages [][]byte
+}
 
 //This is not accessed concurrently, one single goroutine. However, the "peers" are accessed concurrently, therefore the
 //Thread-safe implementation.
@@ -20,29 +23,27 @@ func peerService() {
 		case p := <-register:
 			peers.add(p)
 		case p := <-disconnect:
-			if peers.contains(p.getIPPort(), PEERTYPE_MINER){
-				logger.Printf("CHANNEL: Closed channel to %v", p.getIPPort()) //TODO: remove this
-			}
 			peers.delete(p)
 			close(p.ch)
-			if peers.contains(p.getIPPort(), PEERTYPE_MINER){
-				logger.Printf("CHANNEL: Closed channel to %v", p.getIPPort())
-			}
 		}
 	}
 }
 
 func broadcastService() {
-	sendingMap = make(map[*peer][][]byte)
+	sendingMap = map[string]*delayedMessagesPerSender{}
 
+	//For miner connections a map is created where all connections are stored based on the IP and Port of the peer.
+	// In the first iteration this map is initalized.
 	for {
 		select {
 		//Broadcasting all messages.
 		case msg := <-minerBrdcstMsg:
-			minerBrdcstMsgMutex.Unlock()
 			for p := range peers.minerConns {
-				if !isConnectionAlreadyInSendingMap(p, sendingMap) {
-					sendingMap[p] = nil
+				//Check if a connection was already established once. If so, nothing happens.
+				alreadyInSenderMap, needsUpdate := isConnectionAlreadyInSendingMap(p, sendingMap)
+				if !alreadyInSenderMap && !needsUpdate {
+					logger.Printf("create sending map for %v", p.getIPPort())
+					sendingMap[p.getIPPort()] = &delayedMessagesPerSender{p, nil}
 				}
 			}
 			sendAndSearchMessages(msg)
@@ -60,89 +61,62 @@ func broadcastService() {
 
 //This function does send the current and possible previous not send messages
 func sendAndSearchMessages(msg []byte) {
-	for p := range sendingMap {
-		//Check if there is a valid transaction to peer p, if not, store message
-		if peers.minerConns[p] {
 
-			if peers.contains(p.getIPPort(),PEERTYPE_MINER) {
-				p.ch <- msg
+	for _, p := range sendingMap {
+		//Check if there is a valid connection to peer p, if not, store message
+		if peers.minerConns[p.peer] {
+
+			//If connection is valid, send message.
+			if peers.contains(p.peer.getIPPort(), PEERTYPE_MINER) {
+				//This is used to get the newest channel for given IP+Port. In case of an update in the background
+				receiver := sendingMap[p.peer.getIPPort()].peer
+				receiver.ch <- msg
 			} else {
-				logger.Printf("CHANNEL_MINER: Wanted to send to %v, but %v is not in the peers.minerConns anymore", p.getIPPort(), p.getIPPort())
+				logger.Printf("CHANNEL_MINER: Wanted to send to %v, but %v is not in the peers.minerConns anymore", p.peer.getIPPort(), p.peer.getIPPort())
 			}
-
-
-			switch msg[4] {
-			case FUNDSTX_BRDCST:
-				var fTx *protocol.FundsTx
-				fTx = fTx.Decode(msg[5:])
-				if fTx == nil {
-					return
-				}
-			//	logger.Printf("    SEND FundsTx %x to %v", fTx.Hash(), p.getIPPort())
-			case AGGTX_BRDCST:
-				var aTx *protocol.AggTx
-				aTx = aTx.Decode(msg[5:])
-				if aTx == nil {
-					return
-				}
-			//	logger.Printf("    SEND AggTx %x to %v", aTx.Hash(), p.getIPPort())
-			}
-
-
-
-
-			for _, hMsg := range sendingMap[p] {
+			//Send previously stored messages for this miner as well.
+			for _, hMsg := range p.delayedMessages {
 				//Send historic not yet sent transaction and remove it.
-				if peers.contains(p.getIPPort(),PEERTYPE_MINER) {
-					p.ch <- hMsg
+				if peers.contains(p.peer.getIPPort(), PEERTYPE_MINER) {
+					logger.Printf("Send delayed msg to %v", p.peer.getIPPort())
+
+					//This is used to get the newest channel for given IP+Port. In case of an update in the background
+					receiver := sendingMap[p.peer.getIPPort()].peer
+					receiver.ch <- hMsg
+
 				} else {
-					logger.Printf("CHANNEL_MINER: Wanted to send to %v, but %v is not in the peers.minerConns anymore", p.getIPPort(), p.getIPPort())
+					logger.Printf("CHANNEL_MINER: Wanted to send to %v, but %v is not in the peers.minerConns anymore", p.peer.getIPPort(), p.peer.getIPPort())
 				}
-
-
-
-				switch msg[4] {
-					case FUNDSTX_BRDCST:
-						var fTx *protocol.FundsTx
-						fTx = fTx.Decode(hMsg[5:])
-						if fTx == nil {
-							return
-						}
-						//logger.Printf("    SEND Historic FundsTx %x to %v", fTx.Hash(), p.getIPPort())
-					case AGGTX_BRDCST:
-						var aTx *protocol.AggTx
-						aTx = aTx.Decode(hMsg[5:])
-						if aTx == nil {
-							return
-						}
-						//logger.Printf("    SEND Historic AggTx %x to %v", aTx.Hash(), p.getIPPort())
-				}
-
-
-
-
-
-				sendingMap[p] = sendingMap[p][1:]
+				p.delayedMessages = p.delayedMessages[1:]
 			}
 		} else {
-			messages = sendingMap[p]
-			//Check that historic messages are not becomming ot big...
-			if len(messages) > 2000 {
+			//Store messages which are not sent du to connectivity issues.
+			messages := p.delayedMessages
+			////Check that not too many delayed messages are stored.
+			if len(messages) > 5000 {
 				messages = messages[1:]
 			}
 			//Store message for this specific miner connection.
-			sendingMap[p] = append(messages, msg)
+			p.delayedMessages = append(messages, msg)
 		}
 	}
 }
 
-func isConnectionAlreadyInSendingMap(p *peer, sendingMap map[*peer][][]byte) bool {
-	for con := range sendingMap {
-		if con == p {
-			return true
+//This function checks if a connection was already established once and if the peer "behind" the IP + Port changed.
+// This can happen all time when new connecting, because e.g a new channel (p.ch) is set up once adding a new peer
+// (even if it was added before). If the peer changes as well, it gets updated in teh sendingMap.
+func isConnectionAlreadyInSendingMap(p *peer, sendingMap map[string]*delayedMessagesPerSender) (alreadyInSenderMap bool, needsUpdate bool) {
+	for _, connection := range sendingMap {
+		if connection.peer.getIPPort() == p.getIPPort() {
+			if connection.peer != p {
+				sendingMap[p.getIPPort()] = &delayedMessagesPerSender{p, connection.delayedMessages}
+				return true, true
+			} else {
+				return true, false
+			}
 		}
 	}
-	return false
+	return false, false
 }
 
 //Belongs to the broadcast service.
@@ -214,7 +188,6 @@ func timeService() {
 	for {
 		time.Sleep(TIME_BRDCST_INTERVAL * time.Second)
 		packet := BuildPacket(TIME_BRDCST, getTime())
-		minerBrdcstMsgMutex.Lock()
 		minerBrdcstMsg <- packet
 	}
 }

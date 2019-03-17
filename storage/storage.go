@@ -22,6 +22,7 @@ var (
 	DifferentReceivers				= make(map[[32]byte]uint32)
 	FundsTxBeforeAggregation		= make([]*protocol.FundsTx, 0)
 	receivedBlockStash				= make([]*protocol.Block, 0)
+	TxcntToTxMap					= make(map[uint32][][32]byte)
 	AllClosedBlocksAsc []*protocol.Block
 	Bootstrap_Server string
 	averageTxSize float32 				= 0
@@ -30,6 +31,7 @@ var (
 	openTxMutex 						= &sync.Mutex{}
 	openINVALIDTxMutex 					= &sync.Mutex{}
 	openFundsTxBeforeAggregationMutex	= &sync.Mutex{}
+	txcntToTxMapMutex	= &sync.Mutex{}
 )
 
 const (

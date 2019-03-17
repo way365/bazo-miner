@@ -181,16 +181,14 @@ func peerConn(p *peer) {
 						logger.Printf("%v\n", err)
 					}
 					if err == nil && p != nil {
-						//logger.Printf("  RECURSIVE peerCon for %v", p.getIPPort())
-						//go peerConn(p)
+						logger.Printf("  RECURSIVE peerCon for %v", p.getIPPort())
+						go peerConn(p)
 					}
 				}
 			} else if p.peerType == PEERTYPE_CLIENT {
 				//logger.Printf("Client disconnected: %v\n", err)
 				disconnect <- p
 			}
-
-			//In case of a comm fail, disconnect cleanly from the broadcast service
 
 			return
 		}

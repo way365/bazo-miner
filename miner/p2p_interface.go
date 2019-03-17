@@ -32,9 +32,7 @@ func processBlock(payload []byte) {
 	storage.WriteToReceivedStash(block)
 
 	//Start validation process
-	logger.Printf("~~~~ Start Validating Block received with received block %x", block.Hash)
 	err := validate(block, false)
-	logger.Printf("~~~~ End Validating Block received")
 	if err == nil {
 		broadcastBlock(block)
 		logger.Printf("Validated block (received): %vState:\n%v", block, getState())

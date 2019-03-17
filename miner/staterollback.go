@@ -76,8 +76,6 @@ func reactivateHistoricBlockDueToRollback(tx protocol.Transaction)() {
 		return
 	}
 
-	logger.Printf(" | Found Block (%x) for which Tx's have to been found and written into the block again. ", block.Hash)
-
 	//Search all transactions which were validated in the "empty" block. This may be very time consuming.
 	for _, tx := range storage.ReadAllClosedFundsAndAggTransactions() {
 		switch tx.(type){

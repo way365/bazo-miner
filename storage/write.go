@@ -53,8 +53,19 @@ func WriteLastClosedBlock(block *protocol.Block) (err error) {
 func WriteOpenTx(transaction protocol.Transaction, nr int) {
 	openTxMutex.Lock()
 	txMemPool[transaction.Hash()] = transaction
-	logger.Printf("  (%v) -->  Write Open Tx: %x", nr, txMemPool[transaction.Hash()].Hash())
+
+	switch transaction.(type) {
+	case *protocol.FundsTx:
+		WriteTxcntToTx(transaction.(*protocol.FundsTx))
+	}
+
 	openTxMutex.Unlock()
+}
+
+func WriteTxcntToTx(transaction *protocol.FundsTx) {
+	txcntToTxMapMutex.Lock()
+	TxcntToTxMap[transaction.TxCnt] = append(TxcntToTxMap[transaction.TxCnt], transaction.Hash())
+	txcntToTxMapMutex.Unlock()
 }
 
 func WriteFundsTxBeforeAggregation(transaction *protocol.FundsTx) {
@@ -118,7 +129,6 @@ func WriteClosedTx(transaction protocol.Transaction, nr int) (err error) {
 		return err
 	})
 
-	logger.Printf("  (%v) -->  Write closed Tx: %x", nr, hash)
 	nrClosedTransactions = nrClosedTransactions + 1
 	totalTransactionSize = totalTransactionSize + float32(transaction.Size())
 	averageTxSize = totalTransactionSize/nrClosedTransactions

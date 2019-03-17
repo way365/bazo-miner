@@ -78,7 +78,6 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 	//Write to mempool and rebroadcast
 	storage.WriteOpenTx(tx,15)
 	toBrdcst := BuildPacket(brdcstType, payload)
-	minerBrdcstMsgMutex.Lock()
 	minerBrdcstMsg <- toBrdcst
 
 }

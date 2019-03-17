@@ -52,7 +52,6 @@ func DeleteAllLastClosedBlock() {
 func DeleteOpenTx(transaction protocol.Transaction, nr int) {
 	openTxMutex.Lock()
 	delete(txMemPool, transaction.Hash())
-	//logger.Printf("  [%v] --> delete open Tx %x", nr, transaction.Hash())
 	openTxMutex.Unlock()
 }
 

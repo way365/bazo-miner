@@ -39,7 +39,6 @@ func forwardBlockBrdcstToMiner() {
 	for {
 		block := <-BlockOut
 		toBrdcst := BuildPacket(BLOCK_BRDCST, block)
-		minerBrdcstMsgMutex.Lock()
 		minerBrdcstMsg <- toBrdcst
 	}
 }
@@ -61,15 +60,11 @@ func forwardVerifiedTxsToMiner() {
 func forwardVerifiedTxsBrdcstToMiner() {
 	for {
 		verifiedTx := <- VerifiedTxsBrdcstOut
-		minerBrdcstMsgMutex.Lock()
 		minerBrdcstMsg <- verifiedTx
 	}
 }
 
 func forwardBlockToMiner(p *peer, payload []byte) {
-	var block *protocol.Block
-	block = block.Decode(payload)
-	logger.Printf("received Block %x from miner %v", block.Hash, p.getIPPort())
 	BlockIn <- payload
 }
 

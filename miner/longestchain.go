@@ -62,9 +62,9 @@ func getBlockSequences(newBlock *protocol.Block) (blocksToRollback, blocksToVali
 	} else {
 		//New chain is longer, rollback and validate new chain.
 		if len(blocksToRollback) != 0 {
-			logger.Printf("... ROLLBACK ...")
-			logger.Printf("... Rollback (blocks to rollback %d vs block of new chain %d)", len(blocksToRollback), len(newChain))
-			logger.Printf("... ANCESTOR ...%v", ancestor)
+
+			logger.Printf("Rollback (blocks to rollback %d vs block of new chain %d)", len(blocksToRollback), len(newChain))
+			logger.Printf("ANCESTOR: %x", ancestor.Hash[0:8])
 
 		}
 		return blocksToRollback, newChain, nil
@@ -123,15 +123,12 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 		//p2p.BlockReq(newBlock.PrevHash, newBlock.PrevHashWithoutTx)
 		requestHash := newBlock.PrevHash
 		requestHashWithoutTx := newBlock.PrevHashWithoutTx
-		logger.Printf("Request Block %x, %x from the network for longest chain", requestHash[0:8],  requestHashWithoutTx[0:8])
 		p2p.BlockReq(requestHash, requestHashWithoutTx)
 
 		//Blocking wait
 		select {
 		case encodedBlock := <-p2p.BlockReqChan:
 			newBlock = newBlock.Decode(encodedBlock)
-			logger.Printf("Received Block by request in getNewChain %x for %x ==> (%x for %x)", newBlock.Hash[0:8], requestHash[0:8], newBlock.HashWithoutTx[0:8], requestHashWithoutTx[0:8])
-
 			storage.WriteToReceivedStash(newBlock)
 		//Limit waiting time to BLOCKFETCH_TIMEOUT seconds before aborting.
 		case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):

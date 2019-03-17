@@ -75,12 +75,11 @@ func collectStatistics(b *protocol.Block) {
 			target = append(target, target[len(target)-1])
 		} else {
 			target = append(target, calculateNewDifficulty(currentTargetTime))
-			logger.Printf("TARGET_CHECK: Target changed, new target: %v", target)
 		}
 
 		targetTimes = append(targetTimes, *currentTargetTime)
 
-		logger.Printf("Target changed, new target: %v", target[len(target)-1])
+		logger.Printf("TARGET_CHECK: Target changed, new target: %v", target[len(target)-1])
 		localBlockCount = 0
 		currentTargetTime = new(timerange)
 		currentTargetTime.first = b.Timestamp

@@ -64,13 +64,11 @@ func validateProofOfStake(diff uint8,
 	//Bytes check
 	for byteNr = 0; byteNr < (uint8)(diff/8); byteNr++ {
 		if pos[byteNr] != 0 {
-			logger.Printf("     Bytes check failed")
 			return false
 		}
 	}
 	//Bits check
 	if diff%8 != 0 && pos[byteNr] >= 1<<(8-diff%8) {
-		logger.Printf("     Bits check failed")
 		return false
 	}
 	return true
@@ -132,7 +130,7 @@ func proofOfStake(diff uint8,
 		}
 		if prevHash != lastBlock.Hash {
 			//Error code -2 initiates that probably a aggTx Should be deleted from open storage.
-			logger.Printf("Abort mining, another block has been successfully validated in the meantime LastBlock: %x", lastBlock.Hash[0:8])
+			logger.Printf("Abort mining, another block has been successfully validated in the meantime --> LastBlock: %x", lastBlock.Hash[0:8])
 			return -2, errors.New("Abort mining, another block has been successfully validated in the meantime:")
 		}
 

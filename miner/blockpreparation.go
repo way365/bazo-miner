@@ -17,7 +17,6 @@ import (
 type openTxs []protocol.Transaction
 
 func prepareBlock(block *protocol.Block) {
-	logger.Printf("~~~~~~ Start Prepare Block")
 	//Fetch all txs from mempool (opentxs).
 	opentxs := storage.ReadAllOpenTxs()
 	opentxs = append(opentxs, storage.ReadAllINVALIDOpenTx()...)
@@ -61,25 +60,24 @@ func prepareBlock(block *protocol.Block) {
 			//Create Mininmal txCnt for the different senders with stateTxCnt.. This is used to fetch missing transactions later on.
 
 			if MinimalTxCntPerSender[trx.From] == nil {
-				logger.Printf("New MinimalTxCntPerSender for %x, txcnt: %v", trx.From, storage.State[trx.From].TxCnt-1)
-				MinimalTxCntPerSender[trx.From] = &senderTxCount{trx.From,  storage.State[trx.From].TxCnt-1, nil}
 
-				logger.Printf("- Intermediate State:\n%v", getState())
-				logger.Printf("  - Intermediate Acc %x txcnt -> %v", trx.From, storage.State[trx.From].TxCnt)
-				logger.Printf("  - Intermediate State per Acc %v", storage.State[trx.From])
-				logger.Printf("  - Intermediate MinimalTxCnt %x txCnt: %v",  MinimalTxCntPerSender[trx.From].sender, MinimalTxCntPerSender[trx.From].txcnt)
+				if storage.State[trx.From].TxCnt == 0 {
+					MinimalTxCntPerSender[trx.From] = &senderTxCount{trx.From,  0, nil}
+				} else {
+					MinimalTxCntPerSender[trx.From] = &senderTxCount{trx.From,  storage.State[trx.From].TxCnt-1, nil}
+				}
 			}
 
-			logger.Printf("Appending to sender %x TxCnt xyz upto tx %v, minimalTxCntPerSedner: %v", trx.Sender(), trx.TxCnt, MinimalTxCntPerSender[trx.From].txcnt+1)
-
-
-
 			for i := MinimalTxCntPerSender[trx.From].txcnt+1; i < trx.TxCnt; i++ {
-				logger.Printf("Appending to sender %x TxCnt %v upto tx %x, minimalTxCntPerSedner: %v", trx.Sender(), i, trx.TxCnt, MinimalTxCntPerSender[trx.From].txcnt+1)
+				if i == 1 {
+					MinimalTxCntPerSender[trx.From].missingTransactions = append(MinimalTxCntPerSender[trx.From].missingTransactions, 0)
+				}
 				MinimalTxCntPerSender[trx.From].missingTransactions = append(MinimalTxCntPerSender[trx.From].missingTransactions, i)
 			}
 
-			MinimalTxCntPerSender[trx.From].txcnt = trx.TxCnt
+			if trx.TxCnt > MinimalTxCntPerSender[trx.From].txcnt {
+				MinimalTxCntPerSender[trx.From].txcnt = trx.TxCnt
+			}
 
 		case *protocol.AggTx:
 			storage.DifferentSenders[tx.Sender()] = storage.DifferentSenders[tx.Sender()] + 1
@@ -108,133 +106,82 @@ func prepareBlock(block *protocol.Block) {
 
 	//Special Request for transactions missing between the Tx with the lowest TxCnt and the state.
 	// With this transactions may are validated quicker.
-	logger.Printf(":::: Start Fetching Missing Transactions")
 	for _, sender := range MinimalTxCntPerSender {
-		//if sender.minTxcnt > storage.State[sender.sender].TxCnt {
-		//	logger.Printf("Missing Transaction:  Sender: %x  TxCnt: From %v to %v", sender.sender, storage.State[sender.sender].TxCnt, sender.minTxcnt)
 
-		logger.Printf("Missing Transaction:    All these Transactions are missing for sender %x: %v ",sender.sender, MinimalTxCntPerSender[sender.sender].missingTransactions)
+		if len(MinimalTxCntPerSender[sender.sender].missingTransactions) > 0 {
+			logger.Printf("Missing Transaction: All these Transactions are missing for sender %x: %v ", sender.sender[0:8], MinimalTxCntPerSender[sender.sender].missingTransactions)
+		}
 
+		for _, missingTxcnt := range MinimalTxCntPerSender[sender.sender].missingTransactions {
 
-		//Try Fetching all transactions which are missing.
-			//for searchTxcnt:= storage.State[sender.sender].TxCnt; searchTxcnt <= (sender.maxTxcnt); searchTxcnt++ {
-			for _, searchTxcnt := range sender.missingTransactions {
-			//	found := false
-				logger.Printf("Missing Transaction:    Try Finding tx with txcnt %v in the closedStorage ", searchTxcnt)
-				var tx protocol.Transaction
-				//Look for tx in openStorage
-				for _, trx := range storage.ReadAllOpenTxs() {
-					switch trx.(type) {
-					case *protocol.FundsTx:
-						if trx.(*protocol.FundsTx).TxCnt == searchTxcnt&& trx.(*protocol.FundsTx).From == sender.sender {
-							tx = trx
-							logger.Printf("Missing Transaction:      Found tx with txcnt %v in the openStorage now", searchTxcnt)
-							break
-						} else {
-							continue
-						}
-					default:
-						continue
+			var missingTransaction protocol.Transaction
+
+			//Search Tx in the local storage, if it may is received in the meantime.
+			for _, txhash := range storage.ReadTxcntToTx(missingTxcnt) {
+				tx := storage.ReadOpenTx(txhash)
+				if tx != nil {
+					if tx.Sender() == sender.sender {
+						missingTransaction = tx
+						break
 					}
-					break
-				}
-
-				//Look for tx In closedStorage
-				if tx == nil {
-					logger.Printf("Missing Transaction:    Try Finding tx with txcnt %v in the OpenInvalidStorage", searchTxcnt)
-					for _, trx := range storage.ReadAllINVALIDOpenTx() {
-						switch trx.(type) {
-						case *protocol.FundsTx:
-							if trx.(*protocol.FundsTx).TxCnt == searchTxcnt && trx.(*protocol.FundsTx).From == sender.sender {
-								tx = trx
-								logger.Printf("Missing Transaction:      Found tx with txcnt %v in the OpenInvalidStorage now", searchTxcnt)
+				} else {
+					tx = storage.ReadINVALIDOpenTx(txhash)
+					if tx != nil {
+						if tx.Sender() == sender.sender {
+							missingTransaction = tx
+							break
+						}
+					} else {
+						tx = storage.ReadClosedTx(txhash)
+						if tx != nil {
+							if tx.Sender() == sender.sender {
+								missingTransaction = tx
 								break
-							} else {
-								continue
 							}
-						default:
-							continue
 						}
-						break
 					}
 				}
+			}
 
-				//Search in the open InvalidStorage
-				if tx == nil {
-					logger.Printf("Missing Transaction:    Try Finding tx with txcnt %v in the closedStorage ", searchTxcnt)
-					for _, trx := range storage.ReadAllClosedFundsAndAggTransactions() {
-						switch trx.(type) {
-						case *protocol.FundsTx:
-							if trx.(*protocol.FundsTx).TxCnt == searchTxcnt && trx.(*protocol.FundsTx).From == sender.sender {
-								tx = trx
-								logger.Printf("Missing Transaction:      Found tx with txcnt %v in the ClosedStorage now", searchTxcnt)
-								break
-							} else {
-								continue
-							}
-						default:
-							continue
-						}
-						break
-					}
-				}
-
-				//Try to fetch tx from the network.
-				if tx == nil {
-					var requestTx = specialTxRequest{sender.sender, p2p.SPECIALTX_REQ, searchTxcnt}
-
-					payload := requestTx.Encoding()
-					//Special Request can be received through the fundsTxChan.
-					logger.Printf("Missing Transaction:      Try Fetching tx with txcnt %v from the network now", searchTxcnt)
-					err := p2p.TxWithTxCntReq(payload, p2p.SPECIALTX_REQ)
-					if err != nil {
-						continue
-					}
-					select {
-					case trx := <-p2p.FundsTxChan:
-						if trx.TxCnt != searchTxcnt&& trx.From != sender.sender {
-							logger.Printf("Missing Transaction:         Received Wrong Transaction")
-							break
-						} else {
-							logger.Printf("Missing Transaction:         Received Correct Tx through TxCnt Request: %x with txcnt %v", trx.Hash(), trx.TxCnt)
-							storage.WriteOpenTx(trx, 16)
-							tx = trx
-							break
-						}
-					case <-time.After(TXFETCH_TIMEOUT * time.Second):
-						logger.Printf("Missing Transaction:         Special Tx Request Timed out...")
-						break
-					}
-				}
-
-				if tx == nil {
-					logger.Printf("Missing Transaction:         Not Reveiced the missing transaction with TxCnt: %v", searchTxcnt)
+			//Try to fetch the transaction form the network, if it is not received until now.
+			if missingTransaction == nil {
+				var requestTx = specialTxRequest{sender.sender, p2p.SPECIALTX_REQ, missingTxcnt}
+				payload := requestTx.Encoding()
+				//Special Request can be received through the fundsTxChan.
+				err := p2p.TxWithTxCntReq(payload, p2p.SPECIALTX_REQ)
+				if err != nil {
 					continue
 				}
-
-				logger.Printf("Missing Transaction:      Append tx (%x), From %x  with txcnt %v now", tx.Hash(), tx.Sender(), tx.(*protocol.FundsTx).TxCnt)
-				opentxToAdd = append(opentxToAdd, tx)
-				tx = nil
+				select {
+				case trx := <-p2p.FundsTxChan:
+					if trx.TxCnt != missingTxcnt && trx.From != sender.sender {
+						logger.Printf("Missing Transaction: Received Wrong Transaction")
+						break
+					} else {
+						storage.WriteOpenTx(trx, 16)
+						missingTransaction = trx
+						break
+					}
+				case <-time.After(TXFETCH_TIMEOUT * time.Second):
+					logger.Printf("Missing Transaction: Tx Request Timed out...")
+					break
+				}
 			}
-		//}
+
+			if missingTransaction == nil {
+				logger.Printf("Missing txcnt %v not found", missingTxcnt)
+			} else {
+				opentxToAdd = append(opentxToAdd, missingTransaction)
+			}
+		}
 	}
 
 	MinimalTxCntPerSender = nil
-	logger.Printf(":::: End Fetching Missing Transactions")
 	//Sort Tx Again to get lowest TxCnt at the beginning.
 	tmpCopy = opentxToAdd
 	sort.Sort(tmpCopy)
 
-	//for _, tx := range opentxToAdd {
-//
-	//	switch tx.(type) {
-	//	case *protocol.FundsTx:
-	//		logger.Printf("Tx. %x, txcnt %v", tx.Hash(), tx.(*protocol.FundsTx).TxCnt)
-	//	}
-	//}
-
 	//Add previous selected transactions.
-	logger.Printf("::::  Start Adding Tx")
 	for _, tx := range opentxToAdd {
 		err := addTx(block, tx)
 		if err != nil {
@@ -242,7 +189,6 @@ func prepareBlock(block *protocol.Block) {
 			storage.DeleteOpenTx(tx, 1001)
 		}
 	}
-	logger.Printf("::::  End Adding Tx")
 
 	// In miner\block.go --> AddFundsTx the transactions get added into storage.TxBeforeAggregation.
 	if len(storage.ReadFundsTxBeforeAggregation()) > 0 {
@@ -253,7 +199,6 @@ func prepareBlock(block *protocol.Block) {
 	storage.DifferentSenders = nil
 	storage.DifferentReceivers = nil
 	nonAggregatableTxCounter = 0
-	logger.Printf("~~~~~~ End Prepare Block")
 	return
 }
 

@@ -45,7 +45,6 @@ type peersStruct struct {
 }
 
 func (peers peersStruct) contains(ipport string, peerType uint) bool {
-
 	var peerConns map[*peer]bool
 
 	if peerType == PEERTYPE_MINER {
@@ -77,6 +76,12 @@ func (peers peersStruct) add(p *peer) {
 	defer peers.peerMutex.Unlock()
 
 	if p.peerType == PEERTYPE_MINER {
+		for peer := range peers.minerConns {
+			if p.getIPPort() == peer.getIPPort() && p != peer {
+				delete(peers.minerConns, p)
+				logger.Printf("Deleted Old Peer Entry for %v", peer.getIPPort())
+			}
+		}
 		peers.minerConns[p] = true
 	}
 	if p.peerType == PEERTYPE_CLIENT {
