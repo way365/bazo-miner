@@ -255,7 +255,7 @@ func (block *Block) Encode() []byte {
 		FundsTxData:  		   			block.FundsTxData,
 		ConfigTxData: 		   			block.ConfigTxData,
 		StakeTxData:  		   			block.StakeTxData,
-		AggTxData:	   			block.AggTxData,
+		AggTxData:	   					block.AggTxData,
 	}
 
 	buffer := new(bytes.Buffer)
