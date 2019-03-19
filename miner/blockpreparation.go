@@ -39,13 +39,13 @@ func prepareBlock(block *protocol.Block) {
 	storage.DifferentReceivers = map[[32]byte]uint32{}
 	storage.FundsTxBeforeAggregation = nil
 
-	type senderTxCount struct {
-		sender [32]byte
+	type senderTxCounterForMissingTransactions struct {
+		senderAddress [32]byte
 		txcnt uint32
 		missingTransactions []uint32
 	}
 
-	var MinimalTxCntPerSender = map[[32]byte]*senderTxCount{}
+	var missingTxCntSender = map[[32]byte]*senderTxCounterForMissingTransactions{}
 
 	//Check how many transactions can be added.
 	for _, tx := range opentxs {
@@ -59,24 +59,24 @@ func prepareBlock(block *protocol.Block) {
 
 			//Create Mininmal txCnt for the different senders with stateTxCnt.. This is used to fetch missing transactions later on.
 
-			if MinimalTxCntPerSender[trx.From] == nil {
+			if missingTxCntSender[trx.From] == nil {
 
 				if storage.State[trx.From].TxCnt == 0 {
-					MinimalTxCntPerSender[trx.From] = &senderTxCount{trx.From,  0, nil}
+					missingTxCntSender[trx.From] = &senderTxCounterForMissingTransactions{trx.From,  0, nil}
 				} else {
-					MinimalTxCntPerSender[trx.From] = &senderTxCount{trx.From,  storage.State[trx.From].TxCnt-1, nil}
+					missingTxCntSender[trx.From] = &senderTxCounterForMissingTransactions{trx.From,  storage.State[trx.From].TxCnt-1, nil}
 				}
 			}
 
-			for i := MinimalTxCntPerSender[trx.From].txcnt+1; i < trx.TxCnt; i++ {
+			for i := missingTxCntSender[trx.From].txcnt+1; i < trx.TxCnt; i++ {
 				if i == 1 {
-					MinimalTxCntPerSender[trx.From].missingTransactions = append(MinimalTxCntPerSender[trx.From].missingTransactions, 0)
+					missingTxCntSender[trx.From].missingTransactions = append(missingTxCntSender[trx.From].missingTransactions, 0)
 				}
-				MinimalTxCntPerSender[trx.From].missingTransactions = append(MinimalTxCntPerSender[trx.From].missingTransactions, i)
+				missingTxCntSender[trx.From].missingTransactions = append(missingTxCntSender[trx.From].missingTransactions, i)
 			}
 
-			if trx.TxCnt > MinimalTxCntPerSender[trx.From].txcnt {
-				MinimalTxCntPerSender[trx.From].txcnt = trx.TxCnt
+			if trx.TxCnt > missingTxCntSender[trx.From].txcnt {
+				missingTxCntSender[trx.From].txcnt = trx.TxCnt
 			}
 
 		case *protocol.AggTx:
@@ -106,13 +106,13 @@ func prepareBlock(block *protocol.Block) {
 
 	//Special Request for transactions missing between the Tx with the lowest TxCnt and the state.
 	// With this transactions may are validated quicker.
-	for _, sender := range MinimalTxCntPerSender {
+	for _, sender := range missingTxCntSender {
 
-		if len(MinimalTxCntPerSender[sender.sender].missingTransactions) > 0 {
-			logger.Printf("Missing Transaction: All these Transactions are missing for sender %x: %v ", sender.sender[0:8], MinimalTxCntPerSender[sender.sender].missingTransactions)
+		if len(missingTxCntSender[sender.senderAddress].missingTransactions) > 0 {
+			logger.Printf("Missing Transaction: All these Transactions are missing for sender %x: %v ", sender.senderAddress[0:8], missingTxCntSender[sender.senderAddress].missingTransactions)
 		}
 
-		for _, missingTxcnt := range MinimalTxCntPerSender[sender.sender].missingTransactions {
+		for _, missingTxcnt := range missingTxCntSender[sender.senderAddress].missingTransactions {
 
 			var missingTransaction protocol.Transaction
 
@@ -120,21 +120,21 @@ func prepareBlock(block *protocol.Block) {
 			for _, txhash := range storage.ReadTxcntToTx(missingTxcnt) {
 				tx := storage.ReadOpenTx(txhash)
 				if tx != nil {
-					if tx.Sender() == sender.sender {
+					if tx.Sender() == sender.senderAddress {
 						missingTransaction = tx
 						break
 					}
 				} else {
 					tx = storage.ReadINVALIDOpenTx(txhash)
 					if tx != nil {
-						if tx.Sender() == sender.sender {
+						if tx.Sender() == sender.senderAddress {
 							missingTransaction = tx
 							break
 						}
 					} else {
 						tx = storage.ReadClosedTx(txhash)
 						if tx != nil {
-							if tx.Sender() == sender.sender {
+							if tx.Sender() == sender.senderAddress {
 								missingTransaction = tx
 								break
 							}
@@ -145,7 +145,7 @@ func prepareBlock(block *protocol.Block) {
 
 			//Try to fetch the transaction form the network, if it is not received until now.
 			if missingTransaction == nil {
-				var requestTx = specialTxRequest{sender.sender, p2p.SPECIALTX_REQ, missingTxcnt}
+				var requestTx = specialTxRequest{sender.senderAddress, p2p.SPECIALTX_REQ, missingTxcnt}
 				payload := requestTx.Encoding()
 				//Special Request can be received through the fundsTxChan.
 				err := p2p.TxWithTxCntReq(payload, p2p.SPECIALTX_REQ)
@@ -154,11 +154,11 @@ func prepareBlock(block *protocol.Block) {
 				}
 				select {
 				case trx := <-p2p.FundsTxChan:
-					if trx.TxCnt != missingTxcnt && trx.From != sender.sender {
+					if trx.TxCnt != missingTxcnt && trx.From != sender.senderAddress {
 						logger.Printf("Missing Transaction: Received Wrong Transaction")
 						break
 					} else {
-						storage.WriteOpenTx(trx, 16)
+						storage.WriteOpenTx(trx)
 						missingTransaction = trx
 						break
 					}
@@ -176,7 +176,7 @@ func prepareBlock(block *protocol.Block) {
 		}
 	}
 
-	MinimalTxCntPerSender = nil
+	missingTxCntSender = nil
 	//Sort Tx Again to get lowest TxCnt at the beginning.
 	tmpCopy = opentxToAdd
 	sort.Sort(tmpCopy)
@@ -186,7 +186,8 @@ func prepareBlock(block *protocol.Block) {
 		err := addTx(block, tx)
 		if err != nil {
 			//If the tx is invalid, we remove it completely, prevents starvation in the mempool.
-			storage.DeleteOpenTx(tx, 1001)
+			storage.DeleteOpenTx(tx)
+			storage.WriteINVALIDOpenTx(tx)
 		}
 	}
 

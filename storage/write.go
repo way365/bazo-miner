@@ -50,7 +50,7 @@ func WriteLastClosedBlock(block *protocol.Block) (err error) {
 }
 
 //Changing the "tx" shortcut here and using "transaction" to distinguish between bolt's transactions
-func WriteOpenTx(transaction protocol.Transaction, nr int) {
+func WriteOpenTx(transaction protocol.Transaction) {
 	openTxMutex.Lock()
 	txMemPool[transaction.Hash()] = transaction
 
@@ -106,7 +106,7 @@ func blockAlreadyInStash(slice []*protocol.Block, newBlockHash [32]byte) bool {
 	return false
 }
 
-func WriteClosedTx(transaction protocol.Transaction, nr int) (err error) {
+func WriteClosedTx(transaction protocol.Transaction) (err error) {
 
 	var bucket string
 	switch transaction.(type) {

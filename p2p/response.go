@@ -57,7 +57,6 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 			packet = BuildPacket(AGGTX_RES, tx.Encode())
 		}
 	}
-
 	sendData(p, packet)
 }
 

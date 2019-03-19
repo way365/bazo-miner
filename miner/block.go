@@ -249,7 +249,7 @@ func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
 		if tx.TxCnt < b.StateCopy[tx.From].TxCnt {
 			closedTx := storage.ReadClosedTx(tx.Hash())
 			if closedTx != nil {
-				storage.DeleteOpenTx(tx, 1002)
+				storage.DeleteOpenTx(tx)
 				storage.DeleteINVALIDOpenTx(tx)
 				addFundsTxMutex.Unlock()
 				return nil
@@ -399,7 +399,7 @@ func searchTransactionsInHistoricBlocks(searchAddressSender [32]byte, searchAddr
 				if trx != nil && trx.Aggregated == false && (trx.From == searchAddressSender || trx.To == searchAddressReceiver) {
 					historicTransactions = append(historicTransactions, trx)
 					trx.Aggregated = true
-					storage.WriteClosedTx(trx, 8001)
+					storage.WriteClosedTx(trx)
 				}
 			} else {
 				return nil
@@ -413,7 +413,7 @@ func searchTransactionsInHistoricBlocks(searchAddressSender [32]byte, searchAddr
 					logger.Printf("Found AggTx (%x) in (%x) which can be aggregated now.", trx.Hash(), block.Hash[0:8])
 					historicTransactions = append(historicTransactions, trx)
 					trx.Aggregated = true
-					storage.WriteClosedTx(trx, 8002)
+					storage.WriteClosedTx(trx)
 				}
 			} else {
 				//Tx Was not closes
@@ -457,7 +457,7 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 		transactionReceivers = append(transactionReceivers, trx.To)
 		nrOfReceivers[trx.To] = nrOfReceivers[trx.To] + 1
 		transactionHashes = append(transactionHashes, trx.Hash())
-		storage.WriteOpenTx(trx,8)
+		storage.WriteOpenTx(trx)
 
 	}
 
@@ -479,11 +479,11 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 			for _, fundsTxHash := range block.FundsTxData {
 				trx := storage.ReadClosedTx(fundsTxHash)
 				if len(transactionSenders) > 0 && trx.(*protocol.FundsTx).From == transactionSenders[0] {
-					//FABIO  historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
+					historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
 					breakingForLoop = true
 					break
 				} else if len(transactionReceivers) > 0 && trx.(*protocol.FundsTx).To == transactionReceivers[0] {
-					//FABIO  historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
+					historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
 					breakingForLoop = true
 					break
 				}
@@ -496,11 +496,11 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 				trx := storage.ReadClosedTx(aggTxHash)
 				if trx != nil {
 					if len(trx.(*protocol.AggTx).From) == 1 && len(transactionSenders) > 0 && trx.(*protocol.AggTx).From[0] == transactionSenders[0] {
-						//FABIO  historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
+						historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
 						breakingForLoop = true
 						break
 					} else if len(trx.(*protocol.AggTx).To) == 1 && len(transactionReceivers) > 0 && trx.(*protocol.AggTx).To[0] == transactionReceivers[0] {
-						//FABIO  historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
+						historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
 						breakingForLoop = true
 						break
 					}
@@ -511,9 +511,9 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 			}
 		}
 	} else if len(nrOfSenders) < len(nrOfReceivers) {
-		//FABIO  historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
+		historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
 	} else if len(nrOfSenders) > len(nrOfReceivers) {
-		//FABIO  historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
+		historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
 	}
 
 	//Add transactions to the transactionsHashes slice
@@ -538,11 +538,11 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 		}
 
 		//Print aggregated Transaction
-		//logger.Printf("%v", aggTx)
+		logger.Printf("%v", aggTx)
 
 		//Add Aggregated transaction and write to open storage
 		addAggTxFinal(block, aggTx)
-		storage.WriteOpenTx(aggTx,9)
+		storage.WriteOpenTx(aggTx)
 
 		//Sett all back to "zero"
 		SortedAndSelectedFundsTx = nil
@@ -750,7 +750,7 @@ func fetchFundsTxData(block *protocol.Block, fundsTxSlice []*protocol.FundsTx, i
 			}
 			select {
 			case fundsTx = <-p2p.FundsTxChan:
-				storage.WriteOpenTx(fundsTx,10)
+				storage.WriteOpenTx(fundsTx)
 				if initialSetup {
 					storage.WriteBootstrapTxReceived(fundsTx)
 				}
@@ -892,7 +892,7 @@ func fetchFundsTxRecursively(AggregatedTxSlice [][32]byte) (aggregatedFundsTxSli
 			if tx.Hash() != txHash {
 				return nil, errors.New(fmt.Sprintf("RECURSIVE Received TxHash did not correspond to our request."))
 			}
-			storage.WriteOpenTx(tx,11)
+			storage.WriteOpenTx(tx)
 		}
 		switch tx.(type) {
 		case *protocol.FundsTx:
@@ -953,7 +953,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 
 			select {
 			case aggTx = <-p2p.AggTxChan:
-				storage.WriteOpenTx(aggTx,12)
+				storage.WriteOpenTx(aggTx)
 			case <-time.After(TXFETCH_TIMEOUT * time.Second):
 				if cnt < 2 {
 					cnt ++
@@ -1034,10 +1034,10 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 							select {
 							case tx = <-p2p.AggTxChan:
 								//Received an Aggregated Transaction which was already validated in an older block.
-								storage.WriteOpenTx(tx,13)
+								storage.WriteOpenTx(tx)
 							case tx = <-p2p.FundsTxChan:
 								//Received a fundsTransaction, which needs to be handled further.
-								storage.WriteOpenTx(tx,14)
+								storage.WriteOpenTx(tx)
 								transactions = append(transactions, tx.(*protocol.FundsTx))
 							case <-time.After(TXFETCH_TIMEOUT * time.Second):
 								logger.Printf("Fetching (%x) timed out...", txHash)
@@ -1400,33 +1400,33 @@ func postValidate(data blockData, initialSetup bool) {
 	if !p2p.IsBootstrap() || !initialSetup {
 		//Write all open transactions to closed/validated storage.
 		for _, tx := range data.accTxSlice {
-			storage.WriteClosedTx(tx, 8003)
-			storage.DeleteOpenTx(tx, 1003)
+			storage.WriteClosedTx(tx)
+			storage.DeleteOpenTx(tx)
 		}
 
 		for _, tx := range data.fundsTxSlice {
-			storage.WriteClosedTx(tx, 8004)
+			storage.WriteClosedTx(tx)
 			tx.Block = data.block.HashWithoutTx
-			storage.DeleteOpenTx(tx, 1004)
+			storage.DeleteOpenTx(tx)
 			storage.DeleteINVALIDOpenTx(tx)
 		}
 
 		for _, tx := range data.configTxSlice {
-			storage.WriteClosedTx(tx, 8005)
-			storage.DeleteOpenTx(tx, 1005)
+			storage.WriteClosedTx(tx)
+			storage.DeleteOpenTx(tx)
 		}
 
 		for _, tx := range data.stakeTxSlice {
-			storage.WriteClosedTx(tx, 8006)
-			storage.DeleteOpenTx(tx, 1006)
+			storage.WriteClosedTx(tx)
+			storage.DeleteOpenTx(tx)
 		}
 
 		//Store all recursively fetched funds transactions.
 		if initialSetup {
 			for _, tx := range data.aggregatedFundsTxSlice {
 				tx.Aggregated = true
-				storage.WriteClosedTx(tx, 8007)
-				storage.DeleteOpenTx(tx, 1007)
+				storage.WriteClosedTx(tx)
+				storage.DeleteOpenTx(tx)
 			}
 		}
 
@@ -1463,16 +1463,16 @@ func postValidate(data blockData, initialSetup bool) {
 					break
 				}
 
-				storage.WriteClosedTx(trx, 8008)
-				storage.DeleteOpenTx(trx, 1008)
+				storage.WriteClosedTx(trx)
+				storage.DeleteOpenTx(trx)
 				storage.DeleteINVALIDOpenTx(tx)
 			}
 
 			//Delete AggTx and write it to closed Tx.
 			tx.Block = data.block.HashWithoutTx
 			tx.Aggregated = false
-			storage.WriteClosedTx(tx, 8009)
-			storage.DeleteOpenTx(tx, 1009)
+			storage.WriteClosedTx(tx)
+			storage.DeleteOpenTx(tx)
 			storage.DeleteINVALIDOpenTx(tx)
 		}
 
@@ -1493,15 +1493,15 @@ func postValidate(data blockData, initialSetup bool) {
 		storage.WriteClosedBlock(data.block)
 
 		//Do not empty last three blocks and only if it not aggregated already.
-	//	for _, block := range storage.ReadAllClosedBlocks(){
-    //
-	//		//Empty all blocks despite the last 3 and genesis block.
-	//		if !block.Aggregated && block.Height > 0 {
-	//			if (int(block.Height)) < (int(data.block.Height) - NO_AGGREGATION_LENGTH) {
-	//	FABIO			storage.UpdateBlocksToBlocksWithoutTx(block)
-	//			}
-	//		}
-	//	}
+		for _, block := range storage.ReadAllClosedBlocks(){
+
+			//Empty all blocks despite the last NO_AGGREGATION_LENGTH and genesis block.
+			if !block.Aggregated && block.Height > 0 {
+				if (int(block.Height)) < (int(data.block.Height) - NO_EMPTYING_LENGTH) {
+					storage.UpdateBlocksToBlocksWithoutTx(block)
+				}
+			}
+		}
 
 		// Write last block to db and delete last block's ancestor.
 		storage.DeleteAllLastClosedBlock()

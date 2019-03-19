@@ -104,22 +104,22 @@ func validateStateRollback(data blockData) {
 func postValidateRollback(data blockData) {
 	//Put all validated txs into invalidated state.
 	for _, tx := range data.accTxSlice {
-		storage.WriteOpenTx(tx, 1)
+		storage.WriteOpenTx(tx)
 		storage.DeleteClosedTx(tx)
 	}
 
 	for _, tx := range data.fundsTxSlice {
-		storage.WriteOpenTx(tx, 2)
+		storage.WriteOpenTx(tx)
 		storage.DeleteClosedTx(tx)
 	}
 
 	for _, tx := range data.configTxSlice {
-		storage.WriteOpenTx(tx, 3)
+		storage.WriteOpenTx(tx)
 		storage.DeleteClosedTx(tx)
 	}
 
 	for _, tx := range data.stakeTxSlice {
-		storage.WriteOpenTx(tx,4)
+		storage.WriteOpenTx(tx)
 		storage.DeleteClosedTx(tx)
 	}
 
@@ -132,18 +132,18 @@ func postValidateRollback(data blockData) {
 			switch trx.(type) {
 			case *protocol.FundsTx:
 				if trx.(*protocol.FundsTx).Block == data.block.HashWithoutTx {
-					storage.WriteOpenTx(trx,5)
+					storage.WriteOpenTx(trx)
 					storage.DeleteClosedTx(trx)
 				}
 			case *protocol.AggTx:
 				if trx.(*protocol.AggTx).Block == data.block.HashWithoutTx {
-					storage.WriteOpenTx(trx,6)
+					storage.WriteOpenTx(trx)
 					storage.DeleteClosedTx(trx)
 				}
 			}
 		}
 
-		storage.WriteOpenTx(tx,7)
+		storage.WriteOpenTx(tx)
 		storage.DeleteClosedTx(tx)
 	}
 

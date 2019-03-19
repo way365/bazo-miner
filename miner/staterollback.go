@@ -60,12 +60,12 @@ func reactivateHistoricBlockDueToRollback(tx protocol.Transaction)() {
 	case *protocol.FundsTx:
 		fundsTx = tx.(*protocol.FundsTx)
 		fundsTx.Aggregated = false
-		storage.WriteClosedTx(fundsTx, 8011)
+		storage.WriteClosedTx(fundsTx)
 		blockHash = fundsTx.Block
 	case *protocol.AggTx:
 		aggTx = tx.(*protocol.AggTx)
 		aggTx.Aggregated = false
-		storage.WriteClosedTx(aggTx, 8012)
+		storage.WriteClosedTx(aggTx)
 		blockHash = aggTx.Block
 	}
 
@@ -84,14 +84,14 @@ func reactivateHistoricBlockDueToRollback(tx protocol.Transaction)() {
 			if FTX.Block == blockHash {
 				//Reactivate this transaction --> it is still closed but it has to be visible in the block and chain again.
 				block.FundsTxData = append(block.FundsTxData, tx.Hash())
-				storage.WriteClosedTx(FTX, 8013)
+				storage.WriteClosedTx(FTX)
 			}
 		case *protocol.AggTx:
 			ATX := tx.(*protocol.AggTx)
 			if ATX.Block == blockHash {
 				//Reactivate this transaction
 				block.AggTxData = append(block.AggTxData, tx.Hash())
-				storage.WriteClosedTx(ATX, 8014)
+				storage.WriteClosedTx(ATX)
 			}
 		}
 	}

@@ -49,7 +49,7 @@ func DeleteAllLastClosedBlock() {
 	})
 }
 
-func DeleteOpenTx(transaction protocol.Transaction, nr int) {
+func DeleteOpenTx(transaction protocol.Transaction) {
 	openTxMutex.Lock()
 	delete(txMemPool, transaction.Hash())
 	openTxMutex.Unlock()

@@ -20,6 +20,7 @@ type AggTx struct {
 	AggregatedTxSlice 	[][32]byte
 	Aggregated			bool
 	Block				[32]byte //This saves the blockHashWithoutTransactions into which the transaction was usually validated. Needed for rollback.
+	MerkleRoot          [32]byte
 }
 
 func ConstrAggTx(amount uint64, fee uint64, from [][32]byte, to [][32]byte, transactions [][32]byte) (tx *AggTx, err error) {
@@ -32,6 +33,8 @@ func ConstrAggTx(amount uint64, fee uint64, from [][32]byte, to [][32]byte, tran
 	tx.AggregatedTxSlice = transactions
 	tx.Aggregated = false
 	tx.Block = [32]byte{}
+	tx.MerkleRoot = BuildAggTxMerkleTree(transactions).MerkleRoot()
+
 
 	return tx, nil
 }
@@ -48,13 +51,13 @@ func (tx *AggTx) Hash() (hash [32]byte) {
 		Fee    				uint64
 		From   				[][32]byte
 		To     				[][32]byte
-		AggregatedTxSlice 	[][32]byte
+		MerkleRoot 			[32]byte
 	}{
 		tx.Amount,
 		tx.Fee,
 		tx.From,
 		tx.To,
-		tx.AggregatedTxSlice,
+		tx.MerkleRoot,
 	}
 
 	return SerializeHashContent(txHash)
@@ -72,6 +75,7 @@ func (tx *AggTx) Encode() (encodedTx []byte) {
 		AggregatedTxSlice: 		tx.AggregatedTxSlice,
 		Aggregated:				tx.Aggregated,
 		Block: 					tx.Block,
+		MerkleRoot:				tx.MerkleRoot,
 	}
 	buffer := new(bytes.Buffer)
 	gob.NewEncoder(buffer).Encode(encodeData)
@@ -102,6 +106,7 @@ func (tx AggTx) String() string {
 			"|  From: %x\n"+
 			"|  To: %x\n"+
 			"|  Transactions: %x\n"+
+			"|  Merkle Root: %x\n"+
 			"|  #Tx: %v\n"+
 			"|  Aggregated: %t\n" +
 			"|_________________________________________________________________________________",
@@ -111,6 +116,7 @@ func (tx AggTx) String() string {
 		tx.From,
 		tx.To,
 		tx.AggregatedTxSlice,
+		tx.MerkleRoot,
 		len(tx.AggregatedTxSlice),
 		tx.Aggregated,
 	)

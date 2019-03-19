@@ -13,7 +13,7 @@ const (
 	HASH_LEN                = 32
 	HEIGHT_LEN				= 4
 	//All fixed sizes form the Block struct are 254
-	MIN_BLOCKSIZE           = 254 + crypto.COMM_PROOF_LENGTH + 1
+	MIN_BLOCKSIZE           = 393 + crypto.COMM_PROOF_LENGTH + 1 // = 650 bytes
 	MIN_BLOCKHEADER_SIZE    = 104
 	BLOOM_FILTER_ERROR_RATE = 0.1
 )
@@ -27,10 +27,11 @@ type Block struct {
 	PrevHashWithoutTx  	[32]byte			//valid hash of ancestor once all tx are aggregated
 	NrConfigTx   		uint8
 	NrElementsBF 		uint16
-	BloomFilter  		*bloom.BloomFilter
+	BloomFilter  		*bloom.BloomFilter	//8 byte
 	Height       		uint32
 	Beneficiary  		[32]byte
-	Aggregated			bool				//Indicates if All transactions are aggregated with a boolean.
+	Aggregated			bool 				//Indicates if All transactions are aggregated with a boolean.
+	// ==> 177 bytes
 
 
 	//Body
@@ -48,6 +49,7 @@ type Block struct {
 	ConflictingBlockHashWithoutTx1 [32]byte
 	ConflictingBlockHashWithoutTx2 [32]byte
 	StateCopy             map[[32]byte]*Account //won't be serialized, just keeping track of local state changes
+	// ==> 216 bytes + crypto.COMM_PROOF_LENGTH
 
 	AccTxData    		 [][32]byte
 	FundsTxData  		 [][32]byte
@@ -150,7 +152,6 @@ func (block *Block) InitBloomFilter(txPubKeys [][32]byte) {
 }
 
 func (block *Block) GetSize() uint64 {
-	//TODO Update MIN_BLOCKSIZE
 	size := MIN_BLOCKSIZE + int(block.GetTxDataSize())
 
 	if block.BloomFilter != nil {

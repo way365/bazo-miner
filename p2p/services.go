@@ -78,8 +78,6 @@ func sendAndSearchMessages(msg []byte) {
 			for _, hMsg := range p.delayedMessages {
 				//Send historic not yet sent transaction and remove it.
 				if peers.contains(p.peer.getIPPort(), PEERTYPE_MINER) {
-					logger.Printf("Send delayed msg to %v", p.peer.getIPPort())
-
 					//This is used to get the newest channel for given IP+Port. In case of an update in the background
 					receiver := sendingMap[p.peer.getIPPort()].peer
 					receiver.ch <- hMsg
@@ -93,7 +91,7 @@ func sendAndSearchMessages(msg []byte) {
 			//Store messages which are not sent du to connectivity issues.
 			messages := p.delayedMessages
 			////Check that not too many delayed messages are stored.
-			if len(messages) > 5000 {
+			if len(messages) > 4000 {
 				messages = messages[1:]
 			}
 			//Store message for this specific miner connection.

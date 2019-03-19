@@ -56,7 +56,7 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 		"BBBBBBBBBBBBBBBBBAAAAAAA                   AAAAAAAZZZZZZZZZZZZZZZZZZZ     OOOOOOOOO\n\n\n")
 
 	logger.Printf("\n\n\n-------------------- START MINER ---------------------")
-	logger.Printf("This Miners ip address: %v\n\n", p2p.Ipport)
+	logger.Printf("This Miners IP-Address: %v\n\n", p2p.Ipport)
 	time.Sleep(2*time.Second)
 	parameterSlice = append(parameterSlice, NewDefaultParameters())
 	activeParameters = &parameterSlice[0]
@@ -80,8 +80,8 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 
 	//this is used to generate the state with aggregated transactions.
 	for _, tx := range storage.ReadAllBootstrapReceivedTransactions() {
-		storage.DeleteOpenTx(tx, 1000)
-		storage.WriteClosedTx(tx,8010)
+		storage.DeleteOpenTx(tx)
+		storage.WriteClosedTx(tx)
 	}
 	storage.DeleteBootstrapReceivedMempool()
 
