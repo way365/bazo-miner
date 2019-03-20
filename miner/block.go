@@ -1282,7 +1282,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	prevProofs := GetLatestProofs(activeParameters.num_included_prev_proofs, block)
 
 	//PoS validation
-	if !validateProofOfStake(getDifficulty(), prevProofs, block.Height, acc.Balance, block.CommitmentProof, block.Timestamp) {
+	if !initialSetup && !validateProofOfStake(getDifficulty(), prevProofs, block.Height, acc.Balance, block.CommitmentProof, block.Timestamp) {
 		logger.Printf("____________________NONCE (%x) in block %x is problematic", block.Nonce, block.Hash[0:8])
 		logger.Printf("|  block.Height: %d, acc.Address %x, acc.txCount %v, acc.Balance %v, block.CommitmentProf: %x, block.Timestamp %v ", block.Height, acc.Address[0:8], acc.TxCnt,  acc.Balance, block.CommitmentProof[0:8], block.Timestamp)
 		logger.Printf("|_____________________________________________________")

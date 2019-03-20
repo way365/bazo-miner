@@ -163,7 +163,6 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 			}
 		}
 		accTxStashMutex.Unlock()
-		AccTxChan <- accTx
 	case CONFIGTX_RES:
 		var configTx *protocol.ConfigTx
 		configTx = configTx.Decode(payload)
