@@ -16,6 +16,8 @@ import (
 
 type openTxs []protocol.Transaction
 
+var receivedBlockInTheMeantime bool
+
 func prepareBlock(block *protocol.Block) {
 	//Fetch all txs from mempool (opentxs).
 	opentxs := storage.ReadAllOpenTxs()
@@ -116,6 +118,11 @@ func prepareBlock(block *protocol.Block) {
 
 			var missingTransaction protocol.Transaction
 
+			if receivedBlockInTheMeantime {
+				logger.Printf("Received Block in the Meantime --> Abort requesting missing Tx (1)")
+				break
+			}
+
 			//Search Tx in the local storage, if it may is received in the meantime.
 			for _, txhash := range storage.ReadTxcntToTx(missingTxcnt) {
 				tx := storage.ReadOpenTx(txhash)
@@ -173,6 +180,11 @@ func prepareBlock(block *protocol.Block) {
 			} else {
 				opentxToAdd = append(opentxToAdd, missingTransaction)
 			}
+		}
+		if receivedBlockInTheMeantime {
+			logger.Printf("Received Block in the Meantime --> Abort requesting missing Tx (2)")
+			receivedBlockInTheMeantime = false
+			break
 		}
 	}
 
