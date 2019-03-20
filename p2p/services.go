@@ -23,8 +23,10 @@ func peerService() {
 		case p := <-register:
 			peers.add(p)
 		case p := <-disconnect:
+			peers.closeChannelMutex.Lock()
 			peers.delete(p)
 			close(p.ch)
+			peers.closeChannelMutex.Unlock()
 		}
 	}
 }
@@ -70,7 +72,9 @@ func sendAndSearchMessages(msg []byte) {
 			if peers.contains(p.peer.getIPPort(), PEERTYPE_MINER) {
 				//This is used to get the newest channel for given IP+Port. In case of an update in the background
 				receiver := sendingMap[p.peer.getIPPort()].peer
+				peers.closeChannelMutex.Lock()
 				receiver.ch <- msg
+				peers.closeChannelMutex.Unlock()
 			} else {
 				logger.Printf("CHANNEL_MINER: Wanted to send to %v, but %v is not in the peers.minerConns anymore", p.peer.getIPPort(), p.peer.getIPPort())
 			}
@@ -80,7 +84,9 @@ func sendAndSearchMessages(msg []byte) {
 				if peers.contains(p.peer.getIPPort(), PEERTYPE_MINER) {
 					//This is used to get the newest channel for given IP+Port. In case of an update in the background
 					receiver := sendingMap[p.peer.getIPPort()].peer
+					peers.closeChannelMutex.Lock()
 					receiver.ch <- hMsg
+					peers.closeChannelMutex.Unlock()
 
 				} else {
 					logger.Printf("CHANNEL_MINER: Wanted to send to %v, but %v is not in the peers.minerConns anymore", p.peer.getIPPort(), p.peer.getIPPort())

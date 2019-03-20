@@ -43,11 +43,14 @@ type peersStruct struct {
 	clientConns map[*peer]bool
 	peerMutex   sync.Mutex
 	containsMutex sync.Mutex
+	closeChannelMutex sync.Mutex
 }
 
 func (peers peersStruct) contains(ipport string, peerType uint) bool {
 	peers.containsMutex.Lock()
+	peers.closeChannelMutex.Lock()
 	defer peers.containsMutex.Unlock()
+	defer peers.closeChannelMutex.Unlock()
 
 	var peerConns map[*peer]bool
 
