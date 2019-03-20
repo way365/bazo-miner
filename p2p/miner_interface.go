@@ -27,11 +27,15 @@ var (
 
 	receivedTXStash = make([]*protocol.FundsTx, 0)
 	receivedAggTxStash = make([]*protocol.AggTx, 0)
+	receivedStakeTxStash = make([]*protocol.StakeTx, 0)
+	receivedAccTxStash = make([]*protocol.AccTx, 0)
 	receivedBlockStash = make([]*protocol.Block, 0)
 
 	fundsTxSashMutex = &sync.Mutex{}
 	aggTxStashMutex = &sync.Mutex{}
 	blockStashMutex = &sync.Mutex{}
+	stakeTxStashMutex = &sync.Mutex{}
+	accTxStashMutex = &sync.Mutex{}
 )
 
 //This is for blocks and txs that the miner successfully validated.
@@ -87,6 +91,24 @@ func aggTxAlreadyInStash(slice []*protocol.AggTx, newTXHash [32]byte) bool {
 	return false
 }
 
+func stakeTxAlreadyInStash(slice []*protocol.StakeTx, newTXHash [32]byte) bool {
+	for _, txInStash := range slice {
+		if txInStash.Hash() == newTXHash {
+			return true
+		}
+	}
+	return false
+}
+
+func accTxAlreadyInStash(slice []*protocol.AccTx, newTXHash [32]byte) bool {
+	for _, txInStash := range slice {
+		if txInStash.Hash() == newTXHash {
+			return true
+		}
+	}
+	return false
+}
+
 func blockAlreadyReceived(slice []*protocol.Block, newBlockHash [32]byte) bool {
 	for _, block := range slice {
 		if block.Hash == newBlockHash {
@@ -132,6 +154,15 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		if accTx == nil {
 			return
 		}
+		accTxStashMutex.Lock()
+		if !accTxAlreadyInStash(receivedAccTxStash, accTx.Hash()) {
+			receivedAccTxStash = append(receivedAccTxStash, accTx)
+			AccTxChan <- accTx
+			if len(receivedAccTxStash) > 1000 {
+				receivedAccTxStash = append(receivedAccTxStash[:0], receivedAccTxStash[1:]...)
+			}
+		}
+		accTxStashMutex.Unlock()
 		AccTxChan <- accTx
 	case CONFIGTX_RES:
 		var configTx *protocol.ConfigTx
@@ -146,7 +177,16 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		if stakeTx == nil {
 			return
 		}
-		StakeTxChan <- stakeTx
+
+		stakeTxStashMutex.Lock()
+		if !stakeTxAlreadyInStash(receivedStakeTxStash, stakeTx.Hash()) {
+			receivedStakeTxStash = append(receivedStakeTxStash, stakeTx)
+			StakeTxChan <- stakeTx
+			if len(receivedStakeTxStash) > 1000 {
+				receivedStakeTxStash = append(receivedStakeTxStash[:0], receivedStakeTxStash[1:]...)
+			}
+		}
+		stakeTxStashMutex.Unlock()
 	case AGGTX_RES:
 		var aggTx *protocol.AggTx
 		aggTx = aggTx.Decode(payload)
