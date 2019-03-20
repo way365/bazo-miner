@@ -73,7 +73,7 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 		return
 	}
 
-	//logger.Printf("Received Tx: %x", tx.Hash())
+	logger.Printf("Received Tx: %x from %x", tx.Hash(), tx.Sender())
 
 	//Write to mempool and rebroadcast
 	storage.WriteOpenTx(tx)

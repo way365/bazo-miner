@@ -5,7 +5,7 @@ const (
 	//that this dynamic check is not possible anymore?!
 	DELAYED_BLOCKS = 10
 
-	TXFETCH_TIMEOUT    = 5  //Sec
+	TXFETCH_TIMEOUT    = 2  //Sec
 	BLOCKFETCH_TIMEOUT = 40 //Sec
 
 	//Some prominent programming languages (e.g., Java) have not unsigned integer types
