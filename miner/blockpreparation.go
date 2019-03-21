@@ -199,7 +199,6 @@ func prepareBlock(block *protocol.Block) {
 		if err != nil {
 			//If the tx is invalid, we remove it completely, prevents starvation in the mempool.
 			storage.DeleteOpenTx(tx)
-			storage.WriteINVALIDOpenTx(tx)
 		}
 	}
 

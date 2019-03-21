@@ -80,8 +80,10 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 
 	//this is used to generate the state with aggregated transactions.
 	for _, tx := range storage.ReadAllBootstrapReceivedTransactions() {
-		storage.DeleteOpenTx(tx)
-		storage.WriteClosedTx(tx)
+		if tx != nil {
+			storage.DeleteOpenTx(tx)
+			storage.WriteClosedTx(tx)
+		}
 	}
 	storage.DeleteBootstrapReceivedMempool()
 

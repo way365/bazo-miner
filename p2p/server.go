@@ -155,6 +155,7 @@ func handleNewConn(p *peer) {
 func peerConn(p *peer) {
 	if p.peerType == PEERTYPE_MINER {
 		logger.Printf("Adding a new miner: %v\n", p.getIPPort())
+		neighborBrdcst()
 	} else if p.peerType == PEERTYPE_CLIENT {
 		//logger.Printf("Adding a new client: %v\n", p.getIPPort())
 	}
