@@ -61,6 +61,7 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 	//Response tx acknowledgment if the peer is a client
 	if !peers.minerConns[p] {
 		packet := BuildPacket(TX_BRDCST_ACK, nil)
+		logger.Printf("Acknoledgement for %v for tx %x", p.getIPPort(), tx.Hash())
 		sendData(p, packet)
 	}
 

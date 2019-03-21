@@ -1003,15 +1003,11 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 				tx := storage.ReadClosedTx(txHash)
 
 				if tx != nil {
-
-
+					//Found already closed transaction --> Not needed for further process.
+					logger.Printf("Found Transaction %x which was in previous block.", tx.Hash())
+					continue
 				} else {
 					tx = storage.ReadOpenTx(txHash)
-					switch tx.(type) {
-					case *protocol.AggTx:
-						continue
-					}
-					transactions = append(transactions, tx.(*protocol.FundsTx))
 
 					if tx != nil {
 						//Found Open new Agg Transaction
