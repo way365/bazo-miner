@@ -188,7 +188,6 @@ func peerConn(p *peer) {
 						}
 					}
 					if err == nil && p != nil {
-						//logger.Printf("  RECURSIVE peerCon for %v", p.getIPPort())
 						go peerConn(p)
 						return
 					}

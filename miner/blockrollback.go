@@ -9,6 +9,7 @@ import (
 //Already validated block but not part of the current longest chain.
 //No need for an additional state mutex, because this function is called while the blockValidation mutex is actively held.
 func rollback(b *protocol.Block) error {
+	logger.Printf("Inside Validation for block %x --> Inside Rollback", b.Hash)
 	accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggTxSlice, err := preValidateRollback(b)
 	if err != nil {
 		return err
@@ -23,7 +24,7 @@ func rollback(b *protocol.Block) error {
 	validateStateRollback(data)
 
 	postValidateRollback(data)
-
+	logger.Printf("Inside Validation for block %x --> Inside Rollback --> END", b.Hash)
 	return nil
 }
 
