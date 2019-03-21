@@ -50,7 +50,7 @@ var (
 func finalizeBlock(block *protocol.Block) error {
 	//Check if we have a slashing proof that we can add to the block.
 	//The slashingDict is updated when a new block is received and when a slashing proof is provided.
-
+	logger.Printf("-- Start Finalize")
 	if len(slashingDict) != 0 {
 		//Get the first slashing proof.
 		for hash, slashingProof := range slashingDict {
@@ -65,7 +65,7 @@ func finalizeBlock(block *protocol.Block) error {
 
 	//Merkle tree includes the hashes of all txs in this block
 	block.MerkleRoot = protocol.BuildMerkleTree(block).MerkleRoot()
-
+	logger.Printf("---- Got Merkleroot")
 	validatorAcc, err := storage.GetAccount(protocol.SerializeHashContent(validatorAccAddress))
 	if err != nil {
 		return err
@@ -80,6 +80,7 @@ func finalizeBlock(block *protocol.Block) error {
 	if err != nil {
 		return err
 	}
+	logger.Printf("---- Got Commitmentproof")
 
 	//Block hash with MerkleTree and therefore, including all transactions
 	partialHash := block.HashBlock()
@@ -87,9 +88,11 @@ func finalizeBlock(block *protocol.Block) error {
 	//Block hash without MerkleTree and therefore, without any transactions
 	partialHashWithoutMerkleRoot := block.HashBlockWithoutMerkleRoot()
 
+	logger.Printf("---- Got Hashed Block")
 	prevProofs := GetLatestProofs(activeParameters.num_included_prev_proofs, block)
-
+	logger.Printf("---- Got latest Proofs")
 	nonce, err := proofOfStake(getDifficulty(), block.PrevHash, prevProofs, block.Height, validatorAcc.Balance, commitmentProof)
+	logger.Printf("---- Got POS")
 	if err != nil {
 		//Delete all partially added transactions.
 		if nonce == -2 {
@@ -109,6 +112,7 @@ func finalizeBlock(block *protocol.Block) error {
 	//Put pieces together to get the final hash.
 	block.Hash = sha3.Sum256(append(nonceBuf[:], partialHash[:]...))
 	block.HashWithoutTx = sha3.Sum256(append(nonceBuf[:], partialHashWithoutMerkleRoot[:]...))
+	logger.Printf("---- Got SHA SUM")
 
 	//This doesn't need to be hashed, because we already have the merkle tree taking care of consistency.
 	block.NrAccTx = uint16(len(block.AccTxData))
@@ -118,7 +122,7 @@ func finalizeBlock(block *protocol.Block) error {
 	block.NrAggTx = uint16(len(block.AggTxData))
 
 	copy(block.CommitmentProof[0:crypto.COMM_PROOF_LENGTH], commitmentProof[:])
-
+	logger.Printf("-- End Finalization")
 	return nil
 }
 
@@ -1082,6 +1086,8 @@ func validate(b *protocol.Block, initialSetup bool) error {
 	blockValidation.Lock()
 	defer blockValidation.Unlock()
 
+	logger.Printf("Inside Vlaidation for block %x", b.Hash)
+
 	//Prepare datastructure to fill tx payloads.
 	blockDataMap := make(map[[32]byte]blockData)
 
@@ -1227,7 +1233,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	//We fetch tx data for each type in parallel -> performance boost.
 	nrOfChannels := 5
 	errChan := make(chan error, nrOfChannels)
-	aggregatedFundsChan := make(chan []*protocol.FundsTx, 1)
+	aggregatedFundsChan := make(chan []*protocol.FundsTx, 10000)
 
 	//We need to allocate slice space for the underlying array when we pass them as reference.
 	accTxSlice = make([]*protocol.AccTx, block.NrAccTx)

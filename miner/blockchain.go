@@ -107,7 +107,7 @@ func mining(initialBlock *protocol.Block) {
 		}
 
 		if err == nil {
-			logger.Printf("Validation of Next Block")
+			logger.Printf("Validation of Next Block%x", currentBlock.Hash)
 			err := validate(currentBlock, false)
 			if err == nil {
 				//Only broadcast the block if it is valid.
@@ -133,6 +133,7 @@ func mining(initialBlock *protocol.Block) {
 		currentBlock = nextBlock
 		logger.Printf("Prepare Next Block")
 		prepareBlock(currentBlock)
+		logger.Printf("Prepare Next Block --> Done")
 		blockValidation.Unlock()
 	}
 }

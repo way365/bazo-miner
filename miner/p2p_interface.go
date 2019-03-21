@@ -33,6 +33,7 @@ func processBlock(payload []byte) {
 
 	//Start validation process
 	receivedBlockInTheMeantime = true
+	logger.Printf("Validation of received Block %x", block.Hash)
 	err := validate(block, false)
 	receivedBlockInTheMeantime = false
 	if err == nil {

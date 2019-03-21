@@ -59,8 +59,7 @@ func bootstrap() {
 	p, err := initiateNewMinerConnection(storage.Bootstrap_Server)
 	if err != nil {
 		selfConnect := "Cannot self-connect"
-		connectWith := "Connection with"
-		if err.Error()[0:9] != selfConnect[0:9] || err.Error()[0:9] != connectWith[0:9] {
+		if err.Error()[0:9] != selfConnect[0:9] {
 			logger.Printf("Initiating new miner connection failed: %v", err)
 		}
 	}
@@ -184,8 +183,7 @@ func peerConn(p *peer) {
 					p, err := initiateNewMinerConnection(p.getIPPort())
 					if err != nil || p == nil {
 						selfConnect := "Cannot self-connect"
-						connectWith := "Connection with"
-						if err.Error()[0:9] != selfConnect[0:9] || err.Error()[0:9] != connectWith[0:9] {
+						if err.Error()[0:9] != selfConnect[0:9] {
 							logger.Printf("Initiating new miner connection failed: %v", err)
 						}
 					}
