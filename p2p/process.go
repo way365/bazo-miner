@@ -64,21 +64,30 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 		logger.Printf("Acknoledgement for %v for tx %x", p.getIPPort(), tx.Hash())
 		sendData(p, packet)
 	}
+	logger.Printf("-- (1) -- %x", tx.Hash())
 
 	if storage.ReadOpenTx(tx.Hash()) != nil {
-		//logger.Printf("Received transaction (%x) already in the mempool.\n", tx.Hash())
+		logger.Printf("Received transaction (%x) already in the mempool.\n", tx.Hash())
 		return
 	}
+	logger.Printf("-- (2) -- %x", tx.Hash())
 	if storage.ReadClosedTx(tx.Hash()) != nil {
-		//logger.Printf("Received transaction (%x) already validated.\n", tx.Hash())
+		logger.Printf("Received transaction (%x) already validated.\n", tx.Hash())
 		return
 	}
+	logger.Printf("-- (3) -- %x", tx.Hash())
+	if storage.ReadClosedTx(tx.Hash()) != nil {
+		logger.Printf("Received transaction (%x) already validated.\n", tx.Hash())
+		return
+	}
+
 
 	logger.Printf("Received Tx: %x from %x", tx.Hash(), tx.Sender())
 
 	//Write to mempool and rebroadcast
 	storage.WriteOpenTx(tx)
 	toBrdcst := BuildPacket(brdcstType, payload)
+	logger.Printf("-- (4) -- %x", tx.Hash())
 	minerBrdcstMsg <- toBrdcst
 
 }
