@@ -133,10 +133,14 @@ func peerBroadcast(p *peer) {
 //Single goroutine that makes sure the system is well connected.
 func checkHealthService() {
 	for {
-		//time.Sleep(HEALTH_CHECK_INTERVAL * time.Second)  //Normal searching for neighbours
+		//time.Sleep(HEALTH_CHECK_INTERVAL * time.Second)  Between 5 and 30 seconds check interval.
 		var nrOfMiners = 1
-		if len(peers.minerConns) > 1 {
-			nrOfMiners = len(peers.minerConns)
+		knownConnections := peers.minerConns
+		if len(knownConnections) > 1 {
+			nrOfMiners = len(knownConnections)
+		}
+		if len(knownConnections) > 6 {
+			nrOfMiners = 6
 		}
 
 		time.Sleep(time.Duration(nrOfMiners) * 5 * time.Second)  //Dynamic searching for neighbours interval --> 5 times the number of miners

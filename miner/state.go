@@ -298,13 +298,17 @@ func fundsStateChange(txSlice []*protocol.FundsTx, initialSetup bool) (err error
 		accReceiver, err = storage.GetAccount(tx.To)
 
 		//Check transaction counter
-		if initialSetup == false && tx.Aggregated == false && tx.TxCnt != accSender.TxCnt {
-			err = errors.New(fmt.Sprintf("Sender (%x) txCnt in %x does not match: %v (tx.txCnt) vs. %v (state txCnt).",accSender.Address[0:8], tx.Hash(), tx.TxCnt, accSender.TxCnt))
+		if !initialSetup && tx.Aggregated == false && tx.TxCnt != accSender.TxCnt {
+			if tx.TxCnt < accSender.TxCnt {
+				logger.Printf("Tx %x, already in the state.", tx.Hash())
+			} else {
+				err = errors.New(fmt.Sprintf("Sender (%x) txCnt in %x does not match: %v (tx.txCnt) vs. %v (state txCnt).", accSender.Address[0:8], tx.Hash(), tx.TxCnt, accSender.TxCnt))
+			}
 		}
 
 		//Check sender balance
-		// TODO "!initialSetup" does allow a "Credit" like behaviour where there is no error, regarding the balance. In the end it should match the wanted state.
-		if (tx.Amount + tx.Fee) > accSender.Balance && !initialSetup {
+		// "!initialSetup" does allow a "Credit" like behaviour where there is no error, regarding the balance. In the end it should match the wanted state.
+		if !initialSetup && (tx.Amount + tx.Fee) > accSender.Balance {
 			err = errors.New(fmt.Sprintf("Sender does not have enough funds for the Funds transaction: Balance = %v, Amount = %v, Fee = %v.", accSender.Balance, tx.Amount, tx.Fee))
 		}
 
