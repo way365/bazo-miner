@@ -3,7 +3,6 @@ package p2p
 //All incoming messages are processed here and acted upon accordingly
 func processIncomingMsg(p *peer, header *Header, payload []byte) {
 
-	logger.Printf("INCOMMING: %v", header.TypeID)
 	switch header.TypeID {
 	//BROADCASTING
 	case FUNDSTX_BRDCST:

@@ -1086,7 +1086,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 	blockValidation.Lock()
 	defer blockValidation.Unlock()
 
-	logger.Printf("Inside Vlaidation for block %x", b.Hash)
+	logger.Printf("Inside Validation for block %x", b.Hash)
 
 	//Prepare datastructure to fill tx payloads.
 	blockDataMap := make(map[[32]byte]blockData)

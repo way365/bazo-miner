@@ -109,6 +109,7 @@ func mining(initialBlock *protocol.Block) {
 		if err == nil {
 			logger.Printf("Validation of Next Block%x", currentBlock.Hash)
 			err := validate(currentBlock, false)
+			logger.Printf("End Validation for block %x", currentBlock.Hash)
 			if err == nil {
 				//Only broadcast the block if it is valid.
 				broadcastBlock(currentBlock)
