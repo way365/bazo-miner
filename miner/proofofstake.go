@@ -118,10 +118,19 @@ func proofOfStake(diff uint8,
 	timestampBufIndexStart := index
 	timestampBufIndexEnd := index + 8
 
+	cnt := 0
 	for range time.Tick(time.Second) {
 		// lastBlock is a global variable which points to the last block. This check makes sure we abort if another
 		// block has been validated
+		logger.Printf("Try Block with Time: %v", time.Now().Format("030405"))
+		if cnt >= 500 {
+			logger.Printf("Mined 500sec and no block validated...? --> No last block received: %x", storage.ReadLastClosedBlock())
+			for _, block := range storage.ReadReceivedBlockStash() {
+				logger.Printf("  --> %x", block.Hash)
+			}
 
+			cnt = 0
+		}
 		if lastBlock == nil {
 			lastBlock = storage.ReadLastClosedBlock()
 		}
@@ -171,9 +180,11 @@ func proofOfStake(diff uint8,
 		if diff%8 != 0 && pos[byteNr] >= 1<<(8-diff%8) {
 			continue
 		}
+		cnt++
 		break
 	}
 
+	cnt = 0
 	return timestamp, nil
 }
 

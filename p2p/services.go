@@ -149,9 +149,10 @@ func checkHealthService() {
 		if Ipport != storage.Bootstrap_Server && !peers.contains(storage.Bootstrap_Server, PEERTYPE_MINER) {
 			p, err := initiateNewMinerConnection(storage.Bootstrap_Server)
 			if p == nil || err != nil {
-				selfConnect := "Cannot self-connect" //Do not print Self-connection error
-				if err.Error()[0:9] != selfConnect[0:9] {
-					logger.Printf("%v\n", err)
+				selfConnect := "Cannot self-connect"
+				connectWith := "Connection with"
+				if err.Error()[0:9] != selfConnect[0:9] || err.Error()[0:9] != connectWith[0:9] {
+					logger.Printf("Initiating new miner connection failed: %v", err)
 				}
 			} else {
 				go peerConn(p)
@@ -170,9 +171,10 @@ func checkHealthService() {
 		case ipaddr := <-iplistChan:
 			p, err := initiateNewMinerConnection(ipaddr)
 			if err != nil {
-				selfConnect := "Cannot self-connect" //Do not print Self-connection error
-				if err.Error()[0:9] != selfConnect[0:9] {
-					logger.Printf("%v\n", err)
+				selfConnect := "Cannot self-connect"
+				connectWith := "Connection with"
+				if err.Error()[0:9] != selfConnect[0:9] || err.Error()[0:9] != connectWith[0:9] {
+					logger.Printf("Initiating new miner connection failed: %v", err)
 				}
 			}
 			if p == nil || err != nil {
@@ -184,7 +186,7 @@ func checkHealthService() {
 			//In case we don't have any ip addresses in the channel left, make a request to the network.
 			PrintMinerCons()
 			neighborReq()
-			logger.Printf("    |-- Request Neighbors...    |\n                                                      |___________________________|")
+			logger.Printf("    |-- Request Neighbors...        |\n                                                      |_______________________________|")
 			break
 		}
 	}

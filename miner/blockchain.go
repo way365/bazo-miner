@@ -97,8 +97,9 @@ func mining(initialBlock *protocol.Block) {
 	currentBlock := newBlock(initialBlock.Hash, initialBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, initialBlock.Height+1)
 
 	for {
-		logger.Printf("Finalization of Next Block")
+		logger.Printf("Finalization of Next Block -- START")
 		err := finalizeBlock(currentBlock)
+		logger.Printf("Finalization of Next Block -- END")
 		if err != nil {
 			logger.Printf("%v\n", err)
 		} else {

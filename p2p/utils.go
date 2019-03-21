@@ -37,6 +37,11 @@ func RcvData(p *peer) (header *Header, payload []byte, err error) {
 
 	payload = make([]byte, header.Len)
 
+	//FABIO
+	if int(header.Len) > 100000 {
+		logger.Printf("~~ Huge Header Len: %v", header.Len)
+	}
+
 	for cnt := 0; cnt < int(header.Len); cnt++ {
 		payload[cnt], err = reader.ReadByte()
 		if err != nil {
