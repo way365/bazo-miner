@@ -62,25 +62,27 @@ func prepareBlock(block *protocol.Block) {
 			//Create Mininmal txCnt for the different senders with stateTxCnt.. This is used to fetch missing transactions later on.
 
 			if missingTxCntSender[trx.From] == nil {
-
-				if storage.State[trx.From].TxCnt == 0 {
-					missingTxCntSender[trx.From] = &senderTxCounterForMissingTransactions{trx.From,  0, nil}
-				} else {
-					missingTxCntSender[trx.From] = &senderTxCounterForMissingTransactions{trx.From,  storage.State[trx.From].TxCnt-1, nil}
+				if storage.State[trx.From] != nil {
+					if storage.State[trx.From].TxCnt == 0 {
+						missingTxCntSender[trx.From] = &senderTxCounterForMissingTransactions{trx.From, 0, nil}
+					} else {
+						missingTxCntSender[trx.From] = &senderTxCounterForMissingTransactions{trx.From, storage.State[trx.From].TxCnt - 1, nil}
+					}
 				}
 			}
 
-			for i := missingTxCntSender[trx.From].txcnt+1; i < trx.TxCnt; i++ {
-				if i == 1 {
-					missingTxCntSender[trx.From].missingTransactions = append(missingTxCntSender[trx.From].missingTransactions, 0)
+			if missingTxCntSender[trx.From] != nil {
+				for i := missingTxCntSender[trx.From].txcnt + 1; i < trx.TxCnt; i++ {
+					if i == 1 {
+						missingTxCntSender[trx.From].missingTransactions = append(missingTxCntSender[trx.From].missingTransactions, 0)
+					}
+					missingTxCntSender[trx.From].missingTransactions = append(missingTxCntSender[trx.From].missingTransactions, i)
 				}
-				missingTxCntSender[trx.From].missingTransactions = append(missingTxCntSender[trx.From].missingTransactions, i)
-			}
 
-			if trx.TxCnt > missingTxCntSender[trx.From].txcnt {
-				missingTxCntSender[trx.From].txcnt = trx.TxCnt
+				if trx.TxCnt > missingTxCntSender[trx.From].txcnt {
+					missingTxCntSender[trx.From].txcnt = trx.TxCnt
+				}
 			}
-
 		case *protocol.AggTx:
 			storage.DifferentSenders[tx.Sender()] = storage.DifferentSenders[tx.Sender()] + 1
 			storage.DifferentReceivers[tx.Receiver()] = storage.DifferentReceivers[tx.Receiver()] + 1
