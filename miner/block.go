@@ -1121,7 +1121,6 @@ func validate(b *protocol.Block, initialSetup bool) error {
 		for _, block := range blocksToValidate {
 			//Fetching payload data from the txs (if necessary, ask other miners).
 			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice, err := preValidate(block, initialSetup)
-			logger.Printf("aggregated Funds Tx Slice: %x", aggregatedFundsTxSlice)
 
 			//Check if the validator that added the block has previously voted on different competing chains (find slashing proof).
 			//The proof will be stored in the global slashing dictionary.

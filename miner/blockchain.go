@@ -97,6 +97,7 @@ func mining(initialBlock *protocol.Block) {
 	currentBlock := newBlock(initialBlock.Hash, initialBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, initialBlock.Height+1)
 
 	for {
+		logger.Printf("Finalization of Next Block")
 		err := finalizeBlock(currentBlock)
 		if err != nil {
 			logger.Printf("%v\n", err)
@@ -105,6 +106,7 @@ func mining(initialBlock *protocol.Block) {
 		}
 
 		if err == nil {
+			logger.Printf("Validation of Next Block")
 			err := validate(currentBlock, false)
 			if err == nil {
 				//Only broadcast the block if it is valid.
@@ -125,8 +127,10 @@ func mining(initialBlock *protocol.Block) {
 		//when we finish the block.
 		logger.Printf("\n\n __________________________________________________ New Mining Round __________________________________________________")
 		blockValidation.Lock()
+		logger.Printf("Create Next Block")
 		nextBlock := newBlock(lastBlock.Hash, lastBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, lastBlock.Height+1)
 		currentBlock = nextBlock
+		logger.Printf("Prepare Next Block")
 		prepareBlock(currentBlock)
 		blockValidation.Unlock()
 	}

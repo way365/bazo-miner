@@ -71,8 +71,9 @@ func sendAndSearchMessages(msg []byte) {
 			//If connection is valid, send message.
 			if peers.contains(p.peer.getIPPort(), PEERTYPE_MINER) {
 				//This is used to get the newest channel for given IP+Port. In case of an update in the background
-				receiver := sendingMap[p.peer.getIPPort()].peer
 				peers.closeChannelMutex.Lock()
+				_, _ = isConnectionAlreadyInSendingMap(p.peer, sendingMap)
+				receiver := sendingMap[p.peer.getIPPort()].peer
 				receiver.ch <- msg
 				peers.closeChannelMutex.Unlock()
 			} else {
@@ -97,7 +98,7 @@ func sendAndSearchMessages(msg []byte) {
 			//Store messages which are not sent du to connectivity issues.
 			messages := p.delayedMessages
 			////Check that not too many delayed messages are stored.
-			if len(messages) > 4000 {
+			if len(messages) > 40 {
 				messages = messages[1:]
 			}
 			//Store message for this specific miner connection.
@@ -148,7 +149,10 @@ func checkHealthService() {
 		if Ipport != storage.Bootstrap_Server && !peers.contains(storage.Bootstrap_Server, PEERTYPE_MINER) {
 			p, err := initiateNewMinerConnection(storage.Bootstrap_Server)
 			if p == nil || err != nil {
-				logger.Printf("%v\n", err)
+				selfConnect := "Cannot self-connect" //Do not print Self-connection error
+				if err.Error()[0:9] != selfConnect[0:9] {
+					logger.Printf("%v\n", err)
+				}
 			} else {
 				go peerConn(p)
 			}
@@ -166,7 +170,10 @@ func checkHealthService() {
 		case ipaddr := <-iplistChan:
 			p, err := initiateNewMinerConnection(ipaddr)
 			if err != nil {
-				logger.Printf("%v\n", err)
+				selfConnect := "Cannot self-connect" //Do not print Self-connection error
+				if err.Error()[0:9] != selfConnect[0:9] {
+					logger.Printf("%v\n", err)
+				}
 			}
 			if p == nil || err != nil {
 				goto RETRY
@@ -175,8 +182,9 @@ func checkHealthService() {
 			break
 		default:
 			//In case we don't have any ip addresses in the channel left, make a request to the network.
+			PrintMinerCons()
 			neighborReq()
-			logger.Printf("Request Neighbors... ")
+			logger.Printf("    |-- Request Neighbors...    |\n                                                      |___________________________|")
 			break
 		}
 	}

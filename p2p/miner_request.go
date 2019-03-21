@@ -83,7 +83,7 @@ func PrintMinerCons() {
 	logger.Printf("| Neighbors: |______________")
 	if len(minerConnections) > 0 {
 		for p := range minerConnections {
-			logger.Printf("|-- Miner: %v   |", p.getIPPort())
+			logger.Printf("|-- Miner: %v", p.getIPPort())
 		}
 	} else {
 		logger.Printf("|   No Neighbors            |", )

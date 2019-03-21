@@ -58,7 +58,10 @@ func bootstrap() {
 	//the future. initiateNewMinerConn(...) starts with MINER_PING to perform the initial handshake message
 	p, err := initiateNewMinerConnection(storage.Bootstrap_Server)
 	if err != nil {
-		logger.Printf("Initiating new miner connection failed: %v", err)
+		selfConnect := "Cannot self-connect"
+		if err.Error()[0:9] != selfConnect[0:9] {
+			logger.Printf("Initiating new miner connection failed: %v", err)
+		}
 	}
 
 	go peerConn(p)
@@ -179,7 +182,11 @@ func peerConn(p *peer) {
 					logger.Printf("Trying to imediately reconnect to %v", p.getIPPort())
 					p, err := initiateNewMinerConnection(p.getIPPort())
 					if err != nil || p == nil {
-						logger.Printf("%v\n", err)
+
+						selfConnect := "Cannot self-connect" //Do not print Self-connection error
+						if err.Error()[0:9] != selfConnect[0:9] {
+							logger.Printf("%v\n", err)
+						}
 					}
 					if err == nil && p != nil {
 						logger.Printf("  RECURSIVE peerCon for %v", p.getIPPort())
