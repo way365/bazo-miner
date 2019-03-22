@@ -67,8 +67,9 @@ func broadcastVerifiedFundsTxs(txs []*protocol.FundsTx) {
 }
 
 func broadcastVerifiedAggTxsToOtherMiners(txs []*protocol.AggTx) {
-
+	logger.Printf("Inside Validation for block --> Inside Postvalidation (11.1) %v", len(txs))
 	for _, tx := range txs {
+		logger.Printf("Inside Validation for block --> Inside Postvalidation (11.1.1) %v", len(txs))
 		toBrdcst := p2p.BuildPacket(p2p.AGGTX_BRDCST, tx.Encode())
 		p2p.VerifiedTxsBrdcstOut <- toBrdcst
 	}
