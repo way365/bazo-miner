@@ -1518,14 +1518,14 @@ func postValidate(data blockData, initialSetup bool) {
 
 		if len(data.fundsTxSlice) > 0 {
 			broadcastVerifiedFundsTxs(data.fundsTxSlice)
-			broadcastVerifiedFundsTxsToOtherMiners(data.fundsTxSlice)
-			broadcastVerifiedFundsTxsToOtherMiners(data.aggregatedFundsTxSlice)
+			//broadcastVerifiedFundsTxsToOtherMiners(data.fundsTxSlice)
+			//broadcastVerifiedFundsTxsToOtherMiners(data.aggregatedFundsTxSlice)
 		}
 		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (11)", data.block.Hash)
 
 		//Broadcast AggTx to the neighbors, such that they do not have to request them later.
 		if len(data.aggTxSlice) > 0 {
-			broadcastVerifiedAggTxsToOtherMiners(data.aggTxSlice)
+			//broadcastVerifiedAggTxsToOtherMiners(data.aggTxSlice)
 		}
 		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (12)", data.block.Hash)
 

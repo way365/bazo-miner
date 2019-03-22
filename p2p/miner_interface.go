@@ -44,6 +44,7 @@ func forwardBlockBrdcstToMiner() {
 	for {
 		block := <-BlockOut
 		toBrdcst := BuildPacket(BLOCK_BRDCST, block)
+		logger.Printf("Inside Validation for block --> Inside forwardBlockBrdcstToMiner (1) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
 		minerBrdcstMsg <- toBrdcst
 	}
 }

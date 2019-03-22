@@ -81,7 +81,7 @@ func sendAndSearchMessages(msg []byte) {
 				_, _ = isConnectionAlreadyInSendingMap(p.peer, sendingMap)
 				receiver := sendingMap[p.peer.getIPPort()].peer
 				receiver.ch <- msg
-				logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (4) len(receiver.ch) %v", len(receiver.ch))
+				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (4) len(receiver.ch) %v", len(receiver.ch))
 				peers.closeChannelMutex.Unlock()
 				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (5)")
 			} else {
@@ -98,7 +98,7 @@ func sendAndSearchMessages(msg []byte) {
 					//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (7)")
 					receiver.ch <- hMsg
 					peers.closeChannelMutex.Unlock()
-					logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (8) len(receiver.ch) %v", len(receiver.ch))
+					//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (8) len(receiver.ch) %v", len(receiver.ch))
 
 				} else {
 					logger.Printf("CHANNEL_MINER: Wanted to send to %v, but %v is not in the peers.minerConns anymore", p.peer.getIPPort(), p.peer.getIPPort())
