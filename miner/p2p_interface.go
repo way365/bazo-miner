@@ -33,9 +33,9 @@ func processBlock(payload []byte) {
 
 	//Start validation process
 	receivedBlockInTheMeantime = true
-	logger.Printf("Inside Validation --> Validation of received Block %x", block.Hash)
+	//logger.Printf("Inside Validation --> Validation of received Block %x", block.Hash)
 	err := validate(block, false)
-	logger.Printf("Inside Validation --> End Validation for block %x", block.Hash)
+	//logger.Printf("Inside Validation --> End Validation for block %x", block.Hash)
 	receivedBlockInTheMeantime = false
 	if err == nil {
 		broadcastBlock(block)
@@ -67,13 +67,13 @@ func broadcastVerifiedFundsTxs(txs []*protocol.FundsTx) {
 }
 
 func broadcastVerifiedAggTxsToOtherMiners(txs []*protocol.AggTx) {
-	logger.Printf("Inside Validation for block --> Inside Postvalidation (11.1) %v", len(txs))
+	//logger.Printf("Inside Validation for block --> Inside Postvalidation (11.1) %v", len(txs))
 	for _, tx := range txs {
-		logger.Printf("Inside Validation for block --> Inside Postvalidation (11.1.1) %v", len(txs))
+		//logger.Printf("Inside Validation for block --> Inside Postvalidation (11.1.1) %v", len(txs))
 		toBrdcst := p2p.BuildPacket(p2p.AGGTX_BRDCST, tx.Encode())
 		logger.Printf("Inside Validation for block --> Inside Postvalidation (11.1.2) %v", len(p2p.VerifiedTxsBrdcstOut))
 		p2p.VerifiedTxsBrdcstOut <- toBrdcst
-		logger.Printf("Inside Validation for block --> Inside Postvalidation (11.1.3) %v", len(txs))
+		//logger.Printf("Inside Validation for block --> Inside Postvalidation (11.1.3) %v", len(txs))
 	}
 }
 

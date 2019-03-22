@@ -64,11 +64,9 @@ func forwardVerifiedTxsToMiner() {
 
 func forwardVerifiedTxsBrdcstToMiner() {
 	for {
-		logger.Printf("Inside Validation for block --> Inside ForwardVerifiedTxsBroadcast (1)")
 		verifiedTx := <- VerifiedTxsBrdcstOut
-		logger.Printf("Inside Validation for block --> Inside ForwardVerifiedTxsBroadcast (2) %v", len(minerBrdcstMsg))
+		logger.Printf("Inside Validation for block --> Inside ForwardVerifiedTxsBroadcast (1) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
 		minerBrdcstMsg <- verifiedTx
-		logger.Printf("Inside Validation for block --> Inside ForwardVerifiedTxsBroadcast (3)")
 	}
 }
 

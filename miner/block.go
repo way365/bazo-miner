@@ -1086,7 +1086,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 	blockValidation.Lock()
 	defer blockValidation.Unlock()
 
-	logger.Printf("Inside Validation for block %x", b.Hash)
+	//logger.Printf("Inside Validation for block %x", b.Hash)
 
 	//Prepare datastructure to fill tx payloads.
 	blockDataMap := make(map[[32]byte]blockData)
@@ -1096,7 +1096,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 	if err != nil {
 		return err
 	}
-	logger.Printf("Inside Validation for block %x -->  BlockSequence", b.Hash)
+	//logger.Printf("Inside Validation for block %x -->  BlockSequence", b.Hash)
 
 	if len(blocksToRollback) > 0 {
 		logger.Printf(" _____________________")
@@ -1113,7 +1113,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 		logger.Printf("|______________________________________________________________________|")
 	}
 
-	logger.Printf("Inside Validation for block %x -->  Blocks to validate vs to rollback", b.Hash)
+	//logger.Printf("Inside Validation for block %x -->  Blocks to validate vs to rollback", b.Hash)
 
 	//Verify block time is dynamic and corresponds to system time at the time of retrieval.
 	//If we are syncing or far behind, we cannot do this dynamic check,
@@ -1127,11 +1127,11 @@ func validate(b *protocol.Block, initialSetup bool) error {
 
 	//No rollback needed, just a new block to validate.
 	if len(blocksToRollback) == 0 {
-		logger.Printf("Inside Validation for block %x -->  no Rollback", b.Hash)
+		//logger.Printf("Inside Validation for block %x -->  no Rollback", b.Hash)
 		for _, block := range blocksToValidate {
 			//Fetching payload data from the txs (if necessary, ask other miners).
 			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice, err := preValidate(block, initialSetup)
-			logger.Printf("Inside Validation for block %x -->  no Rollback --> Prevalidation Done", b.Hash)
+			//logger.Printf("Inside Validation for block %x -->  no Rollback --> Prevalidation Done", b.Hash)
 
 			//Check if the validator that added the block has previously voted on different competing chains (find slashing proof).
 			//The proof will be stored in the global slashing dictionary.
@@ -1147,10 +1147,10 @@ func validate(b *protocol.Block, initialSetup bool) error {
 			if err := validateState(blockDataMap[block.Hash], initialSetup); err != nil {
 				return err
 			}
-			logger.Printf("Inside Validation for block %x -->  no Rollback --> Statevalidation Done", b.Hash)
+			//logger.Printf("Inside Validation for block %x -->  no Rollback --> Statevalidation Done", b.Hash)
 
 			postValidate(blockDataMap[block.Hash], initialSetup)
-			logger.Printf("Inside Validation for block %x -->  no Rollback --> Postvalidation Done", b.Hash)
+			//logger.Printf("Inside Validation for block %x -->  no Rollback --> Postvalidation Done", b.Hash)
 		}
 	} else {
 		//Rollback
@@ -1160,13 +1160,13 @@ func validate(b *protocol.Block, initialSetup bool) error {
 			}
 		}
 
-		logger.Printf("Inside Validation for block %x -->  Rollback --> Rollback Done", b.Hash)
+		//logger.Printf("Inside Validation for block %x -->  Rollback --> Rollback Done", b.Hash)
 
 		//Validation of new chain
 		for _, block := range blocksToValidate {
 			//Fetching payload data from the txs (if necessary, ask other miners).
 			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice, err := preValidate(block, initialSetup)
-			logger.Printf("Inside Validation for block %x -->  Rollback --> Prevalidation Done", b.Hash)
+			//logger.Printf("Inside Validation for block %x -->  Rollback --> Prevalidation Done", b.Hash)
 
 			//Check if the validator that added the block has previously voted on different competing chains (find slashing proof).
 			//The proof will be stored in the global slashing dictionary.
@@ -1182,16 +1182,16 @@ func validate(b *protocol.Block, initialSetup bool) error {
 			if err := validateState(blockDataMap[block.Hash], initialSetup); err != nil {
 				return err
 			}
-			logger.Printf("Inside Validation for block %x -->  Rollback --> Statevalidation Done", b.Hash)
+			//logger.Printf("Inside Validation for block %x -->  Rollback --> Statevalidation Done", b.Hash)
 
 			postValidate(blockDataMap[block.Hash], initialSetup)
-			logger.Printf("Inside Validation for block %x -->  Rollback --> Postvalidation Done", b.Hash)
+			//logger.Printf("Inside Validation for block %x -->  Rollback --> Postvalidation Done", b.Hash)
 			//logger.Printf("Validated block (after rollback): %x", block.Hash[0:8])
 			logger.Printf("Validated block (after rollback): %vState:\n%v", block, getState())
 		}
 	}
 
-	logger.Printf("Inside Validation for block %x -->  End Validation...", b.Hash)
+	//logger.Printf("Inside Validation for block %x -->  End Validation...", b.Hash)
 	return nil
 }
 
@@ -1199,7 +1199,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, aggTxSlice []*protocol.AggTx, aggregatedFundsTxSlice []*protocol.FundsTx, err error) {
 	//This dynamic check is only done if we're up-to-date with syncing, otherwise timestamp is not checked.
 	//Other miners (which are up-to-date) made sure that this is correct.
-	logger.Printf("Inside Validation for block %x --> Inside Prevalidation", block.Hash)
+	//logger.Printf("Inside Validation for block %x --> Inside Prevalidation", block.Hash)
 	if !initialSetup && uptodate {
 		if err := timestampCheck(block.Timestamp); err != nil {
 			return nil, nil, nil, nil, nil, nil, err
@@ -1338,7 +1338,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 		return nil, nil, nil, nil, nil, nil, errors.New("Merkle Root is incorrect.")
 	}
 
-	logger.Printf("Inside Validation for block %x --> Inside Prevalidation --> End", block.Hash)
+	//logger.Printf("Inside Validation for block %x --> Inside Prevalidation --> End", block.Hash)
 	return accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggTxSlice, aggregatedFundsTxSlice, err
 }
 
@@ -1347,7 +1347,7 @@ func validateState(data blockData, initialSetup bool) error {
 	//The sequence of validation matters. If we start with accs, then fund/stake transactions can be done in the same block
 	//even though the accounts did not exist before the block validation.
 
-	logger.Printf("Inside Validation for block %x --> Inside Statevalidation", data.block.Hash)
+	//logger.Printf("Inside Validation for block %x --> Inside Statevalidation", data.block.Hash)
 
 	if err := accStateChange(data.accTxSlice); err != nil {
 		return err
@@ -1409,7 +1409,7 @@ func validateState(data blockData, initialSetup bool) error {
 		return err
 	}
 
-	logger.Printf("Inside Validation for block %x --> Inside Statevalidation --> End", data.block.Hash)
+	//logger.Printf("Inside Validation for block %x --> Inside Statevalidation --> End", data.block.Hash)
 
 	return nil
 }
@@ -1420,10 +1420,10 @@ func postValidate(data blockData, initialSetup bool) {
 	//This is done after state validation (in contrast to accTx/fundsTx).
 	//Conversely, if blocks are rolled back, the system parameters are changed first.
 	configStateChange(data.configTxSlice, data.block.Hash)
-	logger.Printf("Inside Validation for block %x --> Inside Postvalidation (1)", data.block.Hash)
+	//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (1)", data.block.Hash)
 	//Collects meta information about the block (and handled difficulty adaption).
 	collectStatistics(data.block)
-	logger.Printf("Inside Validation for block %x --> Inside Postvalidation (2)", data.block.Hash)
+	//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (2)", data.block.Hash)
 
 	//When starting a miner there are various scenarios how to PostValidate a block
 	// 1. Bootstrapping Miner on InitialSetup 		--> All Tx Are already in closedBucket
@@ -1432,12 +1432,12 @@ func postValidate(data blockData, initialSetup bool) {
 	// 4. Normal Miner after InitialSetup			-->	Write All Tx Into Closed Tx
 	if !p2p.IsBootstrap() || !initialSetup {
 		//Write all open transactions to closed/validated storage.
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (4)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (4)", data.block.Hash)
 		for _, tx := range data.accTxSlice {
 			storage.WriteClosedTx(tx)
 			storage.DeleteOpenTx(tx)
 		}
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (5)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (5)", data.block.Hash)
 
 		for _, tx := range data.fundsTxSlice {
 			storage.WriteClosedTx(tx)
@@ -1445,19 +1445,19 @@ func postValidate(data blockData, initialSetup bool) {
 			storage.DeleteOpenTx(tx)
 			storage.DeleteINVALIDOpenTx(tx)
 		}
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (6)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (6)", data.block.Hash)
 
 		for _, tx := range data.configTxSlice {
 			storage.WriteClosedTx(tx)
 			storage.DeleteOpenTx(tx)
 		}
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (7)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (7)", data.block.Hash)
 
 		for _, tx := range data.stakeTxSlice {
 			storage.WriteClosedTx(tx)
 			storage.DeleteOpenTx(tx)
 		}
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (8)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (8)", data.block.Hash)
 
 		//Store all recursively fetched funds transactions.
 		if initialSetup {
@@ -1467,7 +1467,7 @@ func postValidate(data blockData, initialSetup bool) {
 				storage.DeleteOpenTx(tx)
 			}
 		}
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (9)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (9)", data.block.Hash)
 
 		for _, tx := range data.aggTxSlice {
 
@@ -1514,7 +1514,7 @@ func postValidate(data blockData, initialSetup bool) {
 			storage.DeleteOpenTx(tx)
 			storage.DeleteINVALIDOpenTx(tx)
 		}
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (10)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (10)", data.block.Hash)
 
 		if len(data.fundsTxSlice) > 0 {
 			broadcastVerifiedFundsTxs(data.fundsTxSlice)
@@ -1527,13 +1527,13 @@ func postValidate(data blockData, initialSetup bool) {
 		if len(data.aggTxSlice) > 0 {
 			broadcastVerifiedAggTxsToOtherMiners(data.aggTxSlice)
 		}
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (12)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (12)", data.block.Hash)
 
 
 		//It might be that block is not in the openblock storage, but this doesn't matter.
 		storage.DeleteOpenBlock(data.block.Hash)
 		storage.WriteClosedBlock(data.block)
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (13)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (13)", data.block.Hash)
 
 		//Do not empty last three blocks and only if it not aggregated already.
 //		for _, block := range storage.ReadAllClosedBlocks(){
@@ -1549,7 +1549,7 @@ func postValidate(data blockData, initialSetup bool) {
 		// Write last block to db and delete last block's ancestor.
 		storage.DeleteAllLastClosedBlock()
 		storage.WriteLastClosedBlock(data.block)
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (14)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (14)", data.block.Hash)
 	}
 	logger.Printf("Inside Validation for block %x --> Inside Postvalidation --> END", data.block.Hash)
 }
