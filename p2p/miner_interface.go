@@ -15,7 +15,7 @@ var (
 	BlockHeaderOut = make(chan []byte)
 
 	VerifiedTxsOut = make(chan []byte)
-	VerifiedTxsBrdcstOut = make(chan []byte)
+	VerifiedTxsBrdcstOut = make(chan []byte, 10000)
 
 	//Data requested by miner, to allow parallelism, we have a chan for every tx type.
 	FundsTxChan  		= make(chan *protocol.FundsTx)
@@ -66,7 +66,9 @@ func forwardVerifiedTxsBrdcstToMiner() {
 	for {
 		logger.Printf("Inside Validation for block --> Inside ForwardVerifiedTxsBroadcast (1)")
 		verifiedTx := <- VerifiedTxsBrdcstOut
+		logger.Printf("Inside Validation for block --> Inside ForwardVerifiedTxsBroadcast (2) %v", len(minerBrdcstMsg))
 		minerBrdcstMsg <- verifiedTx
+		logger.Printf("Inside Validation for block --> Inside ForwardVerifiedTxsBroadcast (3)")
 	}
 }
 

@@ -19,7 +19,7 @@ var (
 	peers  peersStruct
 
 	iplistChan      = make(chan string, MIN_MINERS)
-	minerBrdcstMsg  = make(chan []byte)
+	minerBrdcstMsg  = make(chan []byte, 10000)
 	clientBrdcstMsg = make(chan []byte)
 	register        = make(chan *peer)
 	disconnect      = make(chan *peer)
