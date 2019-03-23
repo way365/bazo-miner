@@ -1086,7 +1086,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 	blockValidation.Lock()
 	defer blockValidation.Unlock()
 
-	//logger.Printf("Inside Validation for block %x", b.Hash)
+	logger.Printf("Inside Validation for block %x", b.Hash)
 
 	//Prepare datastructure to fill tx payloads.
 	blockDataMap := make(map[[32]byte]blockData)
@@ -1467,7 +1467,7 @@ func postValidate(data blockData, initialSetup bool) {
 				storage.DeleteOpenTx(tx)
 			}
 		}
-		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (9)", data.block.Hash)
+		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (9)", data.block.Hash)
 
 		for _, tx := range data.aggTxSlice {
 
@@ -1514,7 +1514,7 @@ func postValidate(data blockData, initialSetup bool) {
 			storage.DeleteOpenTx(tx)
 			storage.DeleteINVALIDOpenTx(tx)
 		}
-		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (10)", data.block.Hash)
+		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (10)", data.block.Hash)
 
 		if len(data.fundsTxSlice) > 0 {
 			broadcastVerifiedFundsTxs(data.fundsTxSlice)
@@ -1527,7 +1527,7 @@ func postValidate(data blockData, initialSetup bool) {
 		if len(data.aggTxSlice) > 0 {
 			//broadcastVerifiedAggTxsToOtherMiners(data.aggTxSlice)
 		}
-		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (12)", data.block.Hash)
+		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (12)", data.block.Hash)
 
 
 		//It might be that block is not in the openblock storage, but this doesn't matter.
@@ -1549,7 +1549,7 @@ func postValidate(data blockData, initialSetup bool) {
 		// Write last block to db and delete last block's ancestor.
 		storage.DeleteAllLastClosedBlock()
 		storage.WriteLastClosedBlock(data.block)
-		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (14)", data.block.Hash)
+		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (14)", data.block.Hash)
 	}
 	logger.Printf("Inside Validation for block %x --> Inside Postvalidation --> END", data.block.Hash)
 }

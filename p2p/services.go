@@ -81,7 +81,7 @@ func sendAndSearchMessages(msg []byte) {
 				_, _ = isConnectionAlreadyInSendingMap(p.peer, sendingMap)
 				receiver := sendingMap[p.peer.getIPPort()].peer
 				receiver.ch <- msg
-				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (4) len(receiver.ch) %v", len(receiver.ch))
+				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (4) --> Sent")
 				peers.closeChannelMutex.Unlock()
 				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (5)")
 			} else {
@@ -145,7 +145,6 @@ func isConnectionAlreadyInSendingMap(p *peer, sendingMap map[string]*delayedMess
 //Belongs to the broadcast service.
 func peerBroadcast(p *peer) {
 	for msg := range p.ch {
-		logger.Printf("Senddata to %v", p.getIPPort())
 		sendData(p, msg)
 	}
 }

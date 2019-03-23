@@ -79,7 +79,7 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 	}
 
 
-	logger.Printf("Received Tx: %x from %v", tx.Hash(), p.getIPPort())
+	logger.Printf("Received Tx: %x from %v  -> BRDCSTMsg.len = %v", tx.Hash(), p.getIPPort(), len(minerBrdcstMsg))
 
 	//Write to mempool and rebroadcast
 	storage.WriteOpenTx(tx)
