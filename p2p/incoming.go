@@ -16,6 +16,7 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 	case AGGTX_BRDCST:
 		processTxBrdcst(p, payload, AGGTX_BRDCST)
 	case BLOCK_BRDCST:
+		logger.Printf("Received Block")
 		forwardBlockToMiner(p, payload)
 	case TIME_BRDCST:
 		processTimeRes(p, payload)

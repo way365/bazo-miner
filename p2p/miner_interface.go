@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"github.com/bazo-blockchain/bazo-miner/protocol"
-	"github.com/bazo-blockchain/bazo-miner/storage"
 	"sync"
 )
 
@@ -72,15 +71,14 @@ func forwardVerifiedTxsBrdcstToMiner() {
 }
 
 func forwardBlockToMiner(p *peer, payload []byte) {
-	blockStashMutex.Lock()
-	var block *protocol.Block
-	block = block.Decode(payload)
-	storage.WriteToReceivedStash(block)
-	if !blockAlreadyReceived(storage.ReadReceivedBlockStash(),block.Hash){
+//	blockStashMutex.Lock()
+//	var block *protocol.Block
+//	block = block.Decode(payload)
+//	storage.WriteToReceivedStash(block)
+//	if !blockAlreadyReceived(storage.ReadReceivedBlockStash(),block.Hash){
 		BlockIn <- payload
-	}
-	blockStashMutex.Unlock()
-
+//	}
+//	blockStashMutex.Unlock()
 }
 
 //Checks if Tx Is in the received stash. If true, we received the transaction with a request already.

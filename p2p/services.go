@@ -145,6 +145,7 @@ func isConnectionAlreadyInSendingMap(p *peer, sendingMap map[string]*delayedMess
 //Belongs to the broadcast service.
 func peerBroadcast(p *peer) {
 	for msg := range p.ch {
+		logger.Printf("Senddata to %v", p.getIPPort())
 		sendData(p, msg)
 	}
 }
