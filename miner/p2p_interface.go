@@ -24,6 +24,7 @@ func processBlock(payload []byte) {
 	var block *protocol.Block
 	block = block.Decode(payload)
 
+	logger.Printf("Received block (%x) At ProccessBlock.\n", block.Hash[0:8])
 	processBlockMutex.Lock()
 	//Block already confirmed and validated
 	if storage.ReadClosedBlock(block.Hash) != nil {
@@ -39,9 +40,9 @@ func processBlock(payload []byte) {
 	//Start validation process
 	//receivedBlockInTheMeantime = true
 	//logger.Printf("Inside Validation --> Validation of received Block %x", block.Hash)
-	logger.Printf("Inside Validation --> Received Block: %x and start Validation now!", block.Hash)
+	logger.Printf("Inside Validation ---> Received Block: %x and start Validation now!", block.Hash)
 	err := validate(block, false)
-	logger.Printf("Inside Validation --> End Validation for block %x", block.Hash)
+	logger.Printf("Inside Validation ---> End Validation for block %x", block.Hash)
 	//receivedBlockInTheMeantime = false
 	if err == nil {
 		broadcastBlock(block)

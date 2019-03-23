@@ -31,28 +31,36 @@ func peerService() {
 	}
 }
 
-func broadcastService() {
+func minerBroadcastService() {
 	sendingMap = map[string]*delayedMessagesPerSender{}
 
 	//For miner connections a map is created where all connections are stored based on the IP and Port of the peer.
 	// In the first iteration this map is initalized.
+
+
+	//Broadcasting all messages.
+	for msg := range minerBrdcstMsg {
+		logger.Printf("Inside Broadcastservice (1) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
+		for p := range peers.minerConns {
+			//Check if a connection was already established once. If so, nothing happens.
+			alreadyInSenderMap, needsUpdate := isConnectionAlreadyInSendingMap(p, sendingMap)
+			//logger.Printf("Inside Validation for block --> Inside Broadcastservice (2)")
+			if !alreadyInSenderMap && !needsUpdate {
+				//logger.Printf("Inside Validation for block --> Inside Broadcastservice (3)")
+				logger.Printf("create sending map for %v", p.getIPPort())
+				sendingMap[p.getIPPort()] = &delayedMessagesPerSender{p, nil}
+			}
+		}
+		//logger.Printf("Inside Validation for block --> Inside Broadcastservice (3)")
+		sendAndSearchMessages(msg)
+	}
+
+}
+
+func clientBroadcastService() {
+
 	for {
 		select {
-		//Broadcasting all messages.
-		case msg := <-minerBrdcstMsg:
-			logger.Printf("Inside Validation for block --> Inside Broadcastservice (1) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
-			for p := range peers.minerConns {
-				//Check if a connection was already established once. If so, nothing happens.
-				alreadyInSenderMap, needsUpdate := isConnectionAlreadyInSendingMap(p, sendingMap)
-				//logger.Printf("Inside Validation for block --> Inside Broadcastservice (2)")
-				if !alreadyInSenderMap && !needsUpdate {
-					//logger.Printf("Inside Validation for block --> Inside Broadcastservice (3)")
-					logger.Printf("create sending map for %v", p.getIPPort())
-					sendingMap[p.getIPPort()] = &delayedMessagesPerSender{p, nil}
-				}
-			}
-			//logger.Printf("Inside Validation for block --> Inside Broadcastservice (3)")
-			sendAndSearchMessages(msg)
 		case msg := <-clientBrdcstMsg:
 			for p := range peers.clientConns {
 				if peers.contains(p.getIPPort(),PEERTYPE_CLIENT) {

@@ -7,7 +7,7 @@ import (
 
 var (
 	//Block from the network, to the miner
-	BlockIn = make(chan []byte)
+	BlockIn = make(chan []byte, 20)
 	//Block from the miner, to the network
 	BlockOut = make(chan []byte)
 	//BlockHeader from the miner, to the clients
@@ -76,6 +76,7 @@ func forwardBlockToMiner(p *peer, payload []byte) {
 //	block = block.Decode(payload)
 //	storage.WriteToReceivedStash(block)
 //	if !blockAlreadyReceived(storage.ReadReceivedBlockStash(),block.Hash){
+		logger.Printf("BlockIn Len = %v", len(BlockIn))
 		BlockIn <- payload
 //	}
 //	blockStashMutex.Unlock()

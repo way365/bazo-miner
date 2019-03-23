@@ -68,7 +68,7 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 	}
 
 	currentTargetTime = new(timerange)
-	target = append(target, 22) //Todo. set target to 20
+	target = append(target, 10) //Todo. set target to 20
 
 	initialBlock, err := initState()
 	if err != nil {
@@ -108,9 +108,9 @@ func mining(initialBlock *protocol.Block) {
 
 		if err == nil {
 			//logger.Printf("Inside Validation --> Validation of Next Block%x", currentBlock.Hash)
-			logger.Printf("Inside Validation --> Mined Block: %x and start Validation now!", currentBlock.Hash)
+			logger.Printf("Inside Validation ---> Mined Block: %x and start Validation now!", currentBlock.Hash)
 			err := validate(currentBlock, false)
-			logger.Printf("Inside Validation --> End Validation for block %x", currentBlock.Hash)
+			logger.Printf("Inside Validation ---> End Validation for block %x", currentBlock.Hash)
 			if err == nil {
 				//Only broadcast the block if it is valid.
 				broadcastBlock(currentBlock)

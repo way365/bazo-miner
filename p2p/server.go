@@ -37,7 +37,8 @@ func Init(ipport string) {
 
 	//Start all services that are running concurrently
 	go peerService()
-	go broadcastService()
+	go minerBroadcastService()
+	go clientBroadcastService()
 	go checkHealthService()
 	go timeService()
 	go forwardBlockBrdcstToMiner()
