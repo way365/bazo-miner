@@ -86,7 +86,8 @@ func sendAndSearchMessages(msg []byte) {
 	//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (1)")
 	for _, p := range sendingMap {
 		//Check if there is a valid connection to peer p, if not, store message
-		if peers.minerConns[p.peer] {
+		//if peers.minerConns[p.peer] {
+		if peers.contains(p.peer.getIPPort(), PEERTYPE_MINER) {
 
 			//If connection is valid, send message.
 			//This is used to get the newest channel for given IP+Port. In case of an update in the background
@@ -100,7 +101,6 @@ func sendAndSearchMessages(msg []byte) {
 			}
 			receiver.ch <- msg
 			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (4) --> Sent")
-			peers.closeChannelMutex.Unlock()
 			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (5)")
 
 			//Send previously stored messages for this miner as well.
@@ -109,18 +109,17 @@ func sendAndSearchMessages(msg []byte) {
 
 				//This is used to get the newest channel for given IP+Port. In case of an update in the background
 				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (6)")
-				peers.closeChannelMutex.Lock()
-				receiver := sendingMap[p.peer.getIPPort()].peer
 				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (7)")
 				if len(receiver.ch) > 0 {
 					logger.Printf("Inside Sendand Search With delay to %v -->  len(receiver.ch) = %v", receiver.getIPPort(), len(receiver.ch))
 				}
 				receiver.ch <- hMsg
-				peers.closeChannelMutex.Unlock()
+
 				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (8) len(receiver.ch) %v", len(receiver.ch))
 
 				p.delayedMessages = p.delayedMessages[1:]
 			}
+			peers.closeChannelMutex.Unlock()
 		} else {
 			//Store messages which are not sent du to connectivity issues.
 			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (9)")
@@ -170,7 +169,7 @@ func checkHealthService() {
 	for {
 		//time.Sleep(HEALTH_CHECK_INTERVAL * time.Second)  Between 5 and 30 seconds check interval.
 		var nrOfMiners = 1
-		knownConnections := peers.minerConns
+		knownConnections := peers.getAllPeers(PEERTYPE_MINER)
 		if len(knownConnections) > 1 {
 			nrOfMiners = len(knownConnections)
 		}
@@ -193,7 +192,7 @@ func checkHealthService() {
 		}
 
 		//Periodically check if we are well-connected
-		if len(peers.minerConns) >= MIN_MINERS {
+		if peers.len(PEERTYPE_MINER) >= MIN_MINERS {
 			continue
 		}
 

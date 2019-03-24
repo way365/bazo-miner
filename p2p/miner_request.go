@@ -17,7 +17,7 @@ func BlockReq(hash [32]byte, hashWithoutTx [32]byte) error {
 	payload = append(payload, payloadTEMP...)
 
 	// Block Request with a Broadcast request. This does rise the possibility of a valid answer.
-	for p := range peers.minerConns {
+	for _, p := range peers.getAllPeers(PEERTYPE_MINER) {
 		//Write to the channel, which the peerBroadcast(*peer) running in a seperate goroutine consumes right away.
 
 		if p == nil {
@@ -46,7 +46,7 @@ func LastBlockReq() error {
 func TxReq(hash [32]byte, reqType uint8) error {
 
 	// Tx Request also as brodcast so that the possibility of an answer is higher.
-	for p := range peers.minerConns {
+	for _, p := range peers.getAllPeers(PEERTYPE_MINER) {
 		//Write to the channel, which the peerBroadcast(*peer) running in a seperate goroutine consumes right away.
 
 		if p == nil {
@@ -63,7 +63,7 @@ func TxReq(hash [32]byte, reqType uint8) error {
 func TxWithTxCntReq(payload []byte, reqType uint8) error { //TODO
 
 	// Tx Request also as brodcast so that the possibility of an answer is higher.
-	for p := range peers.minerConns {
+	for _, p := range peers.getAllPeers(PEERTYPE_MINER) {
 		//Write to the channel, which the peerBroadcast(*peer) running in a seperate goroutine consumes right away.
 
 		if p == nil {
@@ -78,15 +78,15 @@ func TxWithTxCntReq(payload []byte, reqType uint8) error { //TODO
 }
 
 func PrintMinerCons() {
-	minerConnections := peers.minerConns
+	minerConnections := peers.getAllPeers(PEERTYPE_MINER)
 	logger.Printf(" ____________")
 	logger.Printf("| Neighbors: |__________________")
 	if len(minerConnections) > 0 {
-		for p := range minerConnections {
+		for _, p := range minerConnections {
 			logger.Printf("|-- Miner: %v", p.getIPPort())
 		}
 	} else {
-		logger.Printf("|   No Neighbors               |", )
+		logger.Printf("|   No Neighbors                |", )
 	}
 	logger.Printf("|_______________________________|")
 }

@@ -12,6 +12,9 @@ import (
 //This file responds to incoming requests from miners in a synchronous fashion
 func txRes(p *peer, payload []byte, txKind uint8) {
 	var txHash [32]byte
+	if len(payload) != 32 {
+		return
+	}
 	copy(txHash[:], payload[0:32])
 
 	var tx protocol.Transaction
@@ -65,6 +68,10 @@ func specialTxRes(p *peer, payload []byte, txKind uint8) {
 
 	var senderHash [32]byte
 	var searchedTransaction protocol.Transaction
+
+	if len(payload) != 42 {
+		return
+	}
 
 	txcnt := binary.BigEndian.Uint32(payload[1:9])
 	copy(senderHash[:], payload[10:42])
@@ -166,6 +173,9 @@ func blockHeaderRes(p *peer, payload []byte) {
 func accRes(p *peer, payload []byte) {
 	var packet []byte
 	var hash [32]byte
+	if len(payload) != 32 {
+		return
+	}
 	copy(hash[:], payload[0:32])
 
 	acc, _ := storage.GetAccount(hash)
@@ -177,6 +187,9 @@ func accRes(p *peer, payload []byte) {
 func rootAccRes(p *peer, payload []byte) {
 	var packet []byte
 	var hash [32]byte
+	if len(payload) != 32 {
+		return
+	}
 	copy(hash[:], payload[0:32])
 
 	acc, _ := storage.GetRootAccount(hash)
@@ -279,7 +292,9 @@ func intermediateNodesRes(p *peer, payload []byte) {
 	var blockHash, txHash [32]byte
 	var nodeHashes [][]byte
 	var packet []byte
-
+	if len(payload) != 64 {
+		return
+	}
 	copy(blockHash[:], payload[:32])
 	copy(txHash[:], payload[32:64])
 
