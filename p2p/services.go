@@ -95,7 +95,6 @@ func sendAndSearchMessages(msg []byte) {
 			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (3)")
 			_, _ = isConnectionAlreadyInSendingMap(p.peer, sendingMap)
 			receiver := sendingMap[p.peer.getIPPort()].peer
-			logger.Printf("Inside Send&Search len(receiver.ch) = %v", len(receiver.ch))
 			receiver.ch <- msg
 			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (4) --> Sent")
 			peers.closeChannelMutex.Unlock()

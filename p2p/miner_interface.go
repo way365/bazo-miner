@@ -7,7 +7,7 @@ import (
 
 var (
 	//Block from the network, to the miner
-	BlockIn = make(chan []byte, 20)
+	BlockIn = make(chan []byte, 100)
 	//Block from the miner, to the network
 	BlockOut = make(chan []byte)
 	//BlockHeader from the miner, to the clients

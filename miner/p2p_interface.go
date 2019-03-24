@@ -13,6 +13,7 @@ import (
 func incomingData() {
 	for {
 		block := <-p2p.BlockIn
+		logger.Printf("Received block At inncomingData")
 		processBlock(block)
 	}
 }
@@ -25,25 +26,25 @@ func processBlock(payload []byte) {
 	block = block.Decode(payload)
 
 	logger.Printf("Received block (%x) At ProccessBlock.\n", block.Hash[0:8])
-	processBlockMutex.Lock()
+
 	//Block already confirmed and validated
 	if storage.ReadClosedBlock(block.Hash) != nil {
 		logger.Printf("Received block (%x) has already been validated.\n", block.Hash[0:8])
-		processBlockMutex.Unlock()
+
 		return
 	}
 
 	//Append received Block to stash
 	storage.WriteToReceivedStash(block)
-	processBlockMutex.Unlock()
+
 
 	//Start validation process
-	//receivedBlockInTheMeantime = true
+	receivedBlockInTheMeantime = true
 	//logger.Printf("Inside Validation --> Validation of received Block %x", block.Hash)
 	logger.Printf("Inside Validation ---> Received Block: %x and start Validation now!", block.Hash)
 	err := validate(block, false)
 	logger.Printf("Inside Validation ---> End Validation for block %x", block.Hash)
-	//receivedBlockInTheMeantime = false
+	receivedBlockInTheMeantime = false
 	if err == nil {
 		broadcastBlock(block)
 		logger.Printf("Validated block (received): %vState:\n%v", block, getState())
