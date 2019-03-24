@@ -43,7 +43,9 @@ func forwardBlockBrdcstToMiner() {
 	for {
 		block := <-BlockOut
 		toBrdcst := BuildPacket(BLOCK_BRDCST, block)
-		logger.Printf("Inside forwardBlockBrdcstToMiner (1) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
+		if len(minerBrdcstMsg) > 0 {
+			logger.Printf("Inside forwardBlockBrdcstToMiner (1) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
+		}
 		minerBrdcstMsg <- toBrdcst
 	}
 }
@@ -65,7 +67,9 @@ func forwardVerifiedTxsToMiner() {
 func forwardVerifiedTxsBrdcstToMiner() {
 	for {
 		verifiedTx := <- VerifiedTxsBrdcstOut
-		logger.Printf("Inside ForwardVerifiedTxsBroadcast (1) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
+		if len(minerBrdcstMsg) > 0 {
+			logger.Printf("Inside ForwardVerifiedTxsBroadcast (1) len(minerBrdcstMsg) = %v", len(minerBrdcstMsg))
+		}
 		minerBrdcstMsg <- verifiedTx
 	}
 }
@@ -76,7 +80,11 @@ func forwardBlockToMiner(p *peer, payload []byte) {
 //	block = block.Decode(payload)
 //	storage.WriteToReceivedStash(block)
 //	if !blockAlreadyReceived(storage.ReadReceivedBlockStash(),block.Hash){
-		logger.Printf("BlockIn Len = %v", len(BlockIn))
+		if len(BlockIn) > 3 {
+			var block *protocol.Block
+			block = block.Decode(payload)
+			logger.Printf("Inside ForwardBlockToMiner --> len(BlockIn) = %v for block %x", len(BlockIn), block.Hash[0:8])
+		}
 		BlockIn <- payload
 //	}
 //	blockStashMutex.Unlock()

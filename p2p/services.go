@@ -95,6 +95,9 @@ func sendAndSearchMessages(msg []byte) {
 			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (3)")
 			_, _ = isConnectionAlreadyInSendingMap(p.peer, sendingMap)
 			receiver := sendingMap[p.peer.getIPPort()].peer
+			if len(receiver.ch) > 0 {
+				logger.Printf("Inside Sendand Search to %v -->  len(receiver.ch) = %v", receiver.getIPPort(), len(receiver.ch))
+			}
 			receiver.ch <- msg
 			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (4) --> Sent")
 			peers.closeChannelMutex.Unlock()
@@ -106,10 +109,12 @@ func sendAndSearchMessages(msg []byte) {
 
 				//This is used to get the newest channel for given IP+Port. In case of an update in the background
 				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (6)")
-				receiver := sendingMap[p.peer.getIPPort()].peer
 				peers.closeChannelMutex.Lock()
+				receiver := sendingMap[p.peer.getIPPort()].peer
 				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (7)")
-				logger.Printf("Inside Sendand Search with delay len(receiver.ch) = %v", len(receiver.ch))
+				if len(receiver.ch) > 0 {
+					logger.Printf("Inside Sendand Search With delay to %v -->  len(receiver.ch) = %v", receiver.getIPPort(), len(receiver.ch))
+				}
 				receiver.ch <- hMsg
 				peers.closeChannelMutex.Unlock()
 				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (8) len(receiver.ch) %v", len(receiver.ch))
