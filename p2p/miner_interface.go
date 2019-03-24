@@ -43,7 +43,7 @@ func forwardBlockBrdcstToMiner() {
 	for {
 		block := <-BlockOut
 		toBrdcst := BuildPacket(BLOCK_BRDCST, block)
-		logger.Printf("Inside Validation for block --> Inside forwardBlockBrdcstToMiner (1) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
+		logger.Printf("Inside forwardBlockBrdcstToMiner (1) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
 		minerBrdcstMsg <- toBrdcst
 	}
 }
@@ -65,7 +65,7 @@ func forwardVerifiedTxsToMiner() {
 func forwardVerifiedTxsBrdcstToMiner() {
 	for {
 		verifiedTx := <- VerifiedTxsBrdcstOut
-		logger.Printf("Inside Validation for block --> Inside ForwardVerifiedTxsBroadcast (1) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
+		logger.Printf("Inside ForwardVerifiedTxsBroadcast (1) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
 		minerBrdcstMsg <- verifiedTx
 	}
 }

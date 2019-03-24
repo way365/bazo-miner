@@ -165,7 +165,7 @@ func peerConn(p *peer) {
 	}
 
 	//Give the peer a channel
-	p.ch = make(chan []byte)
+	p.ch = make(chan []byte, 10000)
 
 	//Register withe the broadcast service and start the additional writer
 	register <- p

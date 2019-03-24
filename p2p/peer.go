@@ -94,6 +94,17 @@ func (peers peersStruct) add(p *peer) {
 	if p.peerType == PEERTYPE_CLIENT {
 		peers.clientConns[p] = true
 	}
+
+	for p := range peers.minerConns {
+		//Check if a connection was already established once. If so, nothing happens.
+		alreadyInSenderMap, needsUpdate := isConnectionAlreadyInSendingMap(p, sendingMap)
+		//logger.Printf("Inside Validation for block --> Inside Broadcastservice (2)")
+		if !alreadyInSenderMap && !needsUpdate {
+			//logger.Printf("Inside Validation for block --> Inside Broadcastservice (3)")
+			logger.Printf("Create sending map for %v", p.getIPPort())
+			sendingMap[p.getIPPort()] = &delayedMessagesPerSender{p, nil}
+		}
+	}
 }
 
 func (peers peersStruct) delete(p *peer) {

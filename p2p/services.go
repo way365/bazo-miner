@@ -39,20 +39,28 @@ func minerBroadcastService() {
 
 
 	//Broadcasting all messages.
-	for msg := range minerBrdcstMsg {
-		logger.Printf("Inside Broadcastservice (1) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
-		for p := range peers.minerConns {
-			//Check if a connection was already established once. If so, nothing happens.
-			alreadyInSenderMap, needsUpdate := isConnectionAlreadyInSendingMap(p, sendingMap)
-			//logger.Printf("Inside Validation for block --> Inside Broadcastservice (2)")
-			if !alreadyInSenderMap && !needsUpdate {
-				//logger.Printf("Inside Validation for block --> Inside Broadcastservice (3)")
-				logger.Printf("create sending map for %v", p.getIPPort())
-				sendingMap[p.getIPPort()] = &delayedMessagesPerSender{p, nil}
-			}
+//	for msg := range minerBrdcstMsg {
+//		logger.Printf("Inside minerBroadcastservice (1) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
+//	//	for p := range peers.minerConns {
+//	//		//Check if a connection was already established once. If so, nothing happens.
+//	//		alreadyInSenderMap, needsUpdate := isConnectionAlreadyInSendingMap(p, sendingMap)
+//	//		//logger.Printf("Inside Validation for block --> Inside Broadcastservice (2)")
+//	//		if !alreadyInSenderMap && !needsUpdate {
+//	//			//logger.Printf("Inside Validation for block --> Inside Broadcastservice (3)")
+//	//			logger.Printf("create sending map for %v", p.getIPPort())
+//	//			sendingMap[p.getIPPort()] = &delayedMessagesPerSender{p, nil}
+//	//		}
+//	//	}
+//		//logger.Printf("Inside Validation for block --> Inside Broadcastservice (3)")
+//		sendAndSearchMessages(msg)
+//	}
+//	logger.Printf("Inside minerBroadcastservice (2) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
+
+	for {
+		select {
+		case msg := <-minerBrdcstMsg:
+			sendAndSearchMessages(msg)
 		}
-		//logger.Printf("Inside Validation for block --> Inside Broadcastservice (3)")
-		sendAndSearchMessages(msg)
 	}
 
 }
@@ -75,42 +83,38 @@ func clientBroadcastService() {
 
 //This function does send the current and possible previous not send messages
 func sendAndSearchMessages(msg []byte) {
-	logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (1)")
+	//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (1)")
 	for _, p := range sendingMap {
 		//Check if there is a valid connection to peer p, if not, store message
 		if peers.minerConns[p.peer] {
 
 			//If connection is valid, send message.
-			if peers.contains(p.peer.getIPPort(), PEERTYPE_MINER) {
-				//This is used to get the newest channel for given IP+Port. In case of an update in the background
-				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (2)")
-				peers.closeChannelMutex.Lock()
-				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (3)")
-				_, _ = isConnectionAlreadyInSendingMap(p.peer, sendingMap)
-				receiver := sendingMap[p.peer.getIPPort()].peer
-				receiver.ch <- msg
-				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (4) --> Sent")
-				peers.closeChannelMutex.Unlock()
-				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (5)")
-			} else {
-				logger.Printf("CHANNEL_MINER: Wanted to send to %v, but %v is not in the peers.minerConns anymore", p.peer.getIPPort(), p.peer.getIPPort())
-			}
+			//This is used to get the newest channel for given IP+Port. In case of an update in the background
+			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (2)")
+			peers.closeChannelMutex.Lock()
+			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (3)")
+			_, _ = isConnectionAlreadyInSendingMap(p.peer, sendingMap)
+			receiver := sendingMap[p.peer.getIPPort()].peer
+			logger.Printf("Inside Send&Search len(receiver.ch) = %v", len(receiver.ch))
+			receiver.ch <- msg
+			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (4) --> Sent")
+			peers.closeChannelMutex.Unlock()
+			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (5)")
+
 			//Send previously stored messages for this miner as well.
 			for _, hMsg := range p.delayedMessages {
 				//Send historic not yet sent transaction and remove it.
-				if peers.contains(p.peer.getIPPort(), PEERTYPE_MINER) {
-					//This is used to get the newest channel for given IP+Port. In case of an update in the background
-					//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (6)")
-					receiver := sendingMap[p.peer.getIPPort()].peer
-					peers.closeChannelMutex.Lock()
-					//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (7)")
-					receiver.ch <- hMsg
-					peers.closeChannelMutex.Unlock()
-					//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (8) len(receiver.ch) %v", len(receiver.ch))
 
-				} else {
-					logger.Printf("CHANNEL_MINER: Wanted to send to %v, but %v is not in the peers.minerConns anymore", p.peer.getIPPort(), p.peer.getIPPort())
-				}
+				//This is used to get the newest channel for given IP+Port. In case of an update in the background
+				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (6)")
+				receiver := sendingMap[p.peer.getIPPort()].peer
+				peers.closeChannelMutex.Lock()
+				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (7)")
+				logger.Printf("Inside Sendand Search with delay len(receiver.ch) = %v", len(receiver.ch))
+				receiver.ch <- hMsg
+				peers.closeChannelMutex.Unlock()
+				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (8) len(receiver.ch) %v", len(receiver.ch))
+
 				p.delayedMessages = p.delayedMessages[1:]
 			}
 		} else {
