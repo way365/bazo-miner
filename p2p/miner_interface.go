@@ -9,7 +9,7 @@ var (
 	//Block from the network, to the miner
 	BlockIn = make(chan []byte, 100)
 	//Block from the miner, to the network
-	BlockOut = make(chan []byte)
+	BlockOut = make(chan []byte, 100)
 	//BlockHeader from the miner, to the clients
 	BlockHeaderOut = make(chan []byte)
 
