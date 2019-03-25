@@ -35,10 +35,9 @@ func RcvData(p *peer) (header *Header, payload []byte, err error) {
 		return nil, nil, errors.New(fmt.Sprintf("Connection to %v aborted: %v", p.getIPPort(), err))
 	}
 
-	logger.Printf("Header.Len = %v for TypeId: %v from %v", header.Len, LogMapping[header.TypeID], p.getIPPort())
-
-	if int(header.Len) > 5000 {
-		logger.Printf("~~ Header.Len for %v is bigger than allowed blocksize of 5'000: %v", LogMapping[header.TypeID], header.Len)
+	if int(header.Len) > 800000 {
+		logger.Printf("Header.Len = %v --> Abort here to prevent an Out Of Memory Error", header.Len)
+		return nil, nil, errors.New(fmt.Sprintf("Abort Receiving Data from %v to prevent Out Of Memory Error", p.getIPPort()))
 	}
 
 	payload = make([]byte, header.Len)
@@ -108,8 +107,8 @@ func peerSelfConn(newIpport string) bool {
 func BuildPacket(typeID uint8, payload []byte) (packet []byte) {
 	var payloadLen [4]byte
 
-	if len(payload)+HEADER_LEN > 5000 {
-		logger.Printf("~~ payload for %v is bigger than allowed blocksizeof 5'000: %v", LogMapping[typeID], len(payload))
+	if int(len(payload)) > 800000 {
+		logger.Printf("Payload = %v --> Probably Abort here to prevent an Out Of Memory Error", len(payload))
 	}
 
 	packet = make([]byte, HEADER_LEN+len(payload))
