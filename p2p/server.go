@@ -187,12 +187,14 @@ func peerConn(p *peer) {
 						if err.Error()[0:9] != selfConnect[0:9] {
 							logger.Printf("Initiating new miner connection failed: %v", err)
 						}
+						return
 					}
 					if err == nil && p != nil {
 						go peerConn(p)
 						return
 					}
 				}
+				return
 			} else if p.peerType == PEERTYPE_CLIENT {
 				//logger.Printf("Client disconnected: %v\n", err)
 				disconnect <- p

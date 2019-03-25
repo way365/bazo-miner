@@ -13,7 +13,6 @@ import (
 func incomingData() {
 	for {
 		block := <-p2p.BlockIn
-		logger.Printf("Received block At inncomingData")
 		processBlock(block)
 	}
 }
@@ -24,8 +23,6 @@ func processBlock(payload []byte) {
 
 	var block *protocol.Block
 	block = block.Decode(payload)
-
-	logger.Printf("Received block (%x) At ProccessBlock.\n", block.Hash[0:8])
 
 	//Block already confirmed and validated
 	if storage.ReadClosedBlock(block.Hash) != nil {

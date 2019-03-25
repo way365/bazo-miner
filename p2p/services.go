@@ -105,17 +105,17 @@ func sendAndSearchMessages(msg []byte) {
 
 			//Send previously stored messages for this miner as well.
 			for _, hMsg := range p.delayedMessages {
-				//Send historic not yet sent transaction and remove it.
+					//Send historic not yet sent transaction and remove it.
 
-				//This is used to get the newest channel for given IP+Port. In case of an update in the background
-				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (6)")
-				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (7)")
-				if len(receiver.ch) > 0 {
-					logger.Printf("Inside Sendand Search With delay to %v -->  len(receiver.ch) = %v", receiver.getIPPort(), len(receiver.ch))
-				}
-				receiver.ch <- hMsg
+					//This is used to get the newest channel for given IP+Port. In case of an update in the background
+					//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (6)")
+					//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (7)")
+					if len(receiver.ch) > 0 {
+						logger.Printf("Inside Sendand Search With delay to %v -->  len(receiver.ch) = %v", receiver.getIPPort(), len(receiver.ch))
+					}
+					receiver.ch <- hMsg
 
-				//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (8) len(receiver.ch) %v", len(receiver.ch))
+					//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (8) len(receiver.ch) %v", len(receiver.ch))
 
 				p.delayedMessages = p.delayedMessages[1:]
 			}
@@ -201,18 +201,18 @@ func checkHealthService() {
 		select {
 		//iplistChan gets filled with every incoming neighborRes, they're consumed here.
 		case ipaddr := <-iplistChan:
-			p, err := initiateNewMinerConnection(ipaddr)
-			if err != nil {
-				selfConnect := "Cannot self-connect"
-				if err.Error()[0:9] != selfConnect[0:9] {
+			if !peerExists(ipaddr) && !peerSelfConn(ipaddr) {
+
+				p, err := initiateNewMinerConnection(ipaddr)
+				if err != nil {
 					logger.Printf("Initiating new miner connection failed: %v", err)
 				}
+				if p == nil || err != nil {
+					goto RETRY
+				}
+				go peerConn(p)
+				break
 			}
-			if p == nil || err != nil {
-				goto RETRY
-			}
-			go peerConn(p)
-			break
 		default:
 			//In case we don't have any ip addresses in the channel left, make a request to the network.
 			PrintMinerCons()

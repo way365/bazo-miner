@@ -1,7 +1,5 @@
 package p2p
 
-import "github.com/bazo-blockchain/bazo-miner/protocol"
-
 //All incoming messages are processed here and acted upon accordingly
 func processIncomingMsg(p *peer, header *Header, payload []byte) {
 
@@ -18,9 +16,6 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 	case AGGTX_BRDCST:
 		processTxBrdcst(p, payload, AGGTX_BRDCST)
 	case BLOCK_BRDCST:
-		var b *protocol.Block
-		b = b.Decode(payload)
-		logger.Printf("received Block %x", b.Hash)
 		forwardBlockToMiner(p, payload)
 	case TIME_BRDCST:
 		processTimeRes(p, payload)
