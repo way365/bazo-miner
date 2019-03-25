@@ -85,7 +85,7 @@ func WriteINVALIDOpenTx(transaction protocol.Transaction) {
 }
 
 func WriteToReceivedStash(block *protocol.Block) {
-
+	receivedBlockStashMutex.Lock()
 	//Only write it to stash if it is not in there already.
 	if !blockAlreadyInStash(receivedBlockStash, block.Hash) {
 		receivedBlockStash = append(receivedBlockStash, block)
@@ -95,6 +95,7 @@ func WriteToReceivedStash(block *protocol.Block) {
 			receivedBlockStash = append(receivedBlockStash[:0], receivedBlockStash[1:]...)
 		}
 	}
+	receivedBlockStashMutex.Unlock()
 }
 
 func blockAlreadyInStash(slice []*protocol.Block, newBlockHash [32]byte) bool {

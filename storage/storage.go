@@ -31,7 +31,8 @@ var (
 	openTxMutex 						= &sync.Mutex{}
 	openINVALIDTxMutex 					= &sync.Mutex{}
 	openFundsTxBeforeAggregationMutex	= &sync.Mutex{}
-	txcntToTxMapMutex	= &sync.Mutex{}
+	txcntToTxMapMutex					= &sync.Mutex{}
+	receivedBlockStashMutex				= &sync.Mutex{}
 )
 
 const (

@@ -59,6 +59,9 @@ func minerBroadcastService() {
 	for {
 		select {
 		case msg := <-minerBrdcstMsg:
+			if len(minerBrdcstMsg) > 0 {
+				logger.Printf("Inside MinerBrdCst: len(minerBrdcstMsg) = %v", len(minerBrdcstMsg))
+			}
 			sendAndSearchMessages(msg)
 		}
 	}
@@ -159,6 +162,7 @@ func isConnectionAlreadyInSendingMap(p *peer, sendingMap map[string]*delayedMess
 
 //Belongs to the broadcast service.
 func peerBroadcast(p *peer) {
+	logger.Printf("CreatedPeerbroadcast for %v", p.getIPPort())
 	for msg := range p.ch {
 		sendData(p, msg)
 	}

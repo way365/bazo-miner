@@ -13,6 +13,11 @@ import (
 func incomingData() {
 	for {
 		block := <-p2p.BlockIn
+		if len(p2p.BlockIn) > 0 {
+			var block1 *protocol.Block
+			block1 = block1.Decode(block)
+			logger.Printf("Inside IncommingData --> len(BlockIn) = %v for block %x", len(p2p.BlockIn), block1.Hash[0:8])
+		}
 		processBlock(block)
 	}
 }
@@ -23,11 +28,10 @@ func processBlock(payload []byte) {
 
 	var block *protocol.Block
 	block = block.Decode(payload)
-
+	logger.Printf("Inside processBlock --> len(BlockIn) = %v for block %x", len(p2p.BlockIn), block.Hash[0:8])
 	//Block already confirmed and validated
 	if storage.ReadClosedBlock(block.Hash) != nil {
 		logger.Printf("Received block (%x) has already been validated.\n", block.Hash[0:8])
-
 		return
 	}
 
