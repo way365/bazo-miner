@@ -147,6 +147,9 @@ func blockHeaderRes(p *peer, payload []byte) {
 
 	//If no specific header is requested, send latest
 	if len(payload) > 0 {
+		if len(payload) != 32 {
+			return
+		}
 		var blockHash [32]byte
 		copy(blockHash[:], payload[:32])
 		if block := storage.ReadClosedBlock(blockHash); block != nil {
