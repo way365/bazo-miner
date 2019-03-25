@@ -35,12 +35,15 @@ func RcvData(p *peer) (header *Header, payload []byte, err error) {
 		return nil, nil, errors.New(fmt.Sprintf("Connection to %v aborted: %v", p.getIPPort(), err))
 	}
 
+	logger.Printf("Header.Len = %v for TypeId: %v from %v", header.Len, LogMapping[header.TypeID], p.getIPPort())
+
+	if int(header.Len) > 5000 {
+		logger.Printf("~~ Header.Len for %v is bigger than allowed blocksize of 5'000: %v", LogMapping[header.TypeID], header.Len)
+	}
+
 	payload = make([]byte, header.Len)
 
-	//FABIO
-	if int(header.Len) > 100000 {
-		logger.Printf("~~ Huge Header Len: %v", header.Len)
-	}
+
 
 	for cnt := 0; cnt < int(header.Len); cnt++ {
 		payload[cnt], err = reader.ReadByte()
@@ -104,6 +107,10 @@ func peerSelfConn(newIpport string) bool {
 
 func BuildPacket(typeID uint8, payload []byte) (packet []byte) {
 	var payloadLen [4]byte
+
+	if len(payload)+HEADER_LEN > 5000 {
+		logger.Printf("~~ payload for %v is bigger than allowed blocksizeof 5'000: %v", LogMapping[typeID], len(payload))
+	}
 
 	packet = make([]byte, HEADER_LEN+len(payload))
 	binary.BigEndian.PutUint32(payloadLen[:], uint32(len(payload)))
