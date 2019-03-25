@@ -124,12 +124,10 @@ func proofOfStake(diff uint8,
 		// block has been validated
 		cnt = cnt + 1
 		logger.Printf("Try Block with Time: %v and cnt: %v", time.Now().Format("030405"), cnt)
-		if cnt >= 500 {
-			logger.Printf("Mined 500sec and no block validated...? --> No last block received: %x", storage.ReadLastClosedBlock().Hash[0:8])
-			for _, block := range storage.ReadReceivedBlockStash() {
-				logger.Printf("  --> %x", block.Hash)
-			}
-			cnt = 0
+
+		//If 30 blocks should have been received, break
+		if cnt >= 30 * BLOCK_INTERVAL {
+			logger.Printf("Mined %v sec and no block validated...? --> Strange... ", 30*BLOCK_INTERVAL)
 			return -1, errors.New("Abort mining, Mined too long")
 		}
 
