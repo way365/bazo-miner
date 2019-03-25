@@ -116,6 +116,10 @@ func sendAndSearchMessages(msg []byte) {
 					if len(receiver.ch) > 0 {
 						logger.Printf("Inside Sendand Search With delay to %v -->  len(receiver.ch) = %v", receiver.getIPPort(), len(receiver.ch))
 					}
+					//If the receiver channel is full, continue such that the program is not blocked...
+					if len(receiver.ch) == 1000 {
+						continue
+					}
 					receiver.ch <- hMsg
 
 					//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (8) len(receiver.ch) %v", len(receiver.ch))
@@ -165,7 +169,7 @@ func peerBroadcast(p *peer) {
 	logger.Printf("CreatedPeerbroadcast for %v", p.getIPPort())
 
 	for msg := range p.ch {
-		sendData(p, msg)
+		go sendData(p, msg)
 	}
 }
 

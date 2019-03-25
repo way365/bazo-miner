@@ -36,7 +36,7 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 	//In case it was not found, send a corresponding message back
 	if tx == nil {
 		packet := BuildPacket(NOT_FOUND, nil)
-		sendData(p, packet)
+		go sendData(p, packet)
 		return
 	}
 
@@ -60,7 +60,7 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 			packet = BuildPacket(AGGTX_RES, tx.Encode())
 		}
 	}
-	sendData(p, packet)
+	go sendData(p, packet)
 }
 
 func specialTxRes(p *peer, payload []byte, txKind uint8) {
@@ -104,10 +104,10 @@ func specialTxRes(p *peer, payload []byte, txKind uint8) {
 
 	if searchedTransaction != nil {
 		packet := BuildPacket(FUNDSTX_RES, searchedTransaction.Encode())
-		sendData(p, packet)
+		go sendData(p, packet)
 	} else {
 		packet := BuildPacket(NOT_FOUND, nil)
-		sendData(p, packet)
+		go sendData(p, packet)
 	}
 }
 
@@ -119,7 +119,7 @@ func blockRes(p *peer, payload []byte) {
 	var blockHashWithoutTx [32]byte
 
 	//If no specific block is requested, send latest
-	if len(payload) > 0 {
+	if len(payload) > 0 && len(payload) == 64  {
 		copy(blockHash[:], payload[:32])
 		copy(blockHashWithoutTx[:], payload[32:])
 
@@ -128,7 +128,7 @@ func blockRes(p *peer, payload []byte) {
 				block = storage.ReadOpenBlock(blockHash)
 			}
 		}
-	} else {
+	} else if len(payload) == 0 {
 		block = storage.ReadLastClosedBlock()
 	}
 
@@ -138,7 +138,7 @@ func blockRes(p *peer, payload []byte) {
 		packet = BuildPacket(NOT_FOUND, nil)
 	}
 
-	sendData(p, packet)
+	go sendData(p, packet)
 }
 
 //Response the requested block SPV header
@@ -169,7 +169,7 @@ func blockHeaderRes(p *peer, payload []byte) {
 		packet = BuildPacket(NOT_FOUND, nil)
 	}
 
-	sendData(p, packet)
+	go sendData(p, packet)
 }
 
 //Responds to an account request from another miner
@@ -184,7 +184,7 @@ func accRes(p *peer, payload []byte) {
 	acc, _ := storage.GetAccount(hash)
 	packet = BuildPacket(ACC_RES, acc.Encode())
 
-	sendData(p, packet)
+	go sendData(p, packet)
 }
 
 func rootAccRes(p *peer, payload []byte) {
@@ -198,7 +198,7 @@ func rootAccRes(p *peer, payload []byte) {
 	acc, _ := storage.GetRootAccount(hash)
 	packet = BuildPacket(ROOTACC_RES, acc.Encode())
 
-	sendData(p, packet)
+	go sendData(p, packet)
 }
 
 //Completes the handshake with another miner.
@@ -230,7 +230,7 @@ func pongRes(p *peer, payload []byte, peerType uint) {
 
 	go peerConn(p)
 
-	sendData(p, packet)
+	go sendData(p, packet)
 }
 
 //Decouple the function for testing.
@@ -255,7 +255,7 @@ func neighborRes(p *peer) {
 	}
 
 	packet = BuildPacket(NEIGHBOR_RES, _neighborRes(ipportList))
-	sendData(p, packet)
+	go sendData(p, packet)
 }
 
 //Decouple functionality to facilitate testing
@@ -313,5 +313,5 @@ func intermediateNodesRes(p *peer, payload []byte) {
 		packet = BuildPacket(NOT_FOUND, nil)
 	}
 
-	sendData(p, packet)
+	go sendData(p, packet)
 }

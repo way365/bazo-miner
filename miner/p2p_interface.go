@@ -29,6 +29,7 @@ func processBlock(payload []byte) {
 	var block *protocol.Block
 	block = block.Decode(payload)
 	logger.Printf("Inside processBlock --> len(BlockIn) = %v for block %x", len(p2p.BlockIn), block.Hash[0:8])
+	processBlockMutex.Lock()
 	//Block already confirmed and validated
 	if storage.ReadClosedBlock(block.Hash) != nil {
 		logger.Printf("Received block (%x) has already been validated.\n", block.Hash[0:8])
@@ -37,7 +38,7 @@ func processBlock(payload []byte) {
 
 	//Append received Block to stash
 	storage.WriteToReceivedStash(block)
-
+	processBlockMutex.Unlock()
 
 	//Start validation process
 	receivedBlockInTheMeantime = true

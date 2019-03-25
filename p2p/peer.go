@@ -46,8 +46,8 @@ type peersStruct struct {
 }
 
 func (peers peersStruct) contains(ipport string, peerType uint) bool {
-	peers.closeChannelMutex.Lock()
-	defer peers.closeChannelMutex.Unlock()
+	peers.peerMutex.Lock()
+	defer peers.peerMutex.Unlock()
 
 	var peerConns map[*peer]bool
 
