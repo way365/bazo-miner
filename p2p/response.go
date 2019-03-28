@@ -110,7 +110,6 @@ func specialTxRes(p *peer, payload []byte, txKind uint8) {
 	} else {
 		packet := BuildPacket(NOT_FOUND, nil)
 		sendData(p, packet)
-		_=  TxWithTxCntReq(payload, SPECIALTX_REQ)
 	}
 }
 

@@ -39,7 +39,7 @@ const (
 	ACC_RES                	= 46
 	ROOTACC_RES            	= 47
 	INTERMEDIATE_NODES_RES 	= 48
-	AGGTX_RES			= 49
+	AGGTX_RES				= 49
 
 	NEIGHBOR_REQ = 130
 	NEIGHBOR_RES = 140
