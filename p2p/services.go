@@ -177,14 +177,13 @@ func checkHealthService() {
 		if peers.len(PEERTYPE_MINER) >= MIN_MINERS {
 			continue
 		}
-		
+
 
 		//The only goto in the code (I promise), but best solution here IMHO.
 	RETRY:
 		select {
 		//iplistChan gets filled with every incoming neighborRes, they're consumed here.
 		case ipaddr := <- iplistChan:
-			logger.Printf("LEN(iplistChan) = %v", len(iplistChan))
 			if !peerExists(ipaddr) && !peerSelfConn(ipaddr) {
 
 				p, err := initiateNewMinerConnection(ipaddr)
@@ -195,12 +194,12 @@ func checkHealthService() {
 					goto RETRY
 				}
 				go peerConn(p)
+				//GOTO Retry until channel is empty...
 				goto RETRY
-				//break
 			}
 		default:
 			//In case we don't have any ip addresses in the channel left, make a request to the network.
-			PrintMinerCons()
+			PrintMinerConns()
 			NeighborReq()
 			logger.Printf("    |-- Request Neighbors...        |\n                                                      |_______________________________|")
 			break

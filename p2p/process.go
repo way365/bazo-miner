@@ -108,10 +108,9 @@ func processNeighborRes(p *peer, payload []byte) {
 	for _, ipportIter := range ipportList {
 		//logger.Printf("IP/Port received: %v\n", ipportIter)
 		//iplistChan is a buffered channel to handle ips asynchronously.
-		if !peers.contains(ipportIter, PEERTYPE_MINER) {
+		if !peers.contains(ipportIter, PEERTYPE_MINER) && !peerSelfConn(ipportIter) {
 			iplistChan <- ipportIter
 		}
-
 	}
 }
 

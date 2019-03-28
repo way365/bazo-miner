@@ -18,7 +18,7 @@ var (
 	Ipport string
 	peers  peersStruct
 
-	iplistChan      = make(chan string, MIN_MINERS * 3)
+	iplistChan      = make(chan string, MIN_MINERS * (MIN_MINERS-1))
 	minerBrdcstMsg  = make(chan []byte, 1000)
 	clientBrdcstMsg = make(chan []byte)
 	register        = make(chan *peer)

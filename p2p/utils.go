@@ -32,14 +32,18 @@ func RcvData(p *peer) (header *Header, payload []byte, err error) {
 	header, err = ReadHeader(reader)
 	if err != nil {
 		p.conn.Close()
-		logger.Printf(" RcvData %v -- (1) --> %v ", p.getIPPort(), err)
+		if p.peerType == PEERTYPE_MINER {
+			logger.Printf(" RcvData %v -- (1) --> %v ", p.getIPPort(), err)
+		}
 		return nil, nil, errors.New(fmt.Sprintf("Connection to %v aborted: %v", p.getIPPort(), err))
 	}
 
 	if int(header.Len) > 800000 {
 		logger.Printf("Header.Len = %v --> Abort here to prevent an Out Of Memory Error", header.Len)
 		p.conn.Close()
-		logger.Printf(" RcvData %v -- (2)", p.getIPPort())
+		if p.peerType == PEERTYPE_MINER {
+			logger.Printf(" RcvData %v -- (2)", p.getIPPort())
+		}
 		return nil, nil, errors.New(fmt.Sprintf("Abort Receiving Data from %v to prevent Out Of Memory Error", p.getIPPort()))
 	}
 
@@ -49,7 +53,9 @@ func RcvData(p *peer) (header *Header, payload []byte, err error) {
 		payload[cnt], err = reader.ReadByte()
 		if err != nil {
 			p.conn.Close()
-			logger.Printf(" RcvData %v -- (3) --> %v ", p.getIPPort(), err)
+			if p.peerType == PEERTYPE_MINER {
+				logger.Printf(" RcvData %v -- (3) --> %v ", p.getIPPort(), err)
+			}
 			return nil, nil, errors.New(fmt.Sprintf("Connection to %v aborted: %v", p.getIPPort(), err))
 		}
 	}

@@ -54,7 +54,9 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 
 		//RESPONSES
 	case NEIGHBOR_RES:
-		processNeighborRes(p, payload)
+		if !peerSelfConn(p.getIPPort()){
+			processNeighborRes(p, payload)
+		}
 	case BLOCK_RES:
 		forwardBlockReqToMiner(p, payload)
 	case FUNDSTX_RES:

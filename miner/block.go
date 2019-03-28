@@ -541,7 +541,7 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 		}
 
 		//Print aggregated Transaction
-		logger.Printf("%v", aggTx)
+		//logger.Printf("%v", aggTx)
 
 		//Add Aggregated transaction and write to open storage
 		addAggTxFinal(block, aggTx)

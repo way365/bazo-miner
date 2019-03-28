@@ -77,7 +77,7 @@ func TxWithTxCntReq(payload []byte, reqType uint8) error {
 	return nil
 }
 
-func PrintMinerCons() {
+func PrintMinerConns() {
 	minerConnections := peers.getAllPeers(PEERTYPE_MINER)
 	logger.Printf(" ____________")
 	logger.Printf("| Neighbors: |__________________")

@@ -121,7 +121,7 @@ func mining(initialBlock *protocol.Block) {
 		}
 
 		//Prints miner connections
-		p2p.PrintMinerCons()
+		p2p.PrintMinerConns()
 		p2p.NeighborReq()
 
 
