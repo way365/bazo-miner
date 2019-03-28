@@ -1081,7 +1081,13 @@ func validate(b *protocol.Block, initialSetup bool) error {
 	blockValidation.Lock()
 	defer blockValidation.Unlock()
 
+
 	logger.Printf("Inside Validation for block %x", b.Hash)
+
+	if storage.ReadClosedBlock(b.Hash) != nil {
+		logger.Printf("Received block (%x) has already been validated.\n", b.Hash[0:8])
+		return errors.New("Received Block has already been validated.")
+	}
 
 	//Prepare datastructure to fill tx payloads.
 	blockDataMap := make(map[[32]byte]blockData)
@@ -1410,7 +1416,7 @@ func validateState(data blockData, initialSetup bool) error {
 }
 
 func postValidate(data blockData, initialSetup bool) {
-	logger.Printf("Inside Validation for block %x --> Inside Postvalidation", data.block.Hash)
+	//logger.Printf("Inside Validation for block %x --> Inside Postvalidation", data.block.Hash)
 	//The new system parameters get active if the block was successfully validated
 	//This is done after state validation (in contrast to accTx/fundsTx).
 	//Conversely, if blocks are rolled back, the system parameters are changed first.
@@ -1462,7 +1468,7 @@ func postValidate(data blockData, initialSetup bool) {
 				storage.DeleteOpenTx(tx)
 			}
 		}
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (9)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (9)", data.block.Hash)
 
 		for _, tx := range data.aggTxSlice {
 
@@ -1509,20 +1515,20 @@ func postValidate(data blockData, initialSetup bool) {
 			storage.DeleteOpenTx(tx)
 			storage.DeleteINVALIDOpenTx(tx)
 		}
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (10)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (10)", data.block.Hash)
 
 		if len(data.fundsTxSlice) > 0 {
 			broadcastVerifiedFundsTxs(data.fundsTxSlice)
 			//broadcastVerifiedFundsTxsToOtherMiners(data.fundsTxSlice)
 			//broadcastVerifiedFundsTxsToOtherMiners(data.aggregatedFundsTxSlice)
 		}
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (11)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (11)", data.block.Hash)
 
 		//Broadcast AggTx to the neighbors, such that they do not have to request them later.
 		if len(data.aggTxSlice) > 0 {
 			//broadcastVerifiedAggTxsToOtherMiners(data.aggTxSlice)
 		}
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (12)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (12)", data.block.Hash)
 
 
 		//It might be that block is not in the openblock storage, but this doesn't matter.
@@ -1544,9 +1550,9 @@ func postValidate(data blockData, initialSetup bool) {
 		// Write last block to db and delete last block's ancestor.
 		storage.DeleteAllLastClosedBlock()
 		storage.WriteLastClosedBlock(data.block)
-		logger.Printf("Inside Validation for block %x --> Inside Postvalidation (14)", data.block.Hash)
+		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (14)", data.block.Hash)
 	}
-	logger.Printf("Inside Validation for block %x --> Inside Postvalidation --> END", data.block.Hash)
+	//logger.Printf("Inside Validation for block %x --> Inside Postvalidation --> END", data.block.Hash)
 }
 
 //Only blocks with timestamp not diverging from system time (past or future) more than one hour are accepted.

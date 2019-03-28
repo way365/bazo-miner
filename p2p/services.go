@@ -59,8 +59,8 @@ func minerBroadcastService() {
 	for {
 		select {
 		case msg := <-minerBrdcstMsg:
-			if len(minerBrdcstMsg) > 0 {
-				logger.Printf("Inside MinerBrdCst: len(minerBrdcstMsg) = %v", len(minerBrdcstMsg))
+			if len(minerBrdcstMsg) > 50 {
+				logger.Printf("Inside broadcastMinerService: len(minerBrdcstMsg) = %v", len(minerBrdcstMsg))
 			}
 			go sendAndSearchMessages(msg)
 		}
@@ -99,9 +99,6 @@ func sendAndSearchMessages(msg []byte) {
 			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (3)")
 			_, _ = isConnectionAlreadyInSendingMap(p.peer, sendingMap)
 			receiver := sendingMap[p.peer.getIPPort()].peer
-			if len(receiver.ch) > 0 {
-				logger.Printf("Inside Sendand Search to %v -->  len(receiver.ch) = %v", receiver.getIPPort(), len(receiver.ch))
-			}
 			receiver.ch <- msg
 			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (4) --> Sent")
 			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (5)")
@@ -113,11 +110,9 @@ func sendAndSearchMessages(msg []byte) {
 					//This is used to get the newest channel for given IP+Port. In case of an update in the background
 					//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (6)")
 					//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (7)")
-					if len(receiver.ch) > 0 {
-						logger.Printf("Inside Sendand Search With delay to %v -->  len(receiver.ch) = %v", receiver.getIPPort(), len(receiver.ch))
-					}
+
 					//If the receiver channel is full, continue such that the program is not blocked...
-					if len(receiver.ch) == 1000 {
+					if len(receiver.ch) >= 100 {
 						continue
 					}
 					receiver.ch <- hMsg
@@ -166,10 +161,9 @@ func isConnectionAlreadyInSendingMap(p *peer, sendingMap map[string]*delayedMess
 
 //Belongs to the broadcast service.
 func peerBroadcast(p *peer) {
-	logger.Printf("CreatedPeerbroadcast for %v", p.getIPPort())
 
 	for msg := range p.ch {
-		go sendData(p, msg)
+		sendData(p, msg)
 	}
 }
 
@@ -191,10 +185,8 @@ func checkHealthService() {
 		if Ipport != storage.Bootstrap_Server && !peers.contains(storage.Bootstrap_Server, PEERTYPE_MINER) {
 			p, err := initiateNewMinerConnection(storage.Bootstrap_Server)
 			if p == nil || err != nil {
-				selfConnect := "Cannot self-connect"
-				if err.Error()[0:9] != selfConnect[0:9] {
-					logger.Printf("Initiating new miner connection failed: %v", err)
-				}
+				logger.Printf("Initiating new miner connection failed: %v", err)
+
 			} else {
 				go peerConn(p)
 			}

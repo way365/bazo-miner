@@ -32,25 +32,28 @@ func RcvData(p *peer) (header *Header, payload []byte, err error) {
 	header, err = ReadHeader(reader)
 	if err != nil {
 		p.conn.Close()
+		logger.Printf("-- (1)")
 		return nil, nil, errors.New(fmt.Sprintf("Connection to %v aborted: %v", p.getIPPort(), err))
 	}
 
 	if int(header.Len) > 800000 {
 		logger.Printf("Header.Len = %v --> Abort here to prevent an Out Of Memory Error", header.Len)
+		p.conn.Close()
+		logger.Printf("-- (2)")
 		return nil, nil, errors.New(fmt.Sprintf("Abort Receiving Data from %v to prevent Out Of Memory Error", p.getIPPort()))
 	}
 
 	payload = make([]byte, header.Len)
 
-
-
 	for cnt := 0; cnt < int(header.Len); cnt++ {
 		payload[cnt], err = reader.ReadByte()
 		if err != nil {
 			p.conn.Close()
+			logger.Printf("-- (3)")
 			return nil, nil, errors.New(fmt.Sprintf("Connection to %v aborted: %v", p.getIPPort(), err))
 		}
 	}
+
 
 	//logger.Printf("Receive message:\nSender: %v\nType: %v\nPayload length: %v\n", p.getIPPort(), LogMapping[header.TypeID], len(payload))
 

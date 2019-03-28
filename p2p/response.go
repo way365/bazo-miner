@@ -36,7 +36,7 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 	//In case it was not found, send a corresponding message back
 	if tx == nil {
 		packet := BuildPacket(NOT_FOUND, nil)
-		go sendData(p, packet)
+		sendData(p, packet)
 		return
 	}
 
@@ -60,7 +60,7 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 			packet = BuildPacket(AGGTX_RES, tx.Encode())
 		}
 	}
-	go sendData(p, packet)
+	sendData(p, packet)
 }
 
 func specialTxRes(p *peer, payload []byte, txKind uint8) {
@@ -104,10 +104,12 @@ func specialTxRes(p *peer, payload []byte, txKind uint8) {
 
 	if searchedTransaction != nil {
 		packet := BuildPacket(FUNDSTX_RES, searchedTransaction.Encode())
-		go sendData(p, packet)
+		sendData(p, packet)
+		minerBrdcstMsg <- packet
 	} else {
 		packet := BuildPacket(NOT_FOUND, nil)
-		go sendData(p, packet)
+		sendData(p, packet)
+		_=  TxWithTxCntReq(payload, SPECIALTX_REQ)
 	}
 }
 
@@ -138,7 +140,7 @@ func blockRes(p *peer, payload []byte) {
 		packet = BuildPacket(NOT_FOUND, nil)
 	}
 
-	go sendData(p, packet)
+	sendData(p, packet)
 }
 
 //Response the requested block SPV header
@@ -169,7 +171,7 @@ func blockHeaderRes(p *peer, payload []byte) {
 		packet = BuildPacket(NOT_FOUND, nil)
 	}
 
-	go sendData(p, packet)
+	sendData(p, packet)
 }
 
 //Responds to an account request from another miner
@@ -184,7 +186,7 @@ func accRes(p *peer, payload []byte) {
 	acc, _ := storage.GetAccount(hash)
 	packet = BuildPacket(ACC_RES, acc.Encode())
 
-	go sendData(p, packet)
+	sendData(p, packet)
 }
 
 func rootAccRes(p *peer, payload []byte) {
@@ -198,7 +200,7 @@ func rootAccRes(p *peer, payload []byte) {
 	acc, _ := storage.GetRootAccount(hash)
 	packet = BuildPacket(ROOTACC_RES, acc.Encode())
 
-	go sendData(p, packet)
+	sendData(p, packet)
 }
 
 //Completes the handshake with another miner.
@@ -230,7 +232,7 @@ func pongRes(p *peer, payload []byte, peerType uint) {
 
 	go peerConn(p)
 
-	go sendData(p, packet)
+	sendData(p, packet)
 }
 
 //Decouple the function for testing.
@@ -255,7 +257,7 @@ func neighborRes(p *peer) {
 	}
 
 	packet = BuildPacket(NEIGHBOR_RES, _neighborRes(ipportList))
-	go sendData(p, packet)
+	sendData(p, packet)
 }
 
 //Decouple functionality to facilitate testing
@@ -313,5 +315,5 @@ func intermediateNodesRes(p *peer, payload []byte) {
 		packet = BuildPacket(NOT_FOUND, nil)
 	}
 
-	go sendData(p, packet)
+	sendData(p, packet)
 }

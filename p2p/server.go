@@ -18,8 +18,8 @@ var (
 	Ipport string
 	peers  peersStruct
 
-	iplistChan      = make(chan string, MIN_MINERS)
-	minerBrdcstMsg  = make(chan []byte, 10000)
+	iplistChan      = make(chan string, MIN_MINERS * 3)
+	minerBrdcstMsg  = make(chan []byte, 1000)
 	clientBrdcstMsg = make(chan []byte)
 	register        = make(chan *peer)
 	disconnect      = make(chan *peer)
@@ -59,10 +59,7 @@ func bootstrap() {
 	//the future. initiateNewMinerConn(...) starts with MINER_PING to perform the initial handshake message
 	p, err := initiateNewMinerConnection(storage.Bootstrap_Server)
 	if err != nil {
-		selfConnect := "Cannot self-connect"
-		if err.Error()[0:9] != selfConnect[0:9] {
-			logger.Printf("Initiating new miner connection failed: %v", err)
-		}
+		logger.Printf("Initiating new miner connection failed: %v", err)
 	}
 
 	go peerConn(p)
@@ -91,11 +88,13 @@ func initiateNewMinerConnection(dial string) (*peer, error) {
 	//Extracts the port from our localConn variable (which is in the form IP:Port)
 	localPort, err := strconv.Atoi(strings.Split(Ipport, ":")[1])
 	if err != nil {
+		conn.Close()
 		return nil, errors.New(fmt.Sprintf("Parsing port failed: %v\n", err))
 	}
 
 	packet, err := PrepareHandshake(MINER_PING, localPort)
 	if err != nil {
+		conn.Close()
 		return nil, err
 	}
 
@@ -104,6 +103,7 @@ func initiateNewMinerConnection(dial string) (*peer, error) {
 	//Wait for the other party to finish the handshake with the corresponding message
 	header, _, err := RcvData(p)
 	if err != nil || header.TypeID != MINER_PONG {
+		conn.Close()
 		return nil, errors.New(fmt.Sprintf("Failed to complete miner handshake: %v", err))
 	}
 
@@ -165,7 +165,7 @@ func peerConn(p *peer) {
 	}
 
 	//Give the peer a channel
-	p.ch = make(chan []byte, 1000)
+	p.ch = make(chan []byte, 100)
 
 	//Register withe the broadcast service and start the additional writer
 	register <- p
@@ -177,23 +177,8 @@ func peerConn(p *peer) {
 			if p.peerType == PEERTYPE_MINER {
 				logger.Printf("Miner disconnected: %v\n", err)
 				disconnect <- p
-
-				time.Sleep(time.Second)
-				if !peers.contains(p.getIPPort(), PEERTYPE_MINER) {
-					logger.Printf("Trying to imediately reconnect to %v", p.getIPPort())
-					p, err := initiateNewMinerConnection(p.getIPPort())
-					if err != nil || p == nil {
-						selfConnect := "Cannot self-connect"
-						if err.Error()[0:9] != selfConnect[0:9] {
-							logger.Printf("Initiating new miner connection failed: %v", err)
-						}
-						return
-					}
-					if err == nil && p != nil {
-						go peerConn(p)
-						return
-					}
-				}
+				logger.Printf("Try To Reconnect to %v", p.getIPPort())
+				iplistChan <- p.getIPPort()
 				return
 			} else if p.peerType == PEERTYPE_CLIENT {
 				//logger.Printf("Client disconnected: %v\n", err)

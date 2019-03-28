@@ -108,9 +108,9 @@ func mining(initialBlock *protocol.Block) {
 
 		if err == nil {
 			//logger.Printf("Inside Validation --> Validation of Next Block%x", currentBlock.Hash)
-			logger.Printf("Inside Validation ---> Mined Block: %x and start Validation now!", currentBlock.Hash)
+			logger.Printf("Inside Mining ---> Mined Block: %x and start Validation now!", currentBlock.Hash)
 			err := validate(currentBlock, false)
-			logger.Printf("Inside Validation ---> End Validation for mined block %x, %v", currentBlock.Hash, err)
+			logger.Printf("Inside Mining ---> End Validation for mined block %x, %v", currentBlock.Hash, err)
 			if err == nil {
 				//Only broadcast the block if it is valid.
 				go broadcastBlock(currentBlock)
