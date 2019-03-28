@@ -115,7 +115,6 @@ func mining(initialBlock *protocol.Block) {
 				//Only broadcast the block if it is valid.
 				go broadcastBlock(currentBlock)
 				logger.Printf("Validated block (mined): %vState:\n%v", currentBlock, getState())
-
 			} else {
 				logger.Printf("Mined block (%x) could not be validated: %v\n", currentBlock.Hash[0:8], err)
 			}
@@ -123,6 +122,8 @@ func mining(initialBlock *protocol.Block) {
 
 		//Prints miner connections
 		p2p.PrintMinerCons()
+		p2p.NeighborReq()
+
 
 		//This is the same mutex that is claimed at the beginning of a block validation. The reason we do this is
 		//that before start mining a new block we empty the mempool which contains tx data that is likely to be

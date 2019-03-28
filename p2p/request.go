@@ -3,7 +3,7 @@ package p2p
 //Requests that the p2p package issues requesting data from other miners.
 //Tx and block requests are processed in the miner_interface.go file, because
 //this involves inter-communication between the two packages
-func neighborReq() {
+func NeighborReq() {
 
 	knownPeers := peers.getAllPeers(PEERTYPE_MINER)
 		for _, p := range knownPeers {

@@ -25,7 +25,7 @@ func peerService() {
 		case p := <-disconnect:
 			peers.closeChannelMutex.Lock()
 			peers.delete(p)
-			close(p.ch)
+			//close(p.ch)
 			peers.closeChannelMutex.Unlock()
 		}
 	}
@@ -36,25 +36,6 @@ func minerBroadcastService() {
 
 	//For miner connections a map is created where all connections are stored based on the IP and Port of the peer.
 	// In the first iteration this map is initalized.
-
-
-	//Broadcasting all messages.
-//	for msg := range minerBrdcstMsg {
-//		logger.Printf("Inside minerBroadcastservice (1) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
-//	//	for p := range peers.minerConns {
-//	//		//Check if a connection was already established once. If so, nothing happens.
-//	//		alreadyInSenderMap, needsUpdate := isConnectionAlreadyInSendingMap(p, sendingMap)
-//	//		//logger.Printf("Inside Validation for block --> Inside Broadcastservice (2)")
-//	//		if !alreadyInSenderMap && !needsUpdate {
-//	//			//logger.Printf("Inside Validation for block --> Inside Broadcastservice (3)")
-//	//			logger.Printf("create sending map for %v", p.getIPPort())
-//	//			sendingMap[p.getIPPort()] = &delayedMessagesPerSender{p, nil}
-//	//		}
-//	//	}
-//		//logger.Printf("Inside Validation for block --> Inside Broadcastservice (3)")
-//		sendAndSearchMessages(msg)
-//	}
-//	logger.Printf("Inside minerBroadcastservice (2) len(minerBrdcstMsg) %v", len(minerBrdcstMsg))
 
 	for {
 		select {
@@ -196,12 +177,14 @@ func checkHealthService() {
 		if peers.len(PEERTYPE_MINER) >= MIN_MINERS {
 			continue
 		}
+		
 
 		//The only goto in the code (I promise), but best solution here IMHO.
 	RETRY:
 		select {
 		//iplistChan gets filled with every incoming neighborRes, they're consumed here.
-		case ipaddr := <-iplistChan:
+		case ipaddr := <- iplistChan:
+			logger.Printf("LEN(iplistChan) = %v", len(iplistChan))
 			if !peerExists(ipaddr) && !peerSelfConn(ipaddr) {
 
 				p, err := initiateNewMinerConnection(ipaddr)
@@ -212,15 +195,17 @@ func checkHealthService() {
 					goto RETRY
 				}
 				go peerConn(p)
-				break
+				goto RETRY
+				//break
 			}
 		default:
 			//In case we don't have any ip addresses in the channel left, make a request to the network.
 			PrintMinerCons()
-			neighborReq()
+			NeighborReq()
 			logger.Printf("    |-- Request Neighbors...        |\n                                                      |_______________________________|")
 			break
 		}
+
 	}
 }
 

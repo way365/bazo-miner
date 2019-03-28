@@ -32,14 +32,14 @@ func RcvData(p *peer) (header *Header, payload []byte, err error) {
 	header, err = ReadHeader(reader)
 	if err != nil {
 		p.conn.Close()
-		logger.Printf("-- (1)")
+		logger.Printf(" RcvData %v -- (1) --> %v ", p.getIPPort(), err)
 		return nil, nil, errors.New(fmt.Sprintf("Connection to %v aborted: %v", p.getIPPort(), err))
 	}
 
 	if int(header.Len) > 800000 {
 		logger.Printf("Header.Len = %v --> Abort here to prevent an Out Of Memory Error", header.Len)
 		p.conn.Close()
-		logger.Printf("-- (2)")
+		logger.Printf(" RcvData %v -- (2)", p.getIPPort())
 		return nil, nil, errors.New(fmt.Sprintf("Abort Receiving Data from %v to prevent Out Of Memory Error", p.getIPPort()))
 	}
 
@@ -49,7 +49,7 @@ func RcvData(p *peer) (header *Header, payload []byte, err error) {
 		payload[cnt], err = reader.ReadByte()
 		if err != nil {
 			p.conn.Close()
-			logger.Printf("-- (3)")
+			logger.Printf(" RcvData %v -- (3) --> %v ", p.getIPPort(), err)
 			return nil, nil, errors.New(fmt.Sprintf("Connection to %v aborted: %v", p.getIPPort(), err))
 		}
 	}
@@ -84,6 +84,9 @@ func sendData(p *peer, payload []byte) {
 	//logger.Printf("Send message:\nReceiver: %v\nType: %v\nPayload length: %v\n", p.getIPPort(), LogMapping[payload[4]], len(payload)-HEADER_LEN)
 
 	p.l.Lock()
+	if LogMapping[payload[4]] == "" {
+		logger.Printf("Strange Header.TypeID (%v) to send to %v", payload[4], p.getIPPort())
+	}
 	p.conn.Write(payload)
 	p.l.Unlock()
 }
