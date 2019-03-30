@@ -182,9 +182,8 @@ func checkHealthService() {
 		select {
 		//iplistChan gets filled with every incoming neighborRes, they're consumed here.
 		case ipaddr := <- iplistChan:
-			logger.Printf("Received %v from ipListChan", ipaddr)
+			logger.Printf("Len(iplistChan) = %v", len(iplistChan))
 			if !peerExists(ipaddr) && !peerSelfConn(ipaddr) {
-				logger.Printf("Len(iplistChan) = %v", len(iplistChan))
 				p, err := initiateNewMinerConnection(ipaddr)
 				if err != nil {
 					logger.Printf("Initiating new miner connection failed: %v", err)

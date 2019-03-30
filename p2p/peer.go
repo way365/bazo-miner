@@ -98,7 +98,6 @@ func (peers peersStruct) add(p *peer) {
 		//logger.Printf("Inside Validation for block --> Inside Broadcastservice (2)")
 		if !alreadyInSenderMap && !needsUpdate {
 			//logger.Printf("Inside Validation for block --> Inside Broadcastservice (3)")
-			logger.Printf("Create sending map for %v", p.getIPPort())
 			sendingMap[p.getIPPort()] = &delayedMessagesPerSender{p, nil}
 		}
 	}
