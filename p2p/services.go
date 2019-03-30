@@ -173,10 +173,11 @@ func checkHealthService() {
 			}
 		}
 
-		//Periodically check if we are well-connected
-		if peers.len(PEERTYPE_MINER) >= MIN_MINERS {
-			continue
-		}
+	//	//Periodically check if we are well-connected
+	//	if peers.len(PEERTYPE_MINER) >= MIN_MINERS {
+	//		logger.Printf("Miner %v is well connected.", Ipport)
+	//		continue
+	//	}
 
 
 		//The only goto in the code (I promise), but best solution here IMHO.

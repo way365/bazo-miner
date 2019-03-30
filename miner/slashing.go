@@ -89,9 +89,11 @@ func IsInSameChain(b1, b2 *protocol.Block) bool {
 				break
 			}
 		}
-		higherBlock = newHigherBlock
-		if higherBlock.Hash == lowerBlock.Hash {
-			return true
+		if higherBlock != nil {
+			higherBlock = newHigherBlock
+			if higherBlock.Hash == lowerBlock.Hash {
+				return true
+			}
 		}
 	}
 

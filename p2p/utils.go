@@ -126,6 +126,9 @@ func BuildPacket(typeID uint8, payload []byte) (packet []byte) {
 	packet = make([]byte, HEADER_LEN+len(payload))
 	binary.BigEndian.PutUint32(payloadLen[:], uint32(len(payload)))
 	copy(packet[0:4], payloadLen[:])
+	if LogMapping[typeID] == "" {
+		logger.Printf("Build Packet with Strange TypeID: %v", typeID)
+	}
 	packet[4] = byte(typeID)
 	copy(packet[5:], payload)
 

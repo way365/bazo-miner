@@ -52,7 +52,6 @@ func processBlock(payload []byte) {
 	} else {
 		logger.Printf("Received block (%x) could not be validated: %v\n", block.Hash[0:8], err)
 	}
-	p2p.NeighborReq()
 }
 
 //p2p.BlockOut is a channel whose data get consumed by the p2p package
