@@ -108,7 +108,9 @@ func processNeighborRes(p *peer, payload []byte) {
 	for _, ipportIter := range ipportList {
 		//logger.Printf("IP/Port received: %v\n", ipportIter)
 		//iplistChan is a buffered channel to handle ips asynchronously.
+		logger.Printf("Check %v with len(ipportList) %v ", ipportIter, len(ipportList))
 		if !peers.contains(ipportIter, PEERTYPE_MINER) && !peerSelfConn(ipportIter) {
+			logger.Printf("Send %v through IpListChan", ipportIter)
 			iplistChan <- ipportIter
 		}
 	}
@@ -136,4 +138,10 @@ func _processNeighborRes(payload []byte) (ipportList []string) {
 	}
 
 	return ipportList
+}
+
+func EmptyingiplistChan() {
+	for i := 0; i < len(iplistChan); i++ {
+		<- iplistChan
+	}
 }

@@ -35,6 +35,7 @@ func processBlock(payload []byte) {
 		return
 	}
 
+
 	//Append received Block to stash
 	storage.WriteToReceivedStash(block)
 

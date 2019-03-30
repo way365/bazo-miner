@@ -102,7 +102,7 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 			continue
 		}
 
-		// Check if block is in received stash. When in there, continue outer for-loop (Sorry for GO-TO), until ancestor
+		// Check if block is in received stash. When in there, continue outer for-loop, until ancestor
 		// is found in closed block storage. The blocks from the stash will be validated in the normal validation process
 		// after the rollback. (Similar like when in open storage) If not in stash, continue with a block request to
 		// the network. Keep block in stash in case of multiple rollbacks (Very rare)

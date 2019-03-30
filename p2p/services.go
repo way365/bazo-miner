@@ -25,7 +25,7 @@ func peerService() {
 		case p := <-disconnect:
 			peers.closeChannelMutex.Lock()
 			peers.delete(p)
-			//close(p.ch)
+			//close(p.ch)  https://tour.golang.org/concurrency/4
 			peers.closeChannelMutex.Unlock()
 		}
 	}
@@ -40,9 +40,6 @@ func minerBroadcastService() {
 	for {
 		select {
 		case msg := <-minerBrdcstMsg:
-			if len(minerBrdcstMsg) > 50 {
-				logger.Printf("Inside broadcastMinerService: len(minerBrdcstMsg) = %v", len(minerBrdcstMsg))
-			}
 			go sendAndSearchMessages(msg)
 		}
 	}
@@ -185,6 +182,7 @@ func checkHealthService() {
 		select {
 		//iplistChan gets filled with every incoming neighborRes, they're consumed here.
 		case ipaddr := <- iplistChan:
+			logger.Printf("Received %v from ipListChan", ipaddr)
 			if !peerExists(ipaddr) && !peerSelfConn(ipaddr) {
 				logger.Printf("Len(iplistChan) = %v", len(iplistChan))
 				p, err := initiateNewMinerConnection(ipaddr)
@@ -195,9 +193,9 @@ func checkHealthService() {
 					goto RETRY
 				}
 				go peerConn(p)
-				//GOTO Retry until channel is empty...
-				goto RETRY
 			}
+			//GOTO Retry until channel is empty...
+			goto RETRY
 		default:
 			//In case we don't have any ip addresses in the channel left, make a request to the network.
 			PrintMinerConns()
