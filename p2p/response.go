@@ -37,6 +37,7 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 	if tx == nil {
 		packet := BuildPacket(NOT_FOUND, nil)
 		sendData(p, packet)
+		TxReq(txHash, NOT_FOUND_TX_REQ)
 		return
 	}
 
@@ -61,6 +62,53 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 		}
 	}
 	sendData(p, packet)
+}
+
+
+func notFoundTxRes(payload []byte) {
+	var txHash [32]byte
+	if len(payload) != 32 {
+		return
+	}
+	copy(txHash[:], payload[0:32])
+
+	var tx protocol.Transaction
+	//Check closed and open storage if the tx is available
+	openTx := storage.ReadOpenTx(txHash)
+	closedTx := storage.ReadClosedTx(txHash)
+	invalidTx := storage.ReadINVALIDOpenTx(txHash)
+
+	if openTx != nil {
+		tx = openTx
+	}
+	if closedTx != nil {
+		tx = closedTx
+	}
+	if invalidTx != nil {
+		tx = invalidTx
+	}
+
+	//In case it was not found, send a corresponding message back
+	if tx == nil {
+		TxReq(txHash, NOT_FOUND_TX_REQ)
+		return
+	}
+
+	var packet []byte
+	switch tx.(type) {
+	case *protocol.FundsTx:
+		packet = BuildPacket(FUNDSTX_BRDCST, tx.Encode())
+	case *protocol.AccTx:
+		packet = BuildPacket(ACCTX_BRDCST, tx.Encode())
+	case *protocol.ConfigTx:
+		packet = BuildPacket(CONFIGTX_BRDCST, tx.Encode())
+	case *protocol.StakeTx:
+		packet = BuildPacket(STAKETX_BRDCST, tx.Encode())
+	case *protocol.AggTx:
+		packet = BuildPacket(AGGTX_BRDCST, tx.Encode())
+	}
+
+	minerBrdcstMsg <- packet
 }
 
 func specialTxRes(p *peer, payload []byte, txKind uint8) {

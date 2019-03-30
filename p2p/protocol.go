@@ -28,6 +28,7 @@ const (
 	AGGTX_REQ				= 29
 	UNKNOWNTX_REQ			= 30
 	SPECIALTX_REQ			= 31
+	NOT_FOUND_TX_REQ		= 32
 
 
 	FUNDSTX_RES            	= 40

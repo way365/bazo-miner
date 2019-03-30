@@ -1526,7 +1526,7 @@ func postValidate(data blockData, initialSetup bool) {
 
 		//Broadcast AggTx to the neighbors, such that they do not have to request them later.
 		if len(data.aggTxSlice) > 0 {
-			//broadcastVerifiedAggTxsToOtherMiners(data.aggTxSlice)
+			broadcastVerifiedAggTxsToOtherMiners(data.aggTxSlice)
 		}
 		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (12)", data.block.Hash)
 
