@@ -228,7 +228,7 @@ func forwardBlockReqToMiner(p *peer, payload []byte) {
 	if !blockAlreadyReceived(receivedBlockStash, block.Hash) {
 		receivedBlockStash = append(receivedBlockStash, block)
 		BlockReqChan <- payload
-		if len(receivedBlockStash) > 10 {
+		if len(receivedBlockStash) > 40 {
 			receivedBlockStash = append(receivedBlockStash[:0], receivedBlockStash[1:]...)
 		}
 	}

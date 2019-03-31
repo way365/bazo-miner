@@ -114,6 +114,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 		}
 
 		for {
+			RETRY:
 			p2p.BlockReq(lastBlock.PrevHash, lastBlock.PrevHashWithoutTx)
 			//p2p.BlockReq(lastBlock.PrevHash, lastBlock.PrevHashWithoutTx)
 			select {
@@ -121,7 +122,8 @@ func initState() (initialBlock *protocol.Block, err error) {
 				lastBlock = lastBlock.Decode(encodedBlock)
 				//Limit waiting time to BLOCKFETCH_TIMEOUT seconds before aborting.
 			case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
-				logger.Println("Timed out")
+				logger.Printf("Timed out while requesting %x", lastBlock.PrevHash[0:8])
+				goto RETRY
 			}
 
 			//write aggregated blocks to the 'closedblockswithouttx' bucket. Else to the normal closedblocks bucket.
