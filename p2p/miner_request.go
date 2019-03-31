@@ -9,7 +9,7 @@ import (
 //func BlockReq(hash [32]byte, hashWithoutTx [32]byte) error {
 func BlockReq(hash [32]byte, hashWithoutTx [32]byte) error {
 
-	logger.Printf("Request Block %x, %x from the network", hash[0:8], hashWithoutTx[0:8])
+	logger.Printf("Request Block %x, %x from the network (%v Miners)", hash[0:8], hashWithoutTx[0:8], len(peers.getAllPeers(PEERTYPE_MINER)))
 
 	payload := hash[:]
 	payloadTEMP := hashWithoutTx[:]
