@@ -25,10 +25,10 @@ var (
 
 	BlockReqChan = make(chan []byte)
 
-	receivedTXStash = make([]*protocol.FundsTx, 0)
-	receivedAggTxStash = make([]*protocol.AggTx, 0)
-	receivedStakeTxStash = make([]*protocol.StakeTx, 0)
-	receivedAccTxStash = make([]*protocol.AccTx, 0)
+	ReceivedFundsTXStash = make([]*protocol.FundsTx, 0)
+	ReceivedAggTxStash = make([]*protocol.AggTx, 0)
+	ReceivedStakeTxStash = make([]*protocol.StakeTx, 0)
+	ReceivedAccTxStash = make([]*protocol.AccTx, 0)
 	receivedBlockStash = make([]*protocol.Block, 0)
 
 	fundsTxSashMutex = &sync.Mutex{}
@@ -88,7 +88,7 @@ func forwardBlockToMiner(p *peer, payload []byte) {
 }
 
 //Checks if Tx Is in the received stash. If true, we received the transaction with a request already.
-func txAlreadyInStash(slice []*protocol.FundsTx, newTXHash [32]byte) bool {
+func FundsTxAlreadyInStash(slice []*protocol.FundsTx, newTXHash [32]byte) bool {
 	for _, txInStash := range slice {
 		if txInStash.Hash() == newTXHash {
 			return true
@@ -97,7 +97,7 @@ func txAlreadyInStash(slice []*protocol.FundsTx, newTXHash [32]byte) bool {
 	return false
 }
 
-func aggTxAlreadyInStash(slice []*protocol.AggTx, newTXHash [32]byte) bool {
+func AggTxAlreadyInStash(slice []*protocol.AggTx, newTXHash [32]byte) bool {
 	for _, txInStash := range slice {
 		if txInStash.Hash() == newTXHash {
 			return true
@@ -106,7 +106,7 @@ func aggTxAlreadyInStash(slice []*protocol.AggTx, newTXHash [32]byte) bool {
 	return false
 }
 
-func stakeTxAlreadyInStash(slice []*protocol.StakeTx, newTXHash [32]byte) bool {
+func StakeTxAlreadyInStash(slice []*protocol.StakeTx, newTXHash [32]byte) bool {
 	for _, txInStash := range slice {
 		if txInStash.Hash() == newTXHash {
 			return true
@@ -115,7 +115,7 @@ func stakeTxAlreadyInStash(slice []*protocol.StakeTx, newTXHash [32]byte) bool {
 	return false
 }
 
-func accTxAlreadyInStash(slice []*protocol.AccTx, newTXHash [32]byte) bool {
+func AccTxAlreadyInStash(slice []*protocol.AccTx, newTXHash [32]byte) bool {
 	for _, txInStash := range slice {
 		if txInStash.Hash() == newTXHash {
 			return true
@@ -155,11 +155,11 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 	// are sent multiple times through the channel.
 		// The same concept is used for the AggTx below.
 		fundsTxSashMutex.Lock()
-		if !txAlreadyInStash(receivedTXStash, fundsTx.Hash()) {
-			receivedTXStash = append(receivedTXStash, fundsTx)
+		if !FundsTxAlreadyInStash(ReceivedFundsTXStash, fundsTx.Hash()) {
+			ReceivedFundsTXStash = append(ReceivedFundsTXStash, fundsTx)
 			FundsTxChan <- fundsTx
-			if len(receivedTXStash) > 5000 {
-				receivedTXStash = append(receivedTXStash[:0], receivedTXStash[1:]...)
+			if len(ReceivedFundsTXStash) > 5000 {
+				ReceivedFundsTXStash = append(ReceivedFundsTXStash[:0], ReceivedFundsTXStash[1:]...)
 			}
 		}
 		fundsTxSashMutex.Unlock()
@@ -170,11 +170,11 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 			return
 		}
 		accTxStashMutex.Lock()
-		if !accTxAlreadyInStash(receivedAccTxStash, accTx.Hash()) {
-			receivedAccTxStash = append(receivedAccTxStash, accTx)
+		if !AccTxAlreadyInStash(ReceivedAccTxStash, accTx.Hash()) {
+			ReceivedAccTxStash = append(ReceivedAccTxStash, accTx)
 			AccTxChan <- accTx
-			if len(receivedAccTxStash) > 1000 {
-				receivedAccTxStash = append(receivedAccTxStash[:0], receivedAccTxStash[1:]...)
+			if len(ReceivedAccTxStash) > 1000 {
+				ReceivedAccTxStash = append(ReceivedAccTxStash[:0], ReceivedAccTxStash[1:]...)
 			}
 		}
 		accTxStashMutex.Unlock()
@@ -193,11 +193,11 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		}
 
 		stakeTxStashMutex.Lock()
-		if !stakeTxAlreadyInStash(receivedStakeTxStash, stakeTx.Hash()) {
-			receivedStakeTxStash = append(receivedStakeTxStash, stakeTx)
+		if !StakeTxAlreadyInStash(ReceivedStakeTxStash, stakeTx.Hash()) {
+			ReceivedStakeTxStash = append(ReceivedStakeTxStash, stakeTx)
 			StakeTxChan <- stakeTx
-			if len(receivedStakeTxStash) > 1000 {
-				receivedStakeTxStash = append(receivedStakeTxStash[:0], receivedStakeTxStash[1:]...)
+			if len(ReceivedStakeTxStash) > 1000 {
+				ReceivedStakeTxStash = append(ReceivedStakeTxStash[:0], ReceivedStakeTxStash[1:]...)
 			}
 		}
 		stakeTxStashMutex.Unlock()
@@ -209,11 +209,11 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		}
 
 		aggTxStashMutex.Lock()
-		if !aggTxAlreadyInStash(receivedAggTxStash, aggTx.Hash()) {
-			receivedAggTxStash = append(receivedAggTxStash, aggTx)
+		if !AggTxAlreadyInStash(ReceivedAggTxStash, aggTx.Hash()) {
+			ReceivedAggTxStash = append(ReceivedAggTxStash, aggTx)
 			AggTxChan <- aggTx
-			if len(receivedAggTxStash) > 1000 {
-				receivedAggTxStash = append(receivedAggTxStash[:0], receivedAggTxStash[1:]...)
+			if len(ReceivedAggTxStash) > 1000 {
+				ReceivedAggTxStash = append(ReceivedAggTxStash[:0], ReceivedAggTxStash[1:]...)
 			}
 		}
 		aggTxStashMutex.Unlock()

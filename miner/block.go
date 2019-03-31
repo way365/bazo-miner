@@ -758,8 +758,19 @@ func fetchFundsTxData(block *protocol.Block, fundsTxSlice []*protocol.FundsTx, i
 					storage.WriteBootstrapTxReceived(fundsTx)
 				}
 			case <-time.After(TXFETCH_TIMEOUT * time.Second):
-				errChan <- errors.New("FundsTx fetch timed out")
-				return
+				stash := p2p.ReceivedFundsTXStash
+				if p2p.FundsTxAlreadyInStash(stash, txHash){
+					for _, tx := range stash {
+						if tx.Hash() == txHash {
+							fundsTx = tx
+							break
+						}
+					}
+					break
+				} else {
+					errChan <- errors.New("FundsTx fetch timed out")
+					return
+				}
 			}
 			if fundsTx.Hash() != txHash {
 				errChan <- errors.New("Received FundstxHash did not correspond to our request.")
@@ -889,8 +900,28 @@ func fetchFundsTxRecursively(AggregatedTxSlice [][32]byte) (aggregatedFundsTxSli
 			case tx = <-p2p.AggTxChan:
 			case tx = <-p2p.FundsTxChan:
 			case <-time.After(TXFETCH_TIMEOUT * time.Second):
-				logger.Printf("RECURSIVE Fetching (%x) timed out...", txHash)
-				return nil, errors.New(fmt.Sprintf("RECURSIVE UnknownTx fetch timed out"))
+
+				stash := p2p.ReceivedFundsTXStash
+				if p2p.FundsTxAlreadyInStash(stash, txHash){
+					for _, trx := range stash {
+						if trx.Hash() == txHash {
+							tx = trx
+							break
+						}
+					}
+					break
+				} else if p2p.FundsTxAlreadyInStash(stash, txHash){
+					for _, trx := range stash {
+						if trx.Hash() == txHash {
+							tx = trx
+							break
+						}
+					}
+					break
+				} else {
+					logger.Printf("RECURSIVE Fetching (%x) timed out...", txHash)
+					return nil, errors.New(fmt.Sprintf("RECURSIVE UnknownTx fetch timed out"))
+				}
 			}
 			if tx.Hash() != txHash {
 				return nil, errors.New(fmt.Sprintf("RECURSIVE Received TxHash did not correspond to our request."))
@@ -958,6 +989,16 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 			case aggTx = <-p2p.AggTxChan:
 				storage.WriteOpenTx(aggTx)
 			case <-time.After(TXFETCH_TIMEOUT * time.Second):
+				stash := p2p.ReceivedAggTxStash
+				if p2p.AggTxAlreadyInStash(stash, aggTxHash){
+					for _, tx := range stash {
+						if tx.Hash() == aggTxHash {
+							aggTx = tx
+							break
+						}
+					}
+					break
+				}
 				if cnt < 2 {
 					cnt ++
 					goto HERE
@@ -1526,7 +1567,7 @@ func postValidate(data blockData, initialSetup bool) {
 
 		//Broadcast AggTx to the neighbors, such that they do not have to request them later.
 		if len(data.aggTxSlice) > 0 {
-			broadcastVerifiedAggTxsToOtherMiners(data.aggTxSlice)
+			//broadcastVerifiedAggTxsToOtherMiners(data.aggTxSlice)
 		}
 		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (12)", data.block.Hash)
 

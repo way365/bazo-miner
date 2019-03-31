@@ -123,6 +123,12 @@ func initState() (initialBlock *protocol.Block, err error) {
 				//Limit waiting time to BLOCKFETCH_TIMEOUT seconds before aborting.
 			case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
 				if p2p.BlockAlreadyReceived(storage.ReadReceivedBlockStash(), lastBlock.PrevHash) {
+					for _, block := range storage.ReadReceivedBlockStash() {
+						if block.Hash == lastBlock.PrevHash {
+							lastBlock = block
+							break
+						}
+					}
 					logger.Printf("Block %x received Before", lastBlock.PrevHash[0:8])
 					break
 				} else {
