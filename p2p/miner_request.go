@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"errors"
+	"time"
 )
 
 //Both block and tx requests are handled asymmetricaly, using channels as inter-communication
@@ -9,12 +10,23 @@ import (
 //func BlockReq(hash [32]byte, hashWithoutTx [32]byte) error {
 func BlockReq(hash [32]byte, hashWithoutTx [32]byte) error {
 
-	logger.Printf("Request Block %x, %x from the network (%v Miners)", hash[0:8], hashWithoutTx[0:8], len(peers.getAllPeers(PEERTYPE_MINER)))
+	logger.Printf("Request Block %x, %x from the network (%v Miners)", hash[0:8], hashWithoutTx[0:8], peers.len(PEERTYPE_MINER))
 
 	payload := hash[:]
 	payloadTEMP := hashWithoutTx[:]
 
 	payload = append(payload, payloadTEMP...)
+
+	if peers.len(PEERTYPE_MINER) == 0 {
+		wait := true
+		for wait {
+			time.Sleep(2*time.Second)
+			logger.Printf("Currently no other miners around... Waiting to request block...")
+			if peers.len(PEERTYPE_MINER) > 0 {
+				wait = false
+			}
+		}
+	}
 
 	// Block Request with a Broadcast request. This does rise the possibility of a valid answer.
 	for _, p := range peers.getAllPeers(PEERTYPE_MINER) {
