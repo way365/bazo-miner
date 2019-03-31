@@ -122,8 +122,13 @@ func initState() (initialBlock *protocol.Block, err error) {
 				lastBlock = lastBlock.Decode(encodedBlock)
 				//Limit waiting time to BLOCKFETCH_TIMEOUT seconds before aborting.
 			case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
-				logger.Printf("Timed out while requesting %x", lastBlock.PrevHash[0:8])
-				goto RETRY
+				if p2p.BlockAlreadyReceived(storage.ReadReceivedBlockStash(), lastBlock.PrevHash) {
+					logger.Printf("Block %x received Before", lastBlock.PrevHash[0:8])
+					break
+				} else {
+					logger.Printf("Timed out while requesting %x", lastBlock.PrevHash[0:8])
+					goto RETRY
+				}
 			}
 
 			//write aggregated blocks to the 'closedblockswithouttx' bucket. Else to the normal closedblocks bucket.

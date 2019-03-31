@@ -76,7 +76,7 @@ func forwardBlockToMiner(p *peer, payload []byte) {
 //	var block *protocol.Block
 //	block = block.Decode(payload)
 //	storage.WriteToReceivedStash(block)
-//	if !blockAlreadyReceived(storage.ReadReceivedBlockStash(),block.Hash){
+//	if !BlockAlreadyReceived(storage.ReadReceivedBlockStash(),block.Hash){
 		if len(BlockIn) > 0 {
 			var block *protocol.Block
 			block = block.Decode(payload)
@@ -124,7 +124,7 @@ func accTxAlreadyInStash(slice []*protocol.AccTx, newTXHash [32]byte) bool {
 	return false
 }
 
-func blockAlreadyReceived(slice []*protocol.Block, newBlockHash [32]byte) bool {
+func BlockAlreadyReceived(slice []*protocol.Block, newBlockHash [32]byte) bool {
 	for _, block := range slice {
 		if block.Hash == newBlockHash {
 			return true
@@ -225,7 +225,8 @@ func forwardBlockReqToMiner(p *peer, payload []byte) {
 	block = block.Decode(payload)
 
 	blockStashMutex.Lock()
-	if !blockAlreadyReceived(receivedBlockStash, block.Hash) {
+	logger.Printf("Received Block %x", block.Hash[0:8])
+	if !BlockAlreadyReceived(receivedBlockStash, block.Hash) {
 		receivedBlockStash = append(receivedBlockStash, block)
 		BlockReqChan <- payload
 		if len(receivedBlockStash) > 40 {

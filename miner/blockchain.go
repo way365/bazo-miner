@@ -123,7 +123,7 @@ func mining(initialBlock *protocol.Block) {
 		//Prints miner connections
 		p2p.EmptyingiplistChan()
 		p2p.PrintMinerConns()
-		p2p.NeighborReq()
+
 
 
 		//This is the same mutex that is claimed at the beginning of a block validation. The reason we do this is

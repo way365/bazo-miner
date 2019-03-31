@@ -37,7 +37,7 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 	if tx == nil {
 		packet := BuildPacket(NOT_FOUND, nil)
 		sendData(p, packet)
-		TxReq(txHash, NOT_FOUND_TX_REQ)
+		//TxReq(txHash, NOT_FOUND_TX_REQ)
 		return
 	}
 
@@ -91,7 +91,7 @@ func notFoundTxRes(payload []byte) {
 	//In case it was not found, send a corresponding message back
 	if tx == nil {
 		logger.Printf("NOT_FOUND_TX_REQ: for %x", txHash)
-		TxReq(txHash, NOT_FOUND_TX_REQ)
+		//TxReq(txHash, NOT_FOUND_TX_REQ)
 		return
 	}
 
