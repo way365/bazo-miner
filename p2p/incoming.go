@@ -36,7 +36,9 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 	case SPECIALTX_REQ:
 		specialTxRes(p, payload, SPECIALTX_REQ)
 	case NOT_FOUND_TX_REQ:
-		notFoundTxRes(payload)
+		if !peerSelfConn(p.getIPPort()) {
+			notFoundTxRes(payload)
+		}
 	case BLOCK_REQ:
 		blockRes(p, payload)
 	case BLOCK_HEADER_REQ:

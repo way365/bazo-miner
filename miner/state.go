@@ -102,7 +102,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 			lastBlock = lastBlock.Decode(encodedBlock)
 			//Limit waiting time to BLOCKFETCH_TIMEOUT seconds before aborting.
 		case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
-			return nil, nil
+			return nil, errors.New(fmt.Sprintf("Timeout requesting last block for initial startup...",))
 		}
 
 		storage.WriteClosedBlock(lastBlock)

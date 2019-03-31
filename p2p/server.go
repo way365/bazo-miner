@@ -176,6 +176,7 @@ func peerConn(p *peer) {
 			if p.peerType == PEERTYPE_MINER {
 				logger.Printf("Miner disconnected: %v\n", err)
 				disconnect <- p
+				time.Sleep(time.Second)
 				logger.Printf("Try To Reconnect to %v", p.getIPPort())
 				iplistChan <- p.getIPPort()
 				return

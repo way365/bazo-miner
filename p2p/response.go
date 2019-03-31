@@ -90,6 +90,7 @@ func notFoundTxRes(payload []byte) {
 
 	//In case it was not found, send a corresponding message back
 	if tx == nil {
+		logger.Printf("NOT_FOUND_TX_REQ: for %x", txHash)
 		TxReq(txHash, NOT_FOUND_TX_REQ)
 		return
 	}
