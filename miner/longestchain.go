@@ -132,6 +132,16 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 			storage.WriteToReceivedStash(newBlock)
 		//Limit waiting time to BLOCKFETCH_TIMEOUT seconds before aborting.
 		case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
+			if p2p.BlockAlreadyReceived(storage.ReadReceivedBlockStash(), requestHash) {
+				for _, block := range storage.ReadReceivedBlockStash() {
+					if block.Hash == lastBlock.PrevHash {
+						newBlock = block
+						break
+					}
+				}
+				logger.Printf("Block %x received Before", requestHash)
+				break
+			}
 			return nil, nil
 		}
 	}

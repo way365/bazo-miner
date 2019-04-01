@@ -85,6 +85,16 @@ func IsInSameChain(b1, b2 *protocol.Block) bool {
 				storage.WriteToReceivedStash(newHigherBlock)
 				//Limit waiting time to BLOCKFETCH_TIMEOUT seconds before aborting.
 			case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
+				if p2p.BlockAlreadyReceived(storage.ReadReceivedBlockStash(), higherBlock.PrevHash) {
+					for _, block := range storage.ReadReceivedBlockStash() {
+						if block.Hash == lastBlock.PrevHash {
+							newHigherBlock = block
+							break
+						}
+					}
+					logger.Printf("Block %x received Before", higherBlock.PrevHash)
+					break
+				}
 				logger.Printf("Higher Block %x, %x  is nil --> Break", higherBlock.PrevHash, higherBlock.PrevHashWithoutTx)
 				break
 			}

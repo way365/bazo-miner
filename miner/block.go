@@ -1654,6 +1654,16 @@ func slashingCheck(slashedAddress, conflictingBlockHash1, conflictingBlockHash2,
 				conflictingBlock1 = conflictingBlock1.Decode(encodedBlock)
 				//Limit waiting time to BLOCKFETCH_TIMEOUT seconds before aborting.
 			case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
+				if p2p.BlockAlreadyReceived(storage.ReadReceivedBlockStash(), conflictingBlockHash1) {
+					for _, block := range storage.ReadReceivedBlockStash() {
+						if block.Hash == lastBlock.PrevHash {
+							conflictingBlock1 = block
+							break
+						}
+					}
+					logger.Printf("Block %x received Before", conflictingBlockHash1)
+					break
+				}
 				return false, errors.New(fmt.Sprintf(prefix + "Could not find a block with the provided conflicting hash (1)."))
 			}
 		}
@@ -1678,6 +1688,16 @@ func slashingCheck(slashedAddress, conflictingBlockHash1, conflictingBlockHash2,
 				conflictingBlock2 = conflictingBlock2.Decode(encodedBlock)
 				//Limit waiting time to BLOCKFETCH_TIMEOUT seconds before aborting.
 			case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
+				if p2p.BlockAlreadyReceived(storage.ReadReceivedBlockStash(), conflictingBlockHash2) {
+					for _, block := range storage.ReadReceivedBlockStash() {
+						if block.Hash == lastBlock.PrevHash {
+							conflictingBlock2 = block
+							break
+						}
+					}
+					logger.Printf("Block %x received Before", conflictingBlockHash2)
+					break
+				}
 				return false, errors.New(fmt.Sprintf(prefix + "Could not find a block with the provided conflicting hash (2)."))
 			}
 		}
