@@ -87,7 +87,7 @@ func IsInSameChain(b1, b2 *protocol.Block) bool {
 			case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
 				if p2p.BlockAlreadyReceived(storage.ReadReceivedBlockStash(), higherBlock.PrevHash) {
 					for _, block := range storage.ReadReceivedBlockStash() {
-						if block.Hash == lastBlock.PrevHash {
+						if block.Hash == higherBlock.PrevHash {
 							newHigherBlock = block
 							break
 						}

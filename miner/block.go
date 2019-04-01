@@ -1656,7 +1656,7 @@ func slashingCheck(slashedAddress, conflictingBlockHash1, conflictingBlockHash2,
 			case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
 				if p2p.BlockAlreadyReceived(storage.ReadReceivedBlockStash(), conflictingBlockHash1) {
 					for _, block := range storage.ReadReceivedBlockStash() {
-						if block.Hash == lastBlock.PrevHash {
+						if block.Hash == conflictingBlockHash1 {
 							conflictingBlock1 = block
 							break
 						}
@@ -1690,7 +1690,7 @@ func slashingCheck(slashedAddress, conflictingBlockHash1, conflictingBlockHash2,
 			case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
 				if p2p.BlockAlreadyReceived(storage.ReadReceivedBlockStash(), conflictingBlockHash2) {
 					for _, block := range storage.ReadReceivedBlockStash() {
-						if block.Hash == lastBlock.PrevHash {
+						if block.Hash == conflictingBlockHash2 {
 							conflictingBlock2 = block
 							break
 						}

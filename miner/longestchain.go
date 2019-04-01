@@ -134,7 +134,7 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 		case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
 			if p2p.BlockAlreadyReceived(storage.ReadReceivedBlockStash(), requestHash) {
 				for _, block := range storage.ReadReceivedBlockStash() {
-					if block.Hash == lastBlock.PrevHash {
+					if block.Hash == requestHash {
 						newBlock = block
 						break
 					}

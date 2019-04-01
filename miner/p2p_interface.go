@@ -43,9 +43,9 @@ func processBlock(payload []byte) {
 	//Start validation process
 	receivedBlockInTheMeantime = true
 	//logger.Printf("Inside Validation --> Validation of received Block %x", block.Hash)
-	logger.Printf("Inside ProcessBlock ---> Received Block: %x and start Validation now!", block.Hash)
+	logger.Printf("Inside ProcessBlock ---> Received Block: %x and start Validation in the next step", block.Hash[0:8])
 	err := validate(block, false)
-	logger.Printf("Inside ProcessBlock ---> End Validation received for block %x, %v", block.Hash, err)
+	logger.Printf("Inside ProcessBlock ---> End Validation received for block %x, %v", block.Hash[0:8], err)
 	receivedBlockInTheMeantime = false
 	if err == nil {
 		go broadcastBlock(block)
