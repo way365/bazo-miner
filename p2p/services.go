@@ -186,6 +186,7 @@ func checkHealthService() {
 				p, err := initiateNewMinerConnection(ipaddr)
 				if err != nil {
 					logger.Printf("Initiating new miner connection failed: %v", err)
+					goto RETRY
 				}
 				if p == nil || err != nil {
 					goto RETRY

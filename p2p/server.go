@@ -18,7 +18,7 @@ var (
 	Ipport string
 	peers  peersStruct
 
-	iplistChan      = make(chan string, MIN_MINERS * (MIN_MINERS-1))
+	iplistChan      = make(chan string, MIN_MINERS * MIN_MINERS)
 	minerBrdcstMsg  = make(chan []byte, 1000)
 	clientBrdcstMsg = make(chan []byte)
 	register        = make(chan *peer, MIN_MINERS)
@@ -178,11 +178,13 @@ func peerConn(p *peer) {
 				logger.Printf("Miner disconnected: %v\n", err)
 				disconnect <- p
 				time.Sleep(time.Second)
+				lastPeerMutex.Lock()
 				if getLastTriedPeer() != p.getIPPort() {
 					logger.Printf("Try To Reconnect to %v", p.getIPPort())
 					iplistChan <- p.getIPPort()
 					setLastTriedPeer(p.getIPPort())
 				}
+				lastPeerMutex.Unlock()
 				return
 			} else if p.peerType == PEERTYPE_CLIENT {
 				//logger.Printf("Client disconnected: %v\n", err)
@@ -198,13 +200,9 @@ func peerConn(p *peer) {
 }
 
 func setLastTriedPeer(ipPort string) () {
-	lastPeerMutex.Lock()
 	lastTriedPeer = ipPort
-	lastPeerMutex.Unlock()
 }
 
 func getLastTriedPeer() (string) {
-	lastPeerMutex.Lock()
-	defer lastPeerMutex.Unlock()
 	return lastTriedPeer
 }
