@@ -46,7 +46,7 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 		sendData(p, packet)
 		if lastNotFoundTxWithHash != txHash {
 			lastNotFoundTxWithHash = txHash
-			TxReq(txHash, NOT_FOUND_TX_REQ)
+			//TxReq(txHash, NOT_FOUND_TX_REQ)
 		}
 		notFoundTxMutex.Unlock()
 		return
@@ -105,7 +105,7 @@ func notFoundTxRes(payload []byte) {
 	if tx == nil {
 		if lastNotFoundTxWithHash != txHash {
 			lastNotFoundTxWithHash = txHash
-			TxReq(txHash, NOT_FOUND_TX_REQ)
+			//TxReq(txHash, NOT_FOUND_TX_REQ)
 		}
 		notFoundTxMutex.Unlock()
 		return
