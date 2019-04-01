@@ -7,7 +7,13 @@ import (
 	"github.com/bazo-blockchain/bazo-miner/storage"
 	"strconv"
 	"strings"
+	"sync"
 )
+
+var(
+	lastNotFoundTxWithHash = [32]byte{}
+	notFoundTxMutex = &sync.Mutex{}
+	)
 
 //This file responds to incoming requests from miners in a synchronous fashion
 func txRes(p *peer, payload []byte, txKind uint8) {
@@ -34,12 +40,18 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 	}
 
 	//In case it was not found, send a corresponding message back
+	notFoundTxMutex.Lock()
 	if tx == nil {
 		packet := BuildPacket(NOT_FOUND, nil)
 		sendData(p, packet)
-		//TxReq(txHash, NOT_FOUND_TX_REQ)
+		if lastNotFoundTxWithHash != txHash {
+			lastNotFoundTxWithHash = txHash
+			TxReq(txHash, NOT_FOUND_TX_REQ)
+		}
+		notFoundTxMutex.Unlock()
 		return
 	}
+	notFoundTxMutex.Unlock()
 
 	var packet []byte
 	switch txKind {
@@ -83,17 +95,22 @@ func notFoundTxRes(payload []byte) {
 	}
 	if closedTx != nil {
 		tx = closedTx
-	}
+	}//
 	if invalidTx != nil {
 		tx = invalidTx
 	}
 
 	//In case it was not found, send a corresponding message back
+	notFoundTxMutex.Lock()
 	if tx == nil {
-		logger.Printf("NOT_FOUND_TX_REQ: for %x", txHash)
-		//TxReq(txHash, NOT_FOUND_TX_REQ)
+		if lastNotFoundTxWithHash != txHash {
+			lastNotFoundTxWithHash = txHash
+			TxReq(txHash, NOT_FOUND_TX_REQ)
+		}
+		notFoundTxMutex.Unlock()
 		return
 	}
+	notFoundTxMutex.Unlock()
 
 	var packet []byte
 	switch tx.(type) {
