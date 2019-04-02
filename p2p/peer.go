@@ -51,26 +51,20 @@ func (peers peersStruct) contains(ipport string, peerType uint) bool {
 	peers.peerMutex.Lock()
 	defer peers.peerMutex.Unlock()
 
-	tempMutex.Lock()
-	var peerConns map[*peer]bool
-
 	if peerType == PEERTYPE_MINER {
-		peerConns = peers.minerConns
-	}
-	if peerType == PEERTYPE_CLIENT {
-		peerConns = peers.clientConns
-	}
-	tempMutex.Unlock()
-
-	tempMutex.Lock()
-	for peer := range peerConns {
-		if peer.getIPPort() == ipport {
-			tempMutex.Unlock()
-			return true
+		for peer := range peers.minerConns {
+			if peer.getIPPort() == ipport {
+				return true
+			}
 		}
 	}
-
-	tempMutex.Unlock()
+	if peerType == PEERTYPE_CLIENT {
+		for peer := range peers.clientConns {
+			if peer.getIPPort() == ipport {
+				return true
+			}
+		}
+	}
 	return false
 }
 
@@ -102,9 +96,7 @@ func (peers peersStruct) add(p *peer) {
 	for p := range peers.minerConns {
 		//Check if a connection was already established once. If so, nothing happens.
 		alreadyInSenderMap, needsUpdate := isConnectionAlreadyInSendingMap(p, sendingMap)
-		//logger.Printf("Inside Validation for block --> Inside Broadcastservice (2)")
 		if !alreadyInSenderMap && !needsUpdate {
-			//logger.Printf("Inside Validation for block --> Inside Broadcastservice (3)")
 			sendingMap[p.getIPPort()] = &delayedMessagesPerSender{p, nil}
 		}
 	}
