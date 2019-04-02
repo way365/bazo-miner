@@ -45,10 +45,13 @@ type peersStruct struct {
 	closeChannelMutex sync.Mutex
 }
 
+var (tempMutex = &sync.Mutex{})
+
 func (peers peersStruct) contains(ipport string, peerType uint) bool {
 	peers.peerMutex.Lock()
 	defer peers.peerMutex.Unlock()
 
+	tempMutex.Lock()
 	var peerConns map[*peer]bool
 
 	if peerType == PEERTYPE_MINER {
@@ -57,13 +60,17 @@ func (peers peersStruct) contains(ipport string, peerType uint) bool {
 	if peerType == PEERTYPE_CLIENT {
 		peerConns = peers.clientConns
 	}
+	tempMutex.Unlock()
 
+	tempMutex.Lock()
 	for peer := range peerConns {
 		if peer.getIPPort() == ipport {
+			tempMutex.Unlock()
 			return true
 		}
 	}
 
+	tempMutex.Unlock()
 	return false
 }
 
