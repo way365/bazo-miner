@@ -198,7 +198,7 @@ func checkHealthService() {
 		default:
 			//In case we don't have any ip addresses in the channel left, make a request to the network.
 			PrintMinerConns()
-			logger.Printf("    |-- Request Neighbors...        |\n                                                      |_______________________________|")
+			logger.Printf("     |-- Request Neighbors...        |\n                                                       |_______________________________|")
 			NeighborReq()
 			break
 		}

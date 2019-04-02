@@ -91,14 +91,14 @@ func TxWithTxCntReq(payload []byte, reqType uint8) error {
 
 func PrintMinerConns() {
 	minerConnections := peers.getAllPeers(PEERTYPE_MINER)
-	logger.Printf(" ____________")
-	logger.Printf("| Neighbors: |__________________")
+	logger.Printf("  ____________")
+	logger.Printf(" | Neighbors: |__________________")
 	if len(minerConnections) > 0 {
 		for _, p := range minerConnections {
-			logger.Printf("|-- Miner: %v", p.getIPPort())
+			logger.Printf(" |-- Miner: %v", p.getIPPort())
 		}
 	} else {
-		logger.Printf("|   No Neighbors                |", )
+		logger.Printf(" |   No Neighbors                |", )
 	}
 	logger.Printf("|_______________________________|")
 }
