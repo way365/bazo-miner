@@ -1071,7 +1071,6 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 							//Need to fetch transaction from the network. At this point it is unknown what type of tx we request.
 							cnt := 0
 							NEXTTRY:
-							logger.Printf("REQUEST:  UnknownTX: %x for block %x", txHash, block.Hash[0:8])
 							err := p2p.TxReq(txHash, p2p.UNKNOWNTX_REQ)
 							if err != nil {
 								errChan <- errors.New(fmt.Sprintf("Tx could not be read: %v", err))
@@ -1083,21 +1082,17 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 							case tx = <-p2p.AggTxChan:
 								//Received an Aggregated Transaction which was already validated in an older block.
 								storage.WriteOpenTx(tx)
-								logger.Printf(" RECEIVED: Unknown AggTx: %x for block %x", txHash, block.Hash[0:8])
 							case tx = <-p2p.FundsTxChan:
 								//Received a fundsTransaction, which needs to be handled further.
 								storage.WriteOpenTx(tx)
 								transactions = append(transactions, tx.(*protocol.FundsTx))
-								logger.Printf(" RECEIVED: Unknown FundsTx: %x for block %x", txHash, block.Hash[0:8])
 							case <-time.After(TXFETCH_TIMEOUT * time.Second):
-								logger.Printf("Fetching UnknownTX %x timed out for block %x", txHash, block.Hash[0:8])
 								aggTxStash := p2p.ReceivedAggTxStash
 								if p2p.AggTxAlreadyInStash(aggTxStash, txHash){
 									for _, trx := range aggTxStash {
 										if trx.Hash() == txHash {
 											tx = trx
 											storage.WriteOpenTx(tx)
-											logger.Printf("  FOUND: Unknown AGGTX: %x for block %x in received Stash during timeout", tx.Hash(), block.Hash[0:8])
 											break
 										}
 									}
@@ -1110,7 +1105,6 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 											tx = trx
 											storage.WriteOpenTx(tx)
 											transactions = append(transactions, tx.(*protocol.FundsTx))
-											logger.Printf("  FOUND: unknown FundsTx: %x for block %x in received Stash during timeout", tx.Hash(), block.Hash[0:8])
 											break
 										}
 									}
@@ -1120,7 +1114,8 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 									cnt ++
 									goto NEXTTRY
 								}
-								errChan <- errors.New("UnknownTx fetch timed out")
+									logger.Printf("Fetching UnknownTX %x timed out for block %x", txHash, block.Hash[0:8])
+									errChan <- errors.New("UnknownTx fetch timed out")
 								return
 							}
 							if tx.Hash() != txHash {
@@ -1632,11 +1627,11 @@ func timestampCheck(timestamp int64) error {
 	systemTime := p2p.ReadSystemTime()
 
 	if timestamp > systemTime {
-		if timestamp-systemTime > int64(time.Hour.Seconds()) {
+		if timestamp-systemTime > int64(2 * time.Hour.Seconds()) {
 			return errors.New("Timestamp was too far in the future.System time: " + strconv.FormatInt(systemTime, 10) + " vs. timestamp " + strconv.FormatInt(timestamp, 10) + "\n")
 		}
 	} else {
-		if systemTime-timestamp > int64(time.Hour.Seconds()) {
+		if systemTime-timestamp > int64(10 * time.Hour.Seconds()) {
 			return errors.New("Timestamp was too far in the past. System time: " + strconv.FormatInt(systemTime, 10) + " vs. timestamp " + strconv.FormatInt(timestamp, 10) + "\n")
 		}
 	}
