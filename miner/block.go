@@ -1091,6 +1091,28 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 								logger.Printf(" RECEIVED: Request FundsTx: %x for block %x", txHash, block.Hash[0:8])
 							case <-time.After(TXFETCH_TIMEOUT * time.Second):
 								logger.Printf("Fetching UnknownTX %x timed out for block %x", txHash, block.Hash[0:8])
+								aggTxStash := p2p.ReceivedAggTxStash
+								if p2p.AggTxAlreadyInStash(aggTxStash, txHash){
+									for _, trx := range aggTxStash {
+										if trx.Hash() == txHash {
+											tx = trx
+											logger.Printf("  FOUND: Request AGGTX: %x for block %x in received Stash during timeout", tx.Hash(), block.Hash[0:8])
+											break
+										}
+									}
+									break
+								}
+								fundsTxStash := p2p.ReceivedFundsTXStash
+								if p2p.FundsTxAlreadyInStash(fundsTxStash, txHash){
+									for _, trx := range fundsTxStash {
+										if trx.Hash() == txHash {
+											tx = trx
+											logger.Printf("  FOUND: Request FundsTx: %x for block %x in received Stash during timeout", tx.Hash(), block.Hash[0:8])
+											break
+										}
+									}
+									break
+								}
 								if cnt < 2 {
 									cnt ++
 									goto NEXTTRY

@@ -160,7 +160,7 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 			ReceivedFundsTXStash = append(ReceivedFundsTXStash, fundsTx)
 			logger.Printf("    Received FundsTx %x through request", fundsTx.Hash())
 			FundsTxChan <- fundsTx
-			if len(ReceivedFundsTXStash) > 5000 {
+			if len(ReceivedFundsTXStash) > 100 {
 				ReceivedFundsTXStash = append(ReceivedFundsTXStash[:0], ReceivedFundsTXStash[1:]...)
 			}
 		}
@@ -175,7 +175,7 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		if !AccTxAlreadyInStash(ReceivedAccTxStash, accTx.Hash()) {
 			ReceivedAccTxStash = append(ReceivedAccTxStash, accTx)
 			AccTxChan <- accTx
-			if len(ReceivedAccTxStash) > 1000 {
+			if len(ReceivedAccTxStash) > 100 {
 				ReceivedAccTxStash = append(ReceivedAccTxStash[:0], ReceivedAccTxStash[1:]...)
 			}
 		}
@@ -198,7 +198,7 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		if !StakeTxAlreadyInStash(ReceivedStakeTxStash, stakeTx.Hash()) {
 			ReceivedStakeTxStash = append(ReceivedStakeTxStash, stakeTx)
 			StakeTxChan <- stakeTx
-			if len(ReceivedStakeTxStash) > 1000 {
+			if len(ReceivedStakeTxStash) > 100 {
 				ReceivedStakeTxStash = append(ReceivedStakeTxStash[:0], ReceivedStakeTxStash[1:]...)
 			}
 		}
@@ -216,7 +216,7 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 			ReceivedAggTxStash = append(ReceivedAggTxStash, aggTx)
 			logger.Printf("      Sent AggTx %x through channel", aggTx.Hash())
 			AggTxChan <- aggTx
-			if len(ReceivedAggTxStash) > 1000 {
+			if len(ReceivedAggTxStash) > 100 {
 				ReceivedAggTxStash = append(ReceivedAggTxStash[:0], ReceivedAggTxStash[1:]...)
 			}
 		}
