@@ -979,6 +979,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 			//Transaction need to be fetched from the network.
 			cnt := 0
 			HERE:
+			logger.Printf("Request AGGTX: %x for block %x", aggTxHash, block.Hash[0:8])
 			err := p2p.TxReq(aggTxHash, p2p.AGGTX_REQ)
 			if err != nil {
 				errChan <- errors.New(fmt.Sprintf("AggTx could not be read: %v", err))
@@ -988,12 +989,14 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 			select {
 			case aggTx = <-p2p.AggTxChan:
 				storage.WriteOpenTx(aggTx)
+				logger.Printf("  Received AGGTX: %x for block %x", aggTxHash, block.Hash[0:8])
 			case <-time.After(TXFETCH_TIMEOUT * time.Second):
 				stash := p2p.ReceivedAggTxStash
 				if p2p.AggTxAlreadyInStash(stash, aggTxHash){
 					for _, tx := range stash {
 						if tx.Hash() == aggTxHash {
 							aggTx = tx
+							logger.Printf("  FOUND: Request AGGTX: %x for block %x in received Stash during timeout", aggTx.Hash(), block.Hash[0:8])
 							break
 						}
 					}
@@ -1003,7 +1006,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 					cnt ++
 					goto HERE
 				}
-				logger.Printf("Fetching (%x) timed out...", aggTxHash)
+				logger.Printf("  TIME OUT: Request AGGTX: %x for block %x", aggTxHash, block.Hash[0:8])
 				errChan <- errors.New("AggTx fetch timed out")
 				return
 			}
@@ -1068,6 +1071,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 							//Need to fetch transaction from the network. At this point it is unknown what type of tx we request.
 							cnt := 0
 							NEXTTRY:
+							logger.Printf("Request UnknownTX: %x for block %x", txHash, block.Hash[0:8])
 							err := p2p.TxReq(txHash, p2p.UNKNOWNTX_REQ)
 							if err != nil {
 								errChan <- errors.New(fmt.Sprintf("Tx could not be read: %v", err))
@@ -1079,12 +1083,14 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 							case tx = <-p2p.AggTxChan:
 								//Received an Aggregated Transaction which was already validated in an older block.
 								storage.WriteOpenTx(tx)
+								logger.Printf(" RECEIVED: Request AggTx: %x for block %x", txHash, block.Hash[0:8])
 							case tx = <-p2p.FundsTxChan:
 								//Received a fundsTransaction, which needs to be handled further.
 								storage.WriteOpenTx(tx)
 								transactions = append(transactions, tx.(*protocol.FundsTx))
+								logger.Printf(" RECEIVED: Request FundsTx: %x for block %x", txHash, block.Hash[0:8])
 							case <-time.After(TXFETCH_TIMEOUT * time.Second):
-								logger.Printf("Fetching (%x) timed out...", txHash)
+								logger.Printf("Fetching UnknownTX %x timed out for block %x", txHash, block.Hash[0:8])
 								if cnt < 2 {
 									cnt ++
 									goto NEXTTRY

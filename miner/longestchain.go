@@ -132,14 +132,15 @@ func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain [
 			storage.WriteToReceivedStash(newBlock)
 		//Limit waiting time to BLOCKFETCH_TIMEOUT seconds before aborting.
 		case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
+			logger.Printf("Timed Out fetching %x in longestChain -> Search in received Block stash", requestHash)
 			if p2p.BlockAlreadyReceived(storage.ReadReceivedBlockStash(), requestHash) {
 				for _, block := range storage.ReadReceivedBlockStash() {
 					if block.Hash == requestHash {
 						newBlock = block
+						logger.Printf("Block %x was in Received Block Stash", requestHash)
 						break
 					}
 				}
-				logger.Printf("Block %x received Before", requestHash)
 				break
 			}
 			return nil, nil

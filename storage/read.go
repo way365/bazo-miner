@@ -179,7 +179,7 @@ func (a ByHeight) Less(i, j int) bool { return a[i].Height < a[j].Height }
 
 
 func ReadReceivedBlockStash() (receivedBlocks []*protocol.Block){
-	return receivedBlockStash
+	return ReceivedBlockStash
 }
 
 func ReadOpenTx(hash [32]byte) (transaction protocol.Transaction) {

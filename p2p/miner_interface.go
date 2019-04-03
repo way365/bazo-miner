@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"github.com/bazo-blockchain/bazo-miner/protocol"
+	"github.com/bazo-blockchain/bazo-miner/storage"
 	"sync"
 )
 
@@ -29,7 +30,6 @@ var (
 	ReceivedAggTxStash = make([]*protocol.AggTx, 0)
 	ReceivedStakeTxStash = make([]*protocol.StakeTx, 0)
 	ReceivedAccTxStash = make([]*protocol.AccTx, 0)
-	receivedBlockStash = make([]*protocol.Block, 0)
 
 	fundsTxSashMutex = &sync.Mutex{}
 	aggTxStashMutex = &sync.Mutex{}
@@ -155,8 +155,10 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 	// are sent multiple times through the channel.
 		// The same concept is used for the AggTx below.
 		fundsTxSashMutex.Lock()
+		logger.Printf("    Received FundsTx %x through request", fundsTx.Hash())
 		if !FundsTxAlreadyInStash(ReceivedFundsTXStash, fundsTx.Hash()) {
 			ReceivedFundsTXStash = append(ReceivedFundsTXStash, fundsTx)
+			logger.Printf("    Received FundsTx %x through request", fundsTx.Hash())
 			FundsTxChan <- fundsTx
 			if len(ReceivedFundsTXStash) > 5000 {
 				ReceivedFundsTXStash = append(ReceivedFundsTXStash[:0], ReceivedFundsTXStash[1:]...)
@@ -209,8 +211,10 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		}
 
 		aggTxStashMutex.Lock()
+		logger.Printf("    Received AggTx %x through request", aggTx.Hash())
 		if !AggTxAlreadyInStash(ReceivedAggTxStash, aggTx.Hash()) {
 			ReceivedAggTxStash = append(ReceivedAggTxStash, aggTx)
+			logger.Printf("      Sent AggTx %x through channel", aggTx.Hash())
 			AggTxChan <- aggTx
 			if len(ReceivedAggTxStash) > 1000 {
 				ReceivedAggTxStash = append(ReceivedAggTxStash[:0], ReceivedAggTxStash[1:]...)
@@ -225,13 +229,11 @@ func forwardBlockReqToMiner(p *peer, payload []byte) {
 	block = block.Decode(payload)
 
 	blockStashMutex.Lock()
-	logger.Printf("Received Block %x", block.Hash[0:8])
-	if !BlockAlreadyReceived(receivedBlockStash, block.Hash) {
-		receivedBlockStash = append(receivedBlockStash, block)
+	logger.Printf("Received Requested Block %x", block.Hash[0:8])
+	if !BlockAlreadyReceived(storage.ReadReceivedBlockStash(), block.Hash) {
+		storage.WriteToReceivedStash(block)
+		logger.Printf("SENT Received Requested Block %x through channel", block.Hash[0:8])
 		BlockReqChan <- payload
-		if len(receivedBlockStash) > 40 {
-			receivedBlockStash = append(receivedBlockStash[:0], receivedBlockStash[1:]...)
-		}
 	}
 	blockStashMutex.Unlock()
 }
