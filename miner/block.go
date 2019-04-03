@@ -1114,8 +1114,8 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 									cnt ++
 									goto NEXTTRY
 								}
-									logger.Printf("Fetching UnknownTX %x timed out for block %x", txHash, block.Hash[0:8])
-									errChan <- errors.New("UnknownTx fetch timed out")
+								logger.Printf("Fetching UnknownTX %x timed out for block %x", txHash, block.Hash[0:8])
+								errChan <- errors.New("UnknownTx fetch timed out")
 								return
 							}
 							if tx.Hash() != txHash {

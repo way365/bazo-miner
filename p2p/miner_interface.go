@@ -156,6 +156,7 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		// The same concept is used for the AggTx below.
 		fundsTxSashMutex.Lock()
 		if !FundsTxAlreadyInStash(ReceivedFundsTXStash, fundsTx.Hash()) {
+			ReceivedFundsTXStash = append(ReceivedFundsTXStash, fundsTx)
 			FundsTxChan <- fundsTx
 			if len(ReceivedFundsTXStash) > 100 {
 				ReceivedFundsTXStash = append(ReceivedFundsTXStash[:0], ReceivedFundsTXStash[1:]...)

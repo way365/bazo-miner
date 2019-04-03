@@ -98,7 +98,7 @@ func PrintMinerConns() {
 			logger.Printf(" |-- Miner: %v", p.getIPPort())
 		}
 	} else {
-		logger.Printf(" |   No Neighbors                |", )
+		logger.Printf("|   No Neighbors                |", )
 	}
 	logger.Printf("|_______________________________|")
 }
