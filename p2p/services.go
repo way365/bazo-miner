@@ -64,7 +64,6 @@ func clientBroadcastService() {
 
 //This function does send the current and possible previous not send messages
 func sendAndSearchMessages(msg []byte) {
-	//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (1)")
 	for _, p := range sendingMap {
 		//Check if there is a valid connection to peer p, if not, store message
 		//if peers.minerConns[p.peer] {
@@ -72,46 +71,33 @@ func sendAndSearchMessages(msg []byte) {
 
 			//If connection is valid, send message.
 			//This is used to get the newest channel for given IP+Port. In case of an update in the background
-			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (2)")
 			peers.closeChannelMutex.Lock()
-			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (3)")
 			_, _ = isConnectionAlreadyInSendingMap(p.peer, sendingMap)
+
 			receiver := sendingMap[p.peer.getIPPort()].peer
 			receiver.ch <- msg
-			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (4) --> Sent")
-			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (5)")
 
 			//Send previously stored messages for this miner as well.
 			for _, hMsg := range p.delayedMessages {
-					//Send historic not yet sent transaction and remove it.
-
-					//This is used to get the newest channel for given IP+Port. In case of an update in the background
-					//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (6)")
-					//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (7)")
-
-					//If the receiver channel is full, continue such that the program is not blocked...
-					if len(receiver.ch) >= 100 {
-						continue
-					}
-					receiver.ch <- hMsg
-
-					//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (8) len(receiver.ch) %v", len(receiver.ch))
-
+				//Send historic not yet sent transaction and remove it.
+				//If the receiver channel is full, continue such that the program is not blocked...
+				if len(receiver.ch) >= 100 {
+					continue
+				}
+				receiver.ch <- hMsg
 				p.delayedMessages = p.delayedMessages[1:]
 			}
 			peers.closeChannelMutex.Unlock()
 		} else {
 			//Store messages which are not sent du to connectivity issues.
-			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (9)")
 			messages := p.delayedMessages
 			////Check that not too many delayed messages are stored.
 			if len(messages) > 40 {
 				messages = messages[1:]
 			}
-			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (10)")
+
 			//Store message for this specific miner connection.
 			p.delayedMessages = append(messages, msg)
-			//logger.Printf("Inside Validation for block --> Inside SendAndSearchMessages (11)")
 		}
 	}
 }
@@ -120,20 +106,16 @@ func sendAndSearchMessages(msg []byte) {
 // This can happen all time when new connecting, because e.g a new channel (p.ch) is set up once adding a new peer
 // (even if it was added before). If the peer changes as well, it gets updated in teh sendingMap.
 func isConnectionAlreadyInSendingMap(p *peer, sendingMap map[string]*delayedMessagesPerSender) (alreadyInSenderMap bool, needsUpdate bool) {
-	//logger.Printf("Inside Validation for block --> Inside Broadcastservice (1.1)")
 	for _, connection := range sendingMap {
 		if connection.peer.getIPPort() == p.getIPPort() {
 			if connection.peer != p {
 				sendingMap[p.getIPPort()] = &delayedMessagesPerSender{p, connection.delayedMessages}
-				//logger.Printf("Inside Validation for block --> Inside Broadcastservice (1.2)")
 				return true, true
 			} else {
-				//logger.Printf("Inside Validation for block --> Inside Broadcastservice (1.3)")
 				return true, false
 			}
 		}
 	}
-	//logger.Printf("Inside Validation for block --> Inside Broadcastservice (1.4)")
 	return false, false
 }
 
