@@ -99,8 +99,7 @@ func prepareBlock(block *protocol.Block) {
 
 		//Check if block will become to big when adding the next transaction.
 		if int(blockSize)+(transactionCounter+nonAggregatableTxCounter)*transactionHashSize > int(activeParameters.Block_size) {
-			logger.Printf("Block Would Overflow --> Stop adding new Transactions")
-			break
+			continue
 		} else {
 			opentxToAdd = append(opentxToAdd, tx)
 		}
