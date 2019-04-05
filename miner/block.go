@@ -1189,7 +1189,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 
 	//No rollback needed, just a new block to validate.
 	if len(blocksToRollback) == 0 {
-		for _, block := range blocksToValidate {
+		for i, block := range blocksToValidate {
 			//Fetching payload data from the txs (if necessary, ask other miners).
 			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice, err := preValidate(block, initialSetup)
 
@@ -1209,7 +1209,9 @@ func validate(b *protocol.Block, initialSetup bool) error {
 			}
 
 			postValidate(blockDataMap[block.Hash], initialSetup)
-			logger.Printf("Validated block (During Validation of other block): %vState:\n%v", block, getState())
+			if i != len(blocksToValidate)-1 {
+				logger.Printf("Validated block (During Validation of other block): %vState:\n%v", block, getState())
+			}
 		}
 	} else {
 		//Rollback

@@ -16,7 +16,13 @@ import (
 
 type openTxs []protocol.Transaction
 
-var receivedBlockInTheMeantime bool
+var (
+	receivedBlockInTheMeantime 	bool
+	nonAggregatableTxCounter 	int
+	blockSize					int
+	transactionHashSize			int
+)
+
 
 func prepareBlock(block *protocol.Block) {
 	//Fetch all txs from mempool (opentxs).
@@ -30,11 +36,9 @@ func prepareBlock(block *protocol.Block) {
 	tmpCopy = opentxs
 	sort.Sort(tmpCopy)
 
-	nonAggregatableTxCounter := 0 //Counter for all transactions which will not be aggregated. (Stake-, config-, acctx)
-	transactionCounter := 0 //Counter for all transactions which will be aggregated. (Funds-, AggTx)
-
-	blockSize := block.GetSize()+block.GetBloomFilterSize()
-	transactionHashSize := 32  //It is 32 bytes
+	nonAggregatableTxCounter = 0 //Counter for all transactions which will not be aggregated. (Stake-, config-, acctx)
+	blockSize = int(activeParameters.Block_size) - (650 +int(block.GetBloomFilterSize())) //Set blocksize - fixed space
+	transactionHashSize = 32  //It is 32 bytes
 
 	//map where all senders from FundsTx and AggTx are added to. --> this ensures that tx with same sender are only counted once.
 	storage.DifferentSenders = map[[32]byte]uint32{}
@@ -50,17 +54,18 @@ func prepareBlock(block *protocol.Block) {
 	var missingTxCntSender = map[[32]byte]*senderTxCounterForMissingTransactions{}
 
 	//Check how many transactions can be added.
-	for _, tx := range opentxs {
-		//Switch because with an if statement every transaction would need a getter-method for its type.
-		//Therefore, switch is more code-efficient.
+
+
+	//Get Best combination of transactions
+	opentxToAdd = checkBestCombination(opentxs)
+
+	//Search missing transactions for the transactions which will be added...
+	for _, tx := range opentxToAdd {
 		switch tx.(type) {
 		case *protocol.FundsTx:
 			trx := tx.(*protocol.FundsTx)
-			storage.DifferentSenders[trx.From] = storage.DifferentSenders[trx.From] + 1
-			storage.DifferentReceivers[trx.To] = storage.DifferentReceivers[trx.To] + 1
 
 			//Create Mininmal txCnt for the different senders with stateTxCnt.. This is used to fetch missing transactions later on.
-
 			if missingTxCntSender[trx.From] == nil {
 				if storage.State[trx.From] != nil {
 					if storage.State[trx.From].TxCnt == 0 {
@@ -83,33 +88,17 @@ func prepareBlock(block *protocol.Block) {
 					missingTxCntSender[trx.From].txcnt = trx.TxCnt
 				}
 			}
-		case *protocol.AggTx:
-			storage.DifferentSenders[tx.Sender()] = storage.DifferentSenders[tx.Sender()] + 1
-			storage.DifferentReceivers[tx.Receiver()] = storage.DifferentReceivers[tx.Receiver()] + 1
-		default:
-			nonAggregatableTxCounter += 1
-		}
-
-		//The Maximum Number of transactions is always the smaller number of Different Senders or Different Receivers.
-		if len(storage.DifferentSenders) <= len(storage.DifferentReceivers) {
-			transactionCounter = len(storage.DifferentSenders)
-		} else {
-			transactionCounter = len(storage.DifferentReceivers)
-		}
-
-		//Check if block will become to big when adding the next transaction.
-		if int(blockSize)+(transactionCounter+nonAggregatableTxCounter)*transactionHashSize > int(activeParameters.Block_size) {
-			continue
-		} else {
-			opentxToAdd = append(opentxToAdd, tx)
 		}
 	}
-
-
 
 	//Special Request for transactions missing between the Tx with the lowest TxCnt and the state.
 	// With this transactions may are validated quicker.
 	for _, sender := range missingTxCntSender {
+
+		//This limits the searching process to teh block interval * TX_FETCH_TIMEOUT
+		if len(missingTxCntSender[sender.senderAddress].missingTransactions) > int(activeParameters.Block_interval) {
+			missingTxCntSender[sender.senderAddress].missingTransactions = missingTxCntSender[sender.senderAddress].missingTransactions[0:int(activeParameters.Block_interval)]
+		}
 
 		if len(missingTxCntSender[sender.senderAddress].missingTransactions) > 0 {
 			logger.Printf("Missing Transaction: All these Transactions are missing for sender %x: %v ", sender.senderAddress[0:8], missingTxCntSender[sender.senderAddress].missingTransactions)
@@ -119,6 +108,7 @@ func prepareBlock(block *protocol.Block) {
 
 			var missingTransaction protocol.Transaction
 
+			//Abort requesting if a block is received in the meantime
 			if receivedBlockInTheMeantime {
 				logger.Printf("Received Block in the Meantime --> Abort requesting missing Tx (1)")
 				break
@@ -162,6 +152,7 @@ func prepareBlock(block *protocol.Block) {
 				}
 				select {
 				case trx := <-p2p.FundsTxChan:
+					//If correct transaction is received, write to openStorage and good, if wrong one is received, break.
 					if trx.TxCnt != missingTxcnt && trx.From != sender.senderAddress {
 						logger.Printf("Missing Transaction: Received Wrong Transaction")
 						break
@@ -171,6 +162,17 @@ func prepareBlock(block *protocol.Block) {
 						break
 					}
 				case <-time.After(TXFETCH_TIMEOUT * time.Second):
+					stash := p2p.ReceivedFundsTXStash
+
+					//Try to find missing transaction in the stash...
+					for _, trx := range stash {
+						if trx.From == sender.senderAddress && trx.TxCnt == missingTxcnt {
+							storage.WriteOpenTx(trx)
+							missingTransaction = trx
+							break
+						}
+					}
+
 					logger.Printf("Missing Transaction: Tx Request Timed out...")
 					break
 				}
@@ -182,6 +184,7 @@ func prepareBlock(block *protocol.Block) {
 				opentxToAdd = append(opentxToAdd, missingTransaction)
 			}
 		}
+		//If Block is receifed before, break now.
 		if receivedBlockInTheMeantime {
 			logger.Printf("Received Block in the Meantime --> Abort requesting missing Tx (2)")
 			receivedBlockInTheMeantime = false
@@ -213,6 +216,81 @@ func prepareBlock(block *protocol.Block) {
 	storage.DifferentReceivers = nil
 	nonAggregatableTxCounter = 0
 	return
+}
+
+func checkBestCombination(openTxs []protocol.Transaction) (TxToAppend []protocol.Transaction) {
+	nrWhenCombinedBest := 0
+	moreOpenTx := true
+	for moreOpenTx {
+		var intermediateTxToAppend []protocol.Transaction
+
+		for _, tx := range openTxs {
+			switch tx.(type) {
+			case *protocol.FundsTx:
+				storage.DifferentSenders[tx.(*protocol.FundsTx).From] = storage.DifferentSenders[tx.(*protocol.FundsTx).From] + 1
+				storage.DifferentReceivers[tx.(*protocol.FundsTx).To] = storage.DifferentReceivers[tx.(*protocol.FundsTx).To] + 1
+			case *protocol.AggTx:
+				storage.DifferentSenders[tx.Sender()] = storage.DifferentSenders[tx.Sender()] + 1
+				storage.DifferentReceivers[tx.Receiver()] = storage.DifferentReceivers[tx.Receiver()] + 1
+			default:
+				nonAggregatableTxCounter += 1
+			}
+		}
+
+		maxSender, addressSender := getMaxKeyAndValueFormMap(storage.DifferentSenders)
+		maxReceiver, addressReceiver := getMaxKeyAndValueFormMap(storage.DifferentReceivers)
+
+		i := 0
+		if maxSender >= maxReceiver {
+			for _, tx := range openTxs {
+				switch tx.(type) {
+				case *protocol.FundsTx:
+					//Append Tx To the ones which get added,
+					if tx.(*protocol.FundsTx).From == addressSender {
+						intermediateTxToAppend = append(intermediateTxToAppend, tx)
+					} else {
+						openTxs[i] = tx
+						i++
+					}
+				}
+			}
+		} else {
+			for _, tx := range openTxs {
+				switch tx.(type) {
+				case *protocol.FundsTx:
+					if tx.(*protocol.FundsTx).To == addressReceiver {
+						intermediateTxToAppend = append(intermediateTxToAppend, tx)
+					} else {
+						openTxs[i] = tx
+						i++
+					}
+				}
+			}
+		}
+		openTxs = openTxs[:i]
+		storage.DifferentSenders = make(map[[32]byte]uint32)
+		storage.DifferentReceivers = make(map[[32]byte]uint32)
+
+		nrWhenCombinedBest = nrWhenCombinedBest + 1
+
+		//Stop when block is full
+		if (nrWhenCombinedBest+nonAggregatableTxCounter)*transactionHashSize >= blockSize {
+			moreOpenTx = false
+			break
+		} else {
+			TxToAppend = append(TxToAppend, intermediateTxToAppend...)
+		}
+
+		//Stop when list is empty
+		if len(openTxs) > 0 {
+			//If adding a new transaction combination, gets bigger than the blocksize, abort
+			moreOpenTx = true
+		} else {
+			moreOpenTx = false
+		}
+	}
+
+	return TxToAppend
 }
 
 type specialTxRequest struct {

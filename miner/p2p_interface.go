@@ -4,7 +4,6 @@ import (
 	"github.com/bazo-blockchain/bazo-miner/p2p"
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
-	"sync"
 )
 
 //The code in this source file communicates with the p2p package via channels
@@ -13,16 +12,10 @@ import (
 func incomingData() {
 	for {
 		block := <-p2p.BlockIn
-		if len(p2p.BlockIn) > 0 {
-			var block1 *protocol.Block
-			block1 = block1.Decode(block)
-			logger.Printf("Inside IncommingData --> len(BlockIn) = %v for block %x", len(p2p.BlockIn), block1.Hash[0:8])
-		}
-		go processBlock(block)
+		processBlock(block)
 	}
 }
 
-var processBlockMutex = &sync.Mutex{}
 //ReceivedBlockStash is a stash with all Blocks received such that we can prevent forking
 func processBlock(payload []byte) {
 
