@@ -163,7 +163,6 @@ func prepareBlock(block *protocol.Block) {
 					}
 				case <-time.After(TXFETCH_TIMEOUT * time.Second):
 					stash := p2p.ReceivedFundsTXStash
-
 					//Try to find missing transaction in the stash...
 					for _, trx := range stash {
 						if trx.From == sender.senderAddress && trx.TxCnt == missingTxcnt {
@@ -173,7 +172,9 @@ func prepareBlock(block *protocol.Block) {
 						}
 					}
 
-					logger.Printf("Missing Transaction: Tx Request Timed out...")
+					if missingTransaction == nil {
+						logger.Printf("Missing Transaction: Tx Request Timed out...")
+					}
 					break
 				}
 			}

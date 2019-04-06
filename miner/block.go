@@ -1210,7 +1210,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 
 			postValidate(blockDataMap[block.Hash], initialSetup)
 			if i != len(blocksToValidate)-1 {
-				logger.Printf("Validated block (During Validation of other block): %vState:\n%v", block, getState())
+				logger.Printf("Validated block (During Validation of other block %v): %vState:\n%v", b.Hash[0:8] , block, getState())
 			}
 		}
 	} else {
@@ -1243,7 +1243,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 
 			postValidate(blockDataMap[block.Hash], initialSetup)
 			//logger.Printf("Validated block (after rollback): %x", block.Hash[0:8])
-			logger.Printf("Validated block (after rollback): %vState:\n%v", block, getState())
+			logger.Printf("Validated block (after rollback for block %v): %vState:\n%v", b.Hash[0:8], block, getState())
 		}
 	}
 
@@ -1326,11 +1326,13 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	}
 
 	if len(aggTxSlice) > 0{
+		logger.Printf("-- Fetch AggTxData - Start")
 		select {
 		case aggregatedFundsTxSlice = <- aggregatedFundsChan:
-		case <-time.After(120 * time.Second):
+		case <-time.After(10 * time.Minute):
 			return nil, nil, nil, nil, nil, nil, errors.New("Fetching FundsTx aggregated in AggTx failed.")
 		}
+		logger.Printf("-- Fetch AggTxData - End")
 	}
 
 	//Check state contains beneficiary.
