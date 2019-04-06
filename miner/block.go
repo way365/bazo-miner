@@ -900,8 +900,9 @@ func fetchFundsTxRecursively(AggregatedTxSlice [][32]byte) (aggregatedFundsTxSli
 			case tx = <-p2p.AggTxChan:
 			case tx = <-p2p.FundsTxChan:
 			case <-time.After(TXFETCH_TIMEOUT * time.Second):
-
 				stash := p2p.ReceivedFundsTXStash
+				aggTxStash := p2p.ReceivedAggTxStash
+
 				if p2p.FundsTxAlreadyInStash(stash, txHash){
 					for _, trx := range stash {
 						if trx.Hash() == txHash {
@@ -910,7 +911,7 @@ func fetchFundsTxRecursively(AggregatedTxSlice [][32]byte) (aggregatedFundsTxSli
 						}
 					}
 					break
-				} else if p2p.FundsTxAlreadyInStash(stash, txHash){
+				} else if p2p.AggTxAlreadyInStash(aggTxStash, txHash){
 					for _, trx := range stash {
 						if trx.Hash() == txHash {
 							tx = trx
