@@ -64,7 +64,8 @@ func clientBroadcastService() {
 
 //This function does send the current and possible previous not send messages
 func sendAndSearchMessages(msg []byte) {
-	for _, p := range sendingMap {
+	sMap := sendingMap
+	for _, p := range sMap {
 		//Check if there is a valid connection to peer p, if not, store message
 		//if peers.minerConns[p.peer] {
 		if peers.contains(p.peer.getIPPort(), PEERTYPE_MINER) {

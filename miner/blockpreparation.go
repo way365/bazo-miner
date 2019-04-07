@@ -225,16 +225,23 @@ func checkBestCombination(openTxs []protocol.Transaction) (TxToAppend []protocol
 	for moreOpenTx {
 		var intermediateTxToAppend []protocol.Transaction
 
-		for _, tx := range openTxs {
+		for i, tx := range openTxs {
 			switch tx.(type) {
 			case *protocol.FundsTx:
 				storage.DifferentSenders[tx.(*protocol.FundsTx).From] = storage.DifferentSenders[tx.(*protocol.FundsTx).From] + 1
 				storage.DifferentReceivers[tx.(*protocol.FundsTx).To] = storage.DifferentReceivers[tx.(*protocol.FundsTx).To] + 1
 			case *protocol.AggTx:
-				storage.DifferentSenders[tx.Sender()] = storage.DifferentSenders[tx.Sender()] + 1
-				storage.DifferentReceivers[tx.Receiver()] = storage.DifferentReceivers[tx.Receiver()] + 1
+				continue
 			default:
-				nonAggregatableTxCounter += 1
+				//If another non-FundsTx can fit into the block, add it, else block is already full, so return the tx
+				//This does help that non-FundsTx get validated as fast as possible.
+				if (nonAggregatableTxCounter+1)*transactionHashSize < blockSize {
+					nonAggregatableTxCounter += 1
+					TxToAppend = append(TxToAppend, tx)
+					openTxs = append(openTxs[:i], openTxs[i+1:]...)
+				} else {
+					return TxToAppend
+				}
 			}
 		}
 
@@ -246,7 +253,7 @@ func checkBestCombination(openTxs []protocol.Transaction) (TxToAppend []protocol
 			for _, tx := range openTxs {
 				switch tx.(type) {
 				case *protocol.FundsTx:
-					//Append Tx To the ones which get added,
+					//Append Tx To the ones which get added, else remove added tx such that no space exists.
 					if tx.(*protocol.FundsTx).From == addressSender {
 						intermediateTxToAppend = append(intermediateTxToAppend, tx)
 					} else {
