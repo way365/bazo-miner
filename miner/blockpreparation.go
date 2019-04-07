@@ -37,7 +37,8 @@ func prepareBlock(block *protocol.Block) {
 	sort.Sort(tmpCopy)
 
 	nonAggregatableTxCounter = 0 //Counter for all transactions which will not be aggregated. (Stake-, config-, acctx)
-	blockSize = int(activeParameters.Block_size) - (650 +int(block.GetBloomFilterSize())) //Set blocksize - fixed space
+	blockSize = int(activeParameters.Block_size) - (650 + 8) //Set blocksize - (fixed space + Bloomfiltersize
+	logger.Printf("block.GetBloomFilterSize() %v", block.GetBloomFilterSize())
 	transactionHashSize = 32  //It is 32 bytes
 
 	//map where all senders from FundsTx and AggTx are added to. --> this ensures that tx with same sender are only counted once.
@@ -52,9 +53,6 @@ func prepareBlock(block *protocol.Block) {
 	}
 
 	var missingTxCntSender = map[[32]byte]*senderTxCounterForMissingTransactions{}
-
-	//Check how many transactions can be added.
-
 
 	//Get Best combination of transactions
 	opentxToAdd = checkBestCombination(opentxs)

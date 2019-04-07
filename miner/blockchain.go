@@ -68,7 +68,7 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 	}
 
 	currentTargetTime = new(timerange)
-	target = append(target, 22)
+	target = append(target, 21)
 
 	initialBlock, err := initState()
 	if err != nil {
