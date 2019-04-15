@@ -482,11 +482,11 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 			for _, fundsTxHash := range block.FundsTxData {
 				trx := storage.ReadClosedTx(fundsTxHash)
 				if len(transactionSenders) > 0 && trx.(*protocol.FundsTx).From == transactionSenders[0] {
-				//	historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
+					historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
 					breakingForLoop = true
 					break
 				} else if len(transactionReceivers) > 0 && trx.(*protocol.FundsTx).To == transactionReceivers[0] {
-				//	historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
+					historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
 					breakingForLoop = true
 					break
 				}
@@ -499,11 +499,11 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 				trx := storage.ReadClosedTx(aggTxHash)
 				if trx != nil {
 					if len(trx.(*protocol.AggTx).From) == 1 && len(transactionSenders) > 0 && trx.(*protocol.AggTx).From[0] == transactionSenders[0] {
-					//	historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
+						historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
 						breakingForLoop = true
 						break
 					} else if len(trx.(*protocol.AggTx).To) == 1 && len(transactionReceivers) > 0 && trx.(*protocol.AggTx).To[0] == transactionReceivers[0] {
-					//	historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
+						historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
 						breakingForLoop = true
 						break
 					}
@@ -514,9 +514,9 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 			}
 		}
 	} else if len(nrOfSenders) < len(nrOfReceivers) {
-	//	historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
+		historicTransactions = searchTransactionsInHistoricBlocks(transactionSenders[0], [32]byte{})
 	} else if len(nrOfSenders) > len(nrOfReceivers) {
-	//	historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
+		historicTransactions = searchTransactionsInHistoricBlocks([32]byte{}, transactionReceivers[0])
 	}
 
 	//Add transactions to the transactionsHashes slice
@@ -541,7 +541,7 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 		}
 
 		//Print aggregated Transaction
-		//logger.Printf("%v", aggTx)
+		logger.Printf("%v", aggTx)
 
 		//Add Aggregated transaction and write to open storage
 		addAggTxFinal(block, aggTx)
