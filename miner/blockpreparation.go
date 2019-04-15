@@ -236,7 +236,9 @@ func checkBestCombination(openTxs []protocol.Transaction) (TxToAppend []protocol
 				if (nonAggregatableTxCounter+1)*transactionHashSize < blockSize {
 					nonAggregatableTxCounter += 1
 					TxToAppend = append(TxToAppend, tx)
-					openTxs = append(openTxs[:i], openTxs[i+1:]...)
+					if i != len(openTxs){
+						openTxs = append(openTxs[:i], openTxs[i+1:]...)
+					}
 				} else {
 					return TxToAppend
 				}
