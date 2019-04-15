@@ -1577,15 +1577,15 @@ func postValidate(data blockData, initialSetup bool) {
 		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (13)", data.block.Hash)
 
 		//Do not empty last three blocks and only if it not aggregated already.
-//		for _, block := range storage.ReadAllClosedBlocks(){
-//
-//			//Empty all blocks despite the last NO_AGGREGATION_LENGTH and genesis block.
-//			if !block.Aggregated && block.Height > 0 {
-//				if (int(block.Height)) < (int(data.block.Height) - NO_EMPTYING_LENGTH) {
-//					storage.UpdateBlocksToBlocksWithoutTx(block)
-//				}
-//			}
-//		}
+		for _, block := range storage.ReadAllClosedBlocks(){
+
+			//Empty all blocks despite the last NO_AGGREGATION_LENGTH and genesis block.
+			if !block.Aggregated && block.Height > 0 {
+				if (int(block.Height)) < (int(data.block.Height) - NO_EMPTYING_LENGTH) {
+					storage.UpdateBlocksToBlocksWithoutTx(block)
+				}
+			}
+		}
 
 		// Write last block to db and delete last block's ancestor.
 		storage.DeleteAllLastClosedBlock()
