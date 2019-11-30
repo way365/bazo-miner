@@ -9,21 +9,23 @@ import (
 )
 
 const (
-	FUNDSTX_SIZE = 213
+	FUNDSTX_SIZE = 246
 )
 
 //when we broadcast transactions we need a way to distinguish with a type
 
 type FundsTx struct {
-	Header byte
-	Amount uint64
-	Fee    uint64
-	TxCnt  uint32
-	From   [32]byte
-	To     [32]byte
-	Sig1   [64]byte
-	Sig2   [64]byte
-	Data   []byte
+	Header 		byte
+	Amount 		uint64
+	Fee    		uint64
+	TxCnt  		uint32
+	From   		[32]byte
+	To     		[32]byte
+	Sig1   		[64]byte
+	Sig2   		[64]byte
+	Aggregated 	bool
+	Block		[32]byte //This saves the blockHashWithoutTransactions into which the transaction was usually validated. Needed for rollback.
+	Data   		[]byte
 }
 
 func ConstrFundsTx(header byte, amount uint64, fee uint64, txCnt uint32, from, to [32]byte, sig1Key *ecdsa.PrivateKey, sig2Key *ecdsa.PrivateKey, data []byte) (tx *FundsTx, err error) {
@@ -35,7 +37,9 @@ func ConstrFundsTx(header byte, amount uint64, fee uint64, txCnt uint32, from, t
 	tx.Amount = amount
 	tx.Fee = fee
 	tx.TxCnt = txCnt
+	tx.Aggregated = false
 	tx.Data = data
+	tx.Block = [32]byte{}
 
 	txHash := tx.Hash()
 
@@ -92,15 +96,17 @@ func (tx *FundsTx) Hash() (hash [32]byte) {
 func (tx *FundsTx) Encode() (encodedTx []byte) {
 	// Encode
 	encodeData := FundsTx{
-		Header: tx.Header,
-		Amount: tx.Amount,
-		Fee:    tx.Fee,
-		TxCnt:  tx.TxCnt,
-		From:   tx.From,
-		To:     tx.To,
-		Sig1:   tx.Sig1,
-		Sig2:   tx.Sig2,
-		Data:   tx.Data,
+		Header: 	tx.Header,
+		Amount: 	tx.Amount,
+		Fee:    	tx.Fee,
+		TxCnt:  	tx.TxCnt,
+		From:   	tx.From,
+		To:     	tx.To,
+		Sig1:   	tx.Sig1,
+		Sig2:   	tx.Sig2,
+		Data:   	tx.Data,
+		Aggregated: tx.Aggregated,
+		Block: 		tx.Block,
 	}
 	buffer := new(bytes.Buffer)
 	gob.NewEncoder(buffer).Encode(encodeData)
@@ -118,6 +124,9 @@ func (*FundsTx) Decode(encodedTx []byte) *FundsTx {
 func (tx *FundsTx) TxFee() uint64 { return tx.Fee }
 func (tx *FundsTx) Size() uint64  { return FUNDSTX_SIZE }
 
+func (tx *FundsTx) Sender() [32]byte { return tx.From }
+func (tx *FundsTx) Receiver() [32]byte { return tx.To }
+
 func (tx FundsTx) String() string {
 	return fmt.Sprintf(
 		"\nHeader: %v\n"+
@@ -128,7 +137,9 @@ func (tx FundsTx) String() string {
 			"To: %x\n"+
 			"Sig1: %x\n"+
 			"Sig2: %x\n"+
-			"Data: %v\n",
+			"Data: %v\n"+
+			"Aggregated: %t\n"+
+			"Block: %x",
 		tx.Header,
 		tx.Amount,
 		tx.Fee,
@@ -138,5 +149,7 @@ func (tx FundsTx) String() string {
 		tx.Sig1[0:8],
 		tx.Sig2[0:8],
 		tx.Data,
+		tx.Aggregated,
+		tx.Block,
 	)
 }

@@ -41,25 +41,30 @@ func newPeer(conn net.Conn, listenerPort string, peerType uint) *peer {
 type peersStruct struct {
 	minerConns  map[*peer]bool
 	clientConns map[*peer]bool
-	peerMutex   sync.Mutex
+	//peerMutex.   sync.Mutex
+	closeChannelMutex sync.Mutex
 }
 
+var (peerMutex = &sync.Mutex{})
+
 func (peers peersStruct) contains(ipport string, peerType uint) bool {
-	var peerConns map[*peer]bool
+	peerMutex.Lock()
+	defer peerMutex.Unlock()
 
 	if peerType == PEERTYPE_MINER {
-		peerConns = peers.minerConns
-	}
-	if peerType == PEERTYPE_CLIENT {
-		peerConns = peers.clientConns
-	}
-
-	for peer, _ := range peerConns {
-		if (peer.getIPPort() == ipport) {
-			return true
+		for peer := range peers.minerConns {
+			if peer.getIPPort() == ipport {
+				return true
+			}
 		}
 	}
-
+	if peerType == PEERTYPE_CLIENT {
+		for peer := range peers.clientConns {
+			if peer.getIPPort() == ipport {
+				return true
+			}
+		}
+	}
 	return false
 }
 
@@ -72,20 +77,34 @@ func (p *peer) getIPPort() string {
 }
 
 func (peers peersStruct) add(p *peer) {
-	peers.peerMutex.Lock()
-	defer peers.peerMutex.Unlock()
+	peerMutex.Lock()
+	defer peerMutex.Unlock()
 
 	if p.peerType == PEERTYPE_MINER {
+		for peer := range peers.minerConns {
+			if p.getIPPort() == peer.getIPPort() {
+				delete(peers.minerConns, peer)
+				logger.Printf("Deleted Old Peer Entry for %v", peer.getIPPort())
+			}
+		}
 		peers.minerConns[p] = true
 	}
 	if p.peerType == PEERTYPE_CLIENT {
 		peers.clientConns[p] = true
 	}
+
+	for p := range peers.minerConns {
+		//Check if a connection was already established once. If so, nothing happens.
+		alreadyInSenderMap, needsUpdate := isConnectionAlreadyInSendingMap(p, sendingMap)
+		if !alreadyInSenderMap && !needsUpdate {
+			sendingMap[p.getIPPort()] = &delayedMessagesPerSender{p, nil}
+		}
+	}
 }
 
 func (peers peersStruct) delete(p *peer) {
-	peers.peerMutex.Lock()
-	defer peers.peerMutex.Unlock()
+	peerMutex.Lock()
+	defer peerMutex.Unlock()
 
 	if p.peerType == PEERTYPE_MINER {
 		delete(peers.minerConns, p)
@@ -96,6 +115,8 @@ func (peers peersStruct) delete(p *peer) {
 }
 
 func (peers peersStruct) len(peerType uint) (length int) {
+	peerMutex.Lock()
+	defer peerMutex.Unlock()
 	if peerType == PEERTYPE_MINER {
 		length = len(peers.minerConns)
 	}
@@ -118,8 +139,8 @@ func (peers peersStruct) getRandomPeer(peerType uint) (p *peer) {
 }
 
 func (peers peersStruct) getAllPeers(peerType uint) []*peer {
-	peers.peerMutex.Lock()
-	defer peers.peerMutex.Unlock()
+	peerMutex.Lock()
+	defer peerMutex.Unlock()
 
 	var peerList []*peer
 
@@ -133,13 +154,12 @@ func (peers peersStruct) getAllPeers(peerType uint) []*peer {
 			peerList = append(peerList, p)
 		}
 	}
-
 	return peerList
 }
 
 func (peers peersStruct) getMinerTimes() (peerTimes []int64) {
-	peers.peerMutex.Lock()
-	defer peers.peerMutex.Unlock()
+	peerMutex.Lock()
+	defer peerMutex.Unlock()
 
 	for p := range peers.minerConns {
 		p.l.Lock()

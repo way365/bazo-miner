@@ -9,12 +9,12 @@ import (
 //Already validated block but not part of the current longest chain.
 //No need for an additional state mutex, because this function is called while the blockValidation mutex is actively held.
 func rollback(b *protocol.Block) error {
-	accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, err := preValidateRollback(b)
+	accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggTxSlice, err := preValidateRollback(b)
 	if err != nil {
 		return err
 	}
 
-	data := blockData{accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, b}
+	data := blockData{accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggTxSlice, nil,b}
 
 	//Going back to pre-block system parameters before the state is rolled back.
 	configStateChangeRollback(data.configTxSlice, b.Hash)
@@ -23,18 +23,17 @@ func rollback(b *protocol.Block) error {
 	validateStateRollback(data)
 
 	postValidateRollback(data)
-
 	return nil
 }
 
-func preValidateRollback(b *protocol.Block) (accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, err error) {
+func preValidateRollback(b *protocol.Block) (accTxSlice []*protocol.AccTx, fundsTxSlice []*protocol.FundsTx, configTxSlice []*protocol.ConfigTx, stakeTxSlice []*protocol.StakeTx, aggTxSlice []*protocol.AggTx, err error) {
 	//Fetch all transactions from closed storage.
 	for _, hash := range b.AccTxData {
 		var accTx *protocol.AccTx
 		tx := storage.ReadClosedTx(hash)
 		if tx == nil {
 			//This should never happen, because all validated transactions are in closed storage.
-			return nil, nil, nil, nil, errors.New("CRITICAL: Validated accTx was not in the confirmed tx storage")
+			return nil, nil, nil, nil, nil, errors.New("CRITICAL: Validated accTx was not in the confirmed tx storage")
 		} else {
 			accTx = tx.(*protocol.AccTx)
 		}
@@ -45,7 +44,7 @@ func preValidateRollback(b *protocol.Block) (accTxSlice []*protocol.AccTx, funds
 		var fundsTx *protocol.FundsTx
 		tx := storage.ReadClosedTx(hash)
 		if tx == nil {
-			return nil, nil, nil, nil, errors.New("CRITICAL: Validated fundsTx was not in the confirmed tx storage")
+			return nil, nil, nil, nil,nil, errors.New("CRITICAL: Validated fundsTx was not in the confirmed tx storage")
 		} else {
 			fundsTx = tx.(*protocol.FundsTx)
 		}
@@ -56,7 +55,7 @@ func preValidateRollback(b *protocol.Block) (accTxSlice []*protocol.AccTx, funds
 		var configTx *protocol.ConfigTx
 		tx := storage.ReadClosedTx(hash)
 		if tx == nil {
-			return nil, nil, nil, nil, errors.New("CRITICAL: Validated configTx was not in the confirmed tx storage")
+			return nil, nil, nil, nil, nil, errors.New("CRITICAL: Validated configTx was not in the confirmed tx storage")
 		} else {
 			configTx = tx.(*protocol.ConfigTx)
 		}
@@ -67,14 +66,28 @@ func preValidateRollback(b *protocol.Block) (accTxSlice []*protocol.AccTx, funds
 		var stakeTx *protocol.StakeTx
 		tx := storage.ReadClosedTx(hash)
 		if tx == nil {
-			return nil, nil, nil, nil, errors.New("CRITICAL: Validated stakeTx was not in the confirmed tx storage")
+			return nil, nil, nil, nil, nil, errors.New("CRITICAL: Validated stakeTx was not in the confirmed tx storage")
 		} else {
 			stakeTx = tx.(*protocol.StakeTx)
 		}
 		stakeTxSlice = append(stakeTxSlice, stakeTx)
 	}
 
-	return accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, nil
+	for _, hash := range b.AggTxData {
+		var aggTx *protocol.AggTx
+		tx := storage.ReadClosedTx(hash)
+		if tx == nil {
+			tx = storage.ReadOpenTx(hash)
+			 if tx != nil {
+			 }
+			return nil, nil, nil, nil, nil, errors.New("CRITICAL: Aggregated Transaction was not in the confirmed tx storage")
+		} else {
+			aggTx = tx.(*protocol.AggTx)
+		}
+		aggTxSlice = append(aggTxSlice, aggTx)
+	}
+
+	return accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggTxSlice, nil
 }
 
 func validateStateRollback(data blockData) {
@@ -83,6 +96,7 @@ func validateStateRollback(data blockData) {
 	collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 	stakeStateChangeRollback(data.stakeTxSlice)
 	fundsStateChangeRollback(data.fundsTxSlice)
+	aggregatedStateRollback(data.aggTxSlice, data.block.HashWithoutTx,  data.block.Beneficiary)
 	accStateChangeRollback(data.accTxSlice)
 }
 
@@ -108,13 +122,45 @@ func postValidateRollback(data blockData) {
 		storage.DeleteClosedTx(tx)
 	}
 
+	for _, tx := range data.aggTxSlice {
+
+		//Reopen FundsTx per aggTx
+		for _, aggregatedTxHash := range tx.AggregatedTxSlice {
+			trx := storage.ReadClosedTx(aggregatedTxHash)
+			//Only move transactions which are validated the first time in this block to the Mempool.
+			switch trx.(type) {
+			case *protocol.FundsTx:
+				if trx.(*protocol.FundsTx).Block == data.block.HashWithoutTx {
+					storage.WriteOpenTx(trx)
+					storage.DeleteClosedTx(trx)
+				}
+			case *protocol.AggTx:
+				if trx.(*protocol.AggTx).Block == data.block.HashWithoutTx {
+					storage.WriteOpenTx(trx)
+					storage.DeleteClosedTx(trx)
+				}
+			}
+		}
+
+		storage.WriteOpenTx(tx)
+		storage.DeleteClosedTx(tx)
+	}
+
 	collectStatisticsRollback(data.block)
 
 	//For transactions we switch from closed to open. However, we do not write back blocks
 	//to open storage, because in case of rollback the chain they belonged to is likely to starve.
 	storage.DeleteClosedBlock(data.block.Hash)
+	storage.WriteToReceivedStash(data.block) //Write it to received stash, it will be deleted after X new blocks.
 
 	//Save the previous block as the last closed block.
 	storage.DeleteAllLastClosedBlock()
-	storage.WriteLastClosedBlock(storage.ReadClosedBlock(data.block.PrevHash))
+	prevBlock := storage.ReadClosedBlock(data.block.PrevHash)
+	if prevBlock == nil {
+		prevBlock = storage.ReadClosedBlock(data.block.PrevHashWithoutTx)
+	}
+	if prevBlock == nil {
+		return
+	}
+	storage.WriteLastClosedBlock(prevBlock)
 }

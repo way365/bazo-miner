@@ -5,11 +5,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
 	"net"
 	"strings"
 	"time"
-	"github.com/bazo-blockchain/bazo-miner/protocol"
 )
 
 func Connect(connectionString string) *net.TCPConn {
@@ -32,7 +32,19 @@ func RcvData(p *peer) (header *Header, payload []byte, err error) {
 	header, err = ReadHeader(reader)
 	if err != nil {
 		p.conn.Close()
+		if p.peerType == PEERTYPE_MINER {
+			logger.Printf(" RcvData %v -- (1) --> %v ", p.getIPPort(), err)
+		}
 		return nil, nil, errors.New(fmt.Sprintf("Connection to %v aborted: %v", p.getIPPort(), err))
+	}
+
+	if int(header.Len) > 800000 { //FABIO
+		logger.Printf("Header.Len = %v --> Abort here to prevent an Out Of Memory Error", header.Len)
+		p.conn.Close()
+		if p.peerType == PEERTYPE_MINER {
+			logger.Printf(" RcvData %v -- (2)", p.getIPPort())
+		}
+		return nil, nil, errors.New(fmt.Sprintf("Abort Receiving Data from %v to prevent Out Of Memory Error", p.getIPPort()))
 	}
 
 	payload = make([]byte, header.Len)
@@ -41,11 +53,15 @@ func RcvData(p *peer) (header *Header, payload []byte, err error) {
 		payload[cnt], err = reader.ReadByte()
 		if err != nil {
 			p.conn.Close()
+			if p.peerType == PEERTYPE_MINER {
+				logger.Printf(" RcvData %v -- (3) --> %v ", p.getIPPort(), err)
+			}
 			return nil, nil, errors.New(fmt.Sprintf("Connection to %v aborted: %v", p.getIPPort(), err))
 		}
 	}
 
-	logger.Printf("Receive message:\nSender: %v\nType: %v\nPayload length: %v\n", p.getIPPort(), LogMapping[header.TypeID], len(payload))
+
+	//logger.Printf("Receive message:\nSender: %v\nType: %v\nPayload length: %v\n", p.getIPPort(), LogMapping[header.TypeID], len(payload))
 
 	return header, payload, nil
 }
@@ -71,9 +87,12 @@ func RcvData_(c net.Conn) (header *Header, payload []byte, err error) {
 }
 
 func sendData(p *peer, payload []byte) {
-	logger.Printf("Send message:\nReceiver: %v\nType: %v\nPayload length: %v\n", p.getIPPort(), LogMapping[payload[4]], len(payload)-HEADER_LEN)
+	//logger.Printf("Send message:\nReceiver: %v\nType: %v\nPayload length: %v\n", p.getIPPort(), LogMapping[payload[4]], len(payload)-HEADER_LEN)
 
 	p.l.Lock()
+	if LogMapping[payload[4]] == "" {
+		logger.Printf("Strange Header.TypeID (%v) to send to %v", payload[4], p.getIPPort())
+	}
 	p.conn.Write(payload)
 	p.l.Unlock()
 }
@@ -100,9 +119,16 @@ func peerSelfConn(newIpport string) bool {
 func BuildPacket(typeID uint8, payload []byte) (packet []byte) {
 	var payloadLen [4]byte
 
+	if int(len(payload)) > 800000 {
+		logger.Printf("Payload = %v --> Probably Abort here to prevent an Out Of Memory Error", len(payload))
+	}
+
 	packet = make([]byte, HEADER_LEN+len(payload))
 	binary.BigEndian.PutUint32(payloadLen[:], uint32(len(payload)))
 	copy(packet[0:4], payloadLen[:])
+	if LogMapping[typeID] == "" {
+		logger.Printf("Build Packet with Strange TypeID: %v", typeID)
+	}
 	packet[4] = byte(typeID)
 	copy(packet[5:], payload)
 
@@ -128,6 +154,7 @@ func ReadHeader(reader *bufio.Reader) (*Header, error) {
 
 	//Check if the type is registered in the protocol.
 	if LogMapping[header.TypeID] == "" {
+		logger.Printf("Header: TypeID not found. --> typeID: %v", header.TypeID)
 		return nil, errors.New("Header: TypeID not found.")
 	}
 
@@ -157,7 +184,10 @@ func IsBootstrap() bool {
 	bootstrapPort := strings.Split(storage.Bootstrap_Server, ":")[1]
 	thisPort := strings.Split(Ipport, ":")[1]
 	if thisPort == bootstrapPort {
+		//Only the port is checked if it is bootstrapping... Not the whole IP-Address
+		//All Clients need to run on another port than teh bootstrap server....
 		return true
 	}
 	return false
 }
+

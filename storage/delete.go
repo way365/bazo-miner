@@ -22,6 +22,14 @@ func DeleteClosedBlock(hash [32]byte) {
 	})
 }
 
+func DeleteClosedBlockWithoutTx(hash [32]byte) {
+	db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("closedblockswithouttx"))
+		err := b.Delete(hash[:])
+		return err
+	})
+}
+
 func DeleteLastClosedBlock(hash [32]byte) {
 	db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("lastclosedblock"))
@@ -42,7 +50,20 @@ func DeleteAllLastClosedBlock() {
 }
 
 func DeleteOpenTx(transaction protocol.Transaction) {
+	openTxMutex.Lock()
 	delete(txMemPool, transaction.Hash())
+	openTxMutex.Unlock()
+}
+
+func DeleteINVALIDOpenTx(transaction protocol.Transaction) {
+	openINVALIDTxMutex.Lock()
+	delete(txINVALIDMemPool, transaction.Hash())
+	openINVALIDTxMutex.Unlock()
+}
+
+
+func DeleteAllFundsTxBeforeAggregation(){
+	FundsTxBeforeAggregation = nil
 }
 
 func DeleteClosedTx(transaction protocol.Transaction) {
@@ -56,14 +77,27 @@ func DeleteClosedTx(transaction protocol.Transaction) {
 		bucket = "closedconfigs"
 	case *protocol.StakeTx:
 		bucket = "closedstakes"
+	case *protocol.AggTx:
+		bucket = "closedaggregations"
 	}
-
+	
 	hash := transaction.Hash()
 	db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		err := b.Delete(hash[:])
 		return err
 	})
+
+	nrClosedTransactions = nrClosedTransactions - 1
+	totalTransactionSize = totalTransactionSize - float32(transaction.Size())
+	averageTxSize = totalTransactionSize/nrClosedTransactions
+}
+
+func DeleteBootstrapReceivedMempool() {
+	//Delete in-memory storage
+	for key := range txMemPool {
+		delete(bootstrapReceivedMemPool, key)
+	}
 }
 
 func DeleteAll() {
@@ -83,6 +117,14 @@ func DeleteAll() {
 	})
 	db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("closedblocks"))
+		b.ForEach(func(k, v []byte) error {
+			b.Delete(k)
+			return nil
+		})
+		return nil
+	})
+	db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("closedblockswithouttx"))
 		b.ForEach(func(k, v []byte) error {
 			b.Delete(k)
 			return nil

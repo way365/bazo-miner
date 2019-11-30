@@ -2,19 +2,43 @@ package p2p
 
 import (
 	"errors"
+	"time"
 )
 
 //Both block and tx requests are handled asymmetricaly, using channels as inter-communication
 //All the request in this file are specifically initiated by the miner package
-func BlockReq(hash [32]byte) error {
+//func BlockReq(hash [32]byte, hashWithoutTx [32]byte) error {
+func BlockReq(hash [32]byte, hashWithoutTx [32]byte) error {
 
-	p := peers.getRandomPeer(PEERTYPE_MINER)
-	if p == nil {
-		return errors.New("Couldn't get a connection, request not transmitted.")
+	logger.Printf("Request Block %x, %x from the network (%v Miners)", hash[0:8], hashWithoutTx[0:8], peers.len(PEERTYPE_MINER))
+
+	payload := hash[:]
+	payloadTEMP := hashWithoutTx[:]
+
+	payload = append(payload, payloadTEMP...)
+
+	if peers.len(PEERTYPE_MINER) == 0 {
+		wait := true
+		for wait {
+			time.Sleep(2*time.Second)
+			logger.Printf("Currently no other miners around... Waiting to request block...")
+			if peers.len(PEERTYPE_MINER) > 0 {
+				wait = false
+			}
+		}
 	}
 
-	packet := BuildPacket(BLOCK_REQ, hash[:])
-	sendData(p, packet)
+	// Block Request with a Broadcast request. This does rise the possibility of a valid answer.
+	for _, p := range peers.getAllPeers(PEERTYPE_MINER) {
+		//Write to the channel, which the peerBroadcast(*peer) running in a seperate goroutine consumes right away.
+
+		if p == nil {
+			return errors.New("Couldn't get a connection, request not transmitted.")
+		}
+		packet := BuildPacket(BLOCK_REQ, payload)
+		sendData(p, packet)
+	}
+
 	return nil
 }
 
@@ -33,12 +57,48 @@ func LastBlockReq() error {
 //Request specific transaction
 func TxReq(hash [32]byte, reqType uint8) error {
 
-	p := peers.getRandomPeer(PEERTYPE_MINER)
-	if p == nil {
-		return errors.New("Couldn't get a connection, request not transmitted.")
+	// Tx Request also as brodcast so that the possibility of an answer is higher.
+	for _, p := range peers.getAllPeers(PEERTYPE_MINER) {
+		//Write to the channel, which the peerBroadcast(*peer) running in a seperate goroutine consumes right away.
+
+		if p == nil {
+			return errors.New("Couldn't get a connection, request not transmitted.")
+		}
+		packet := BuildPacket(reqType, hash[:])
+		sendData(p, packet)
 	}
 
-	packet := BuildPacket(reqType, hash[:])
-	sendData(p, packet)
 	return nil
+}
+
+//Request specific transaction
+func TxWithTxCntReq(payload []byte, reqType uint8) error {
+
+	// Tx Request also as brodcast so that the possibility of an answer is higher.
+	for _, p := range peers.getAllPeers(PEERTYPE_MINER) {
+		//Write to the channel, which the peerBroadcast(*peer) running in a seperate goroutine consumes right away.
+
+		if p == nil {
+			return errors.New("Couldn't get a connection, request not transmitted.")
+		}
+
+		packet := BuildPacket(reqType, payload)
+		sendData(p, packet)
+	}
+
+	return nil
+}
+
+func PrintMinerConns() {
+	minerConnections := peers.getAllPeers(PEERTYPE_MINER)
+	logger.Printf("  ____________")
+	logger.Printf(" | Neighbors: |__________________")
+	if len(minerConnections) > 0 {
+		for _, p := range minerConnections {
+			logger.Printf(" |-- Miner: %v", p.getIPPort())
+		}
+	} else {
+		logger.Printf("|   No Neighbors                |", )
+	}
+	logger.Printf("|_______________________________|")
 }

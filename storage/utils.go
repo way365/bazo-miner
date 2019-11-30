@@ -4,12 +4,30 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bazo-blockchain/bazo-miner/protocol"
+	"io"
 	"log"
 	"os"
+	"time"
 )
 
 func InitLogger() *log.Logger {
-	return log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+
+	//Create a Log-file (Logger.Miner.log) and write all logger.printf(...) Statements into it.
+
+	//use this two lines, if all miners should have distinct names for their log files. 
+	time.Now().Format("030405")
+	filename := "LoggerMiner"+time.Now().Format("150405")+".log"
+
+	//use this line when all miners should have the same log file name.
+	//filename := "LoggerMiner.log"
+	LogFile, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+
+	wrt := io.MultiWriter(os.Stdout, LogFile)
+	log.SetOutput(wrt)
+	return log.New(wrt, "INFO: ", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 }
 
 //Needed by miner and p2p package

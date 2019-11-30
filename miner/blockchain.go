@@ -4,28 +4,30 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"github.com/bazo-blockchain/bazo-miner/crypto"
-	"log"
-	"sync"
-
+	"github.com/bazo-blockchain/bazo-miner/p2p"
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
+	"log"
+	"sync"
+	"time"
 )
 
 var (
-	logger              			*log.Logger
-	blockValidation     			= &sync.Mutex{}
-	parameterSlice      			[]Parameters
-	activeParameters    			*Parameters
-	uptodate            			bool
-	slashingDict        			= make(map[[32]byte]SlashingProof)
-	validatorAccAddress 			[64]byte
-	multisigPubKey      			*ecdsa.PublicKey
-	commPrivKey, rootCommPrivKey	*rsa.PrivateKey
+	logger                       *log.Logger
+	blockValidation              = &sync.Mutex{}
+	parameterSlice               []Parameters
+	activeParameters             *Parameters
+	uptodate                     bool
+	slashingDict                 = make(map[[32]byte]SlashingProof)
+	validatorAccAddress          [64]byte
+	multisigPubKey               *ecdsa.PublicKey
+	commPrivKey, rootCommPrivKey *rsa.PrivateKey
 )
 
 //Miner entry point
 func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validatorCommitment, rootCommitment *rsa.PrivateKey) {
 	var err error
+
 
 	validatorAccAddress = crypto.GetAddressFromPubKey(validatorWallet)
 	multisigPubKey = multisigWallet
@@ -34,7 +36,27 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 
 	//Set up logger.
 	logger = storage.InitLogger()
+	logger.Printf("\n\n\n" +
+		"BBBBBBBBBBBBBBBBB               AAA               ZZZZZZZZZZZZZZZZZZZ     OOOOOOOOO\n" +
+		"B::::::::::::::::B             A:::A              Z:::::::::::::::::Z   OO:::::::::OO\n" +
+		"B::::::BBBBBB:::::B           A:::::A             Z:::::::::::::::::Z OO:::::::::::::OO\n" +
+		"BB:::::B     B:::::B         A:::::::A            Z:::ZZZZZZZZ:::::Z O:::::::OOO:::::::O\n" +
+		"  B::::B     B:::::B        A:::::::::A           ZZZZZ     Z:::::Z  O::::::O   O::::::O\n" +
+		"  B::::B     B:::::B       A:::::A:::::A                  Z:::::Z    O:::::O     O:::::O\n" +
+		"  B::::BBBBBB:::::B       A:::::A A:::::A                Z:::::Z     O:::::O     O:::::O\n" +
+		"  B:::::::::::::BB       A:::::A   A:::::A              Z:::::Z      O:::::O     O:::::O\n" +
+		"  B::::BBBBBB:::::B     A:::::A     A:::::A            Z:::::Z       O:::::O     O:::::O\n" +
+		"  B::::B     B:::::B   A:::::AAAAAAAAA:::::A          Z:::::Z        O:::::O     O:::::O\n" +
+		"  B::::B     B:::::B  A:::::::::::::::::::::A        Z:::::Z         O:::::O     O:::::O\n" +
+		"  B::::B     B:::::B A:::::AAAAAAAAAAAAA:::::A    ZZZ:::::Z     ZZZZZO::::::O   O::::::O\n" +
+		"BB:::::BBBBBB::::::BA:::::A             A:::::A   Z::::::ZZZZZZZZ:::ZO:::::::OOO:::::::O\n" +
+		"B:::::::::::::::::BA:::::A               A:::::A  Z:::::::::::::::::Z OO:::::::::::::OO\n" +
+		"B::::::::::::::::BA:::::A                 A:::::A Z:::::::::::::::::Z   OO:::::::::OO\n" +
+		"BBBBBBBBBBBBBBBBBAAAAAAA                   AAAAAAAZZZZZZZZZZZZZZZZZZZ     OOOOOOOOO\n\n\n")
 
+	logger.Printf("\n\n\n-------------------- START MINER ---------------------")
+	logger.Printf("This Miners IP-Address: %v\n\n", p2p.Ipport)
+	time.Sleep(2*time.Second)
 	parameterSlice = append(parameterSlice, NewDefaultParameters())
 	activeParameters = &parameterSlice[0]
 
@@ -45,7 +67,7 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 	}
 
 	currentTargetTime = new(timerange)
-	target = append(target, 15)
+	target = append(target, 13)
 
 	initialBlock, err := initState()
 	if err != nil {
@@ -53,7 +75,16 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 		return
 	}
 
-	logger.Printf("Active config params:%v", activeParameters)
+	logger.Printf("ActiveConfigParams: \n%v\n------------------------------------------------------------------------\n\nBAZO is Running\n\n", activeParameters)
+
+	//this is used to generate the state with aggregated transactions.
+	for _, tx := range storage.ReadAllBootstrapReceivedTransactions() {
+		if tx != nil {
+			storage.DeleteOpenTx(tx)
+			storage.WriteClosedTx(tx)
+		}
+	}
+	storage.DeleteBootstrapReceivedMempool()
 
 	//Start to listen to network inputs (txs and blocks).
 	go incomingData()
@@ -62,7 +93,7 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 
 //Mining is a constant process, trying to come up with a successful PoW.
 func mining(initialBlock *protocol.Block) {
-	currentBlock := newBlock(initialBlock.Hash, [crypto.COMM_PROOF_LENGTH]byte{}, initialBlock.Height+1)
+	currentBlock := newBlock(initialBlock.Hash, initialBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, initialBlock.Height+1)
 
 	for {
 		err := finalizeBlock(currentBlock)
@@ -73,23 +104,34 @@ func mining(initialBlock *protocol.Block) {
 		}
 
 		if err == nil {
-			broadcastBlock(currentBlock)
 			err := validate(currentBlock, false)
 			if err == nil {
-				logger.Printf("Validated block: %vState:\n%v", currentBlock, getState())
+				//Only broadcast the block if it is valid.
+				go broadcastBlock(currentBlock)
+				logger.Printf("Validated block (mined): %vState:\n%v", currentBlock, getState())
 			} else {
-				logger.Printf("Received block (%x) could not be validated: %v\n", currentBlock.Hash[0:8], err)
+				logger.Printf("Mined block (%x) could not be validated: %v\n", currentBlock.Hash[0:8], err)
 			}
 		}
+
+		//Prints miner connections
+		p2p.EmptyingiplistChan()
+		p2p.PrintMinerConns()
+
+
 
 		//This is the same mutex that is claimed at the beginning of a block validation. The reason we do this is
 		//that before start mining a new block we empty the mempool which contains tx data that is likely to be
 		//validated with block validation, so we wait in order to not work on tx data that is already validated
 		//when we finish the block.
+		logger.Printf("\n\n __________________________________________________ New Mining Round __________________________________________________")
 		blockValidation.Lock()
-		nextBlock := newBlock(lastBlock.Hash, [crypto.COMM_PROOF_LENGTH]byte{}, lastBlock.Height+1)
+		logger.Printf("Create Next Block")
+		nextBlock := newBlock(lastBlock.Hash, lastBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, lastBlock.Height+1)
 		currentBlock = nextBlock
+		logger.Printf("Prepare Next Block")
 		prepareBlock(currentBlock)
+		logger.Printf("Prepare Next Block --> Done")
 		blockValidation.Unlock()
 	}
 }

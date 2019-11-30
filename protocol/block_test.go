@@ -18,11 +18,11 @@ func TestBlockCreation(t *testing.T) {
 	createdBlock := NewBlock(prevHash, height)
 
 	if !reflect.DeepEqual(createdBlock.PrevHash, prevHash) {
-		t.Errorf("Previous hash does not match the given one: %x vs. %x", createdBlock.PrevHash, prevHash);
+		t.Errorf("Previous hash does not match the given one: %x vs. %x", createdBlock.PrevHash, prevHash)
 	}
 
 	if !reflect.DeepEqual(createdBlock.Height, height) {
-		t.Errorf("Height does not match the given one: %x vs. %x", createdBlock.Height, height);
+		t.Errorf("Height does not match the given one: %x vs. %x", createdBlock.Height, height)
 	}
 }
 

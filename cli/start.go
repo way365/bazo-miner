@@ -188,7 +188,7 @@ func (args startArgs) String() string {
 			"- Multisig File:\t\t %v\n" +
 			"- Commitment File:\t\t %v\n" +
 			"- Root Wallet File:\t\t %v\n" +
-			"- Root Commitment File:\t %v\n",
+			"- Root Commitment File:\t\t %v\n",
 		args.dbname,
 		args.myNodeAddress,
 		args.bootstrapNodeAddress,

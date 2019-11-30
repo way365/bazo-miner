@@ -5,13 +5,14 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/bazo-blockchain/bazo-miner/crypto"
+	"sync"
 	"time"
 
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
 	"golang.org/x/crypto/sha3"
 )
-
+var validateMutex = sync.Mutex{}
 //Tests whether the first diff bits are zero
 func validateProofOfStake(diff uint8,
 	prevProofs [][crypto.COMM_PROOF_LENGTH]byte,
@@ -19,6 +20,9 @@ func validateProofOfStake(diff uint8,
 	balance uint64,
 	commitmentProof [crypto.COMM_PROOF_LENGTH]byte,
 	timestamp int64) bool {
+
+	validateMutex.Lock()
+	defer validateMutex.Unlock()
 
 	var (
 		heightBuf    [4]byte
@@ -114,11 +118,29 @@ func proofOfStake(diff uint8,
 	timestampBufIndexStart := index
 	timestampBufIndexEnd := index + 8
 
+	cnt := 0
 	for range time.Tick(time.Second) {
 		// lastBlock is a global variable which points to the last block. This check makes sure we abort if another
 		// block has been validated
+		cnt = cnt + 1
+		logger.Printf("Try Block with Time: %v and cnt: %v", time.Now().Format("030405"), cnt)
+
+		//If 30 blocks should have been received, break
+		if cnt >= 30 * BLOCK_INTERVAL {
+			logger.Printf("Mined %v sec and no block validated...? --> Strange... ", 30*BLOCK_INTERVAL)
+			return -1, errors.New("Abort mining, Mined too long")
+		}
+
+		if lastBlock == nil {
+			lastBlock = storage.ReadLastClosedBlock()
+		}
+		if lastBlock == nil {
+			return -1, errors.New("Abort mining, No Last Block Found")
+		}
 		if prevHash != lastBlock.Hash {
-			return -1, errors.New("Abort mining, another block has been successfully validated in the meantime")
+			//Error code -2 initiates that probably a aggTx Should be deleted from open storage.
+			logger.Printf("Abort mining, another block has been successfully validated in the meantime --> LastBlock: %x", lastBlock.Hash[0:8])
+			return -2, errors.New("Abort mining, another block has been successfully validated in the meantime:")
 		}
 
 		abort = false
@@ -142,7 +164,6 @@ func proofOfStake(diff uint8,
 
 		copy(pos[0:32], buf.Bytes())
 
-		//TODO @simibac What do you do here?
 		//Byte check
 		for byteNr = 0; byteNr < (uint8)(diff/8); byteNr++ {
 			if pos[byteNr] != 0 {
@@ -162,14 +183,24 @@ func proofOfStake(diff uint8,
 		break
 	}
 
+	cnt = 0
 	return timestamp, nil
 }
 
 func GetLatestProofs(n int, block *protocol.Block) (prevProofs [][crypto.COMM_PROOF_LENGTH]byte) {
+
 	for block.Height > 0 && n > 0 {
-		block = storage.ReadClosedBlock(block.PrevHash)
-		prevProofs = append(prevProofs, block.CommitmentProof)
+		//try to read block from 'closedblocks' and 'closedblockswithouttx' bucket.
+		closedBlock := storage.ReadClosedBlock(block.PrevHash)
+		if closedBlock == nil {
+			closedBlock = storage.ReadClosedBlockWithoutTx(block.PrevHashWithoutTx)
+		}
+		if closedBlock == nil {
+			return
+		}
+		prevProofs = append(prevProofs, closedBlock.CommitmentProof)
 		n -= 1
+		block = closedBlock
 	}
 	return prevProofs
 }

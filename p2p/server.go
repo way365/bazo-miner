@@ -8,6 +8,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,11 +18,13 @@ var (
 	Ipport string
 	peers  peersStruct
 
-	iplistChan      = make(chan string, MIN_MINERS)
-	minerBrdcstMsg  = make(chan []byte)
+	iplistChan      = make(chan string, MIN_MINERS * MIN_MINERS)
+	minerBrdcstMsg  = make(chan []byte, 1000)
 	clientBrdcstMsg = make(chan []byte)
-	register        = make(chan *peer)
+	register        = make(chan *peer, MIN_MINERS)
 	disconnect      = make(chan *peer)
+	lastpeerMutex	= &sync.Mutex{}
+	lastTriedPeer string
 )
 
 //Entry point for p2p package
@@ -34,13 +37,15 @@ func Init(ipport string) {
 	peers.clientConns = make(map[*peer]bool)
 
 	//Start all services that are running concurrently
-	go broadcastService()
+	go peerService()
+	go minerBroadcastService()
+	go clientBroadcastService()
 	go checkHealthService()
 	go timeService()
 	go forwardBlockBrdcstToMiner()
 	go forwardBlockHeaderBrdcstToMiner()
 	go forwardVerifiedTxsToMiner()
-	go peerService()
+	go forwardVerifiedTxsBrdcstToMiner()
 
 	if !IsBootstrap() {
 		bootstrap()
@@ -84,11 +89,13 @@ func initiateNewMinerConnection(dial string) (*peer, error) {
 	//Extracts the port from our localConn variable (which is in the form IP:Port)
 	localPort, err := strconv.Atoi(strings.Split(Ipport, ":")[1])
 	if err != nil {
+		conn.Close()
 		return nil, errors.New(fmt.Sprintf("Parsing port failed: %v\n", err))
 	}
 
 	packet, err := PrepareHandshake(MINER_PING, localPort)
 	if err != nil {
+		conn.Close()
 		return nil, err
 	}
 
@@ -97,6 +104,7 @@ func initiateNewMinerConnection(dial string) (*peer, error) {
 	//Wait for the other party to finish the handshake with the corresponding message
 	header, _, err := RcvData(p)
 	if err != nil || header.TypeID != MINER_PONG {
+		conn.Close()
 		return nil, errors.New(fmt.Sprintf("Failed to complete miner handshake: %v", err))
 	}
 
@@ -123,14 +131,13 @@ func listener(ipport string) {
 
 	for {
 		conn, err := listener.Accept()
+		if err != nil {
+			//logger.Printf("%v\n", err)
+			continue
+		}
 
 		conn.(*net.TCPConn).SetKeepAlive(true)
 		conn.(*net.TCPConn).SetKeepAlivePeriod(1 * time.Minute)
-
-		if err != nil {
-			logger.Printf("%v\n", err)
-			continue
-		}
 
 		p := newPeer(conn, "", 0)
 		go handleNewConn(p)
@@ -138,7 +145,7 @@ func listener(ipport string) {
 }
 
 func handleNewConn(p *peer) {
-	logger.Printf("New incoming connection: %v\n", p.conn.RemoteAddr().String())
+	//logger.Printf("New incoming connection: %v\n", p.conn.RemoteAddr().String())
 
 	header, payload, err := RcvData(p)
 	if err != nil {
@@ -152,12 +159,13 @@ func handleNewConn(p *peer) {
 func peerConn(p *peer) {
 	if p.peerType == PEERTYPE_MINER {
 		logger.Printf("Adding a new miner: %v\n", p.getIPPort())
+		neighborBrdcst()
 	} else if p.peerType == PEERTYPE_CLIENT {
-		logger.Printf("Adding a new client: %v\n", p.getIPPort())
+		//logger.Printf("Adding a new client: %v\n", p.getIPPort())
 	}
 
 	//Give the peer a channel
-	p.ch = make(chan []byte)
+	p.ch = make(chan []byte, 100)
 
 	//Register withe the broadcast service and start the additional writer
 	register <- p
@@ -168,15 +176,33 @@ func peerConn(p *peer) {
 		if err != nil {
 			if p.peerType == PEERTYPE_MINER {
 				logger.Printf("Miner disconnected: %v\n", err)
+				disconnect <- p
+				time.Sleep(time.Second)
+				lastpeerMutex.Lock()
+				if getLastTriedPeer() != p.getIPPort() {
+					logger.Printf("Try To Reconnect to %v", p.getIPPort())
+					iplistChan <- p.getIPPort()
+					setLastTriedPeer(p.getIPPort())
+				}
+				lastpeerMutex.Unlock()
+				return
 			} else if p.peerType == PEERTYPE_CLIENT {
-				logger.Printf("Client disconnected: %v\n", err)
+				//logger.Printf("Client disconnected: %v\n", err)
+				disconnect <- p
 			}
 
-			//In case of a comm fail, disconnect cleanly from the broadcast service
-			disconnect <- p
 			return
 		}
 
 		go processIncomingMsg(p, header, payload)
+
 	}
+}
+
+func setLastTriedPeer(ipPort string) () {
+	lastTriedPeer = ipPort
+}
+
+func getLastTriedPeer() (string) {
+	return lastTriedPeer
 }

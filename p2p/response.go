@@ -7,30 +7,51 @@ import (
 	"github.com/bazo-blockchain/bazo-miner/storage"
 	"strconv"
 	"strings"
+	"sync"
 )
+
+var(
+	lastNotFoundTxWithHash = [32]byte{}
+	notFoundTxMutex = &sync.Mutex{}
+	)
 
 //This file responds to incoming requests from miners in a synchronous fashion
 func txRes(p *peer, payload []byte, txKind uint8) {
 	var txHash [32]byte
+	if len(payload) != 32 {
+		return
+	}
 	copy(txHash[:], payload[0:32])
 
 	var tx protocol.Transaction
 	//Check closed and open storage if the tx is available
 	openTx := storage.ReadOpenTx(txHash)
 	closedTx := storage.ReadClosedTx(txHash)
+	invalidTx := storage.ReadINVALIDOpenTx(txHash)
 
 	if openTx != nil {
 		tx = openTx
-	} else if closedTx != nil {
+	}
+	if closedTx != nil {
 		tx = closedTx
+	}
+	if invalidTx != nil {
+		tx = invalidTx
 	}
 
 	//In case it was not found, send a corresponding message back
+	notFoundTxMutex.Lock()
 	if tx == nil {
 		packet := BuildPacket(NOT_FOUND, nil)
 		sendData(p, packet)
+		if lastNotFoundTxWithHash != txHash {
+			lastNotFoundTxWithHash = txHash
+			//TxReq(txHash, NOT_FOUND_TX_REQ)
+		}
+		notFoundTxMutex.Unlock()
 		return
 	}
+	notFoundTxMutex.Unlock()
 
 	var packet []byte
 	switch txKind {
@@ -42,9 +63,120 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 		packet = BuildPacket(CONFIGTX_RES, tx.Encode())
 	case STAKETX_REQ:
 		packet = BuildPacket(STAKETX_RES, tx.Encode())
+	case AGGTX_REQ:
+		packet = BuildPacket(AGGTX_RES, tx.Encode())
+	case UNKNOWNTX_REQ:
+		switch tx.(type) {
+		case *protocol.FundsTx:
+			packet = BuildPacket(FUNDSTX_RES, tx.Encode())
+		case *protocol.AggTx:
+			packet = BuildPacket(AGGTX_RES, tx.Encode())
+		}
+	}
+	sendData(p, packet)
+}
+
+
+func notFoundTxRes(payload []byte) {
+	var txHash [32]byte
+	if len(payload) != 32 {
+		return
+	}
+	copy(txHash[:], payload[0:32])
+
+	var tx protocol.Transaction
+	//Check closed and open storage if the tx is available
+	openTx := storage.ReadOpenTx(txHash)
+	closedTx := storage.ReadClosedTx(txHash)
+	invalidTx := storage.ReadINVALIDOpenTx(txHash)
+
+	if openTx != nil {
+		tx = openTx
+	}
+	if closedTx != nil {
+		tx = closedTx
+	}//
+	if invalidTx != nil {
+		tx = invalidTx
 	}
 
-	sendData(p, packet)
+	//In case it was not found, send a corresponding message back
+	notFoundTxMutex.Lock()
+	if tx == nil {
+		if lastNotFoundTxWithHash != txHash {
+			lastNotFoundTxWithHash = txHash
+			//TxReq(txHash, NOT_FOUND_TX_REQ)
+		}
+		notFoundTxMutex.Unlock()
+		return
+	}
+	notFoundTxMutex.Unlock()
+
+	var packet []byte
+	switch tx.(type) {
+	case *protocol.FundsTx:
+		packet = BuildPacket(FUNDSTX_BRDCST, tx.Encode())
+	case *protocol.AccTx:
+		packet = BuildPacket(ACCTX_BRDCST, tx.Encode())
+	case *protocol.ConfigTx:
+		packet = BuildPacket(CONFIGTX_BRDCST, tx.Encode())
+	case *protocol.StakeTx:
+		packet = BuildPacket(STAKETX_BRDCST, tx.Encode())
+	case *protocol.AggTx:
+		packet = BuildPacket(AGGTX_BRDCST, tx.Encode())
+	}
+
+	minerBrdcstMsg <- packet
+}
+
+func specialTxRes(p *peer, payload []byte, txKind uint8) {
+	//Search Transaction based on the txcnt and sender address.
+
+	var senderHash [32]byte
+	var searchedTransaction protocol.Transaction
+
+	if len(payload) != 42 {
+		return
+	}
+
+	txcnt := binary.BigEndian.Uint32(payload[1:9])
+	copy(senderHash[:], payload[10:42])
+
+	for _, txhash := range storage.ReadTxcntToTx(txcnt) {
+		tx := storage.ReadOpenTx(txhash)
+		if tx != nil {
+			if tx.Sender() == senderHash {
+				searchedTransaction = tx
+				break
+			}
+		} else {
+			tx = storage.ReadINVALIDOpenTx(txhash)
+			if tx != nil {
+				if tx.Sender() == senderHash {
+					searchedTransaction = tx
+					break
+				}
+			} else {
+				tx = storage.ReadClosedTx(txhash)
+				if tx != nil {
+					if tx.Sender() == senderHash {
+						searchedTransaction = tx
+						break
+					}
+				}
+			}
+		}
+	}
+
+	if searchedTransaction != nil {
+		packet := BuildPacket(FUNDSTX_RES, searchedTransaction.Encode())
+		sendData(p, packet)
+		packet = BuildPacket(FUNDSTX_BRDCST, searchedTransaction.Encode())
+		minerBrdcstMsg <- packet
+	} else {
+		packet := BuildPacket(NOT_FOUND, nil)
+		sendData(p, packet)
+	}
 }
 
 //Here as well, checking open and closed block storage
@@ -52,14 +184,19 @@ func blockRes(p *peer, payload []byte) {
 	var packet []byte
 	var block *protocol.Block
 	var blockHash [32]byte
+	var blockHashWithoutTx [32]byte
 
 	//If no specific block is requested, send latest
-	if len(payload) > 0 {
+	if len(payload) > 0 && len(payload) == 64  {
 		copy(blockHash[:], payload[:32])
+		copy(blockHashWithoutTx[:], payload[32:])
+
 		if block = storage.ReadClosedBlock(blockHash); block == nil {
-			block = storage.ReadOpenBlock(blockHash)
+			if block = storage.ReadClosedBlockWithoutTx(blockHashWithoutTx); block == nil {
+				block = storage.ReadOpenBlock(blockHash)
+			}
 		}
-	} else {
+	} else if len(payload) == 0 {
 		block = storage.ReadLastClosedBlock()
 	}
 
@@ -78,6 +215,9 @@ func blockHeaderRes(p *peer, payload []byte) {
 
 	//If no specific header is requested, send latest
 	if len(payload) > 0 {
+		if len(payload) != 32 {
+			return
+		}
 		var blockHash [32]byte
 		copy(blockHash[:], payload[:32])
 		if block := storage.ReadClosedBlock(blockHash); block != nil {
@@ -104,6 +244,9 @@ func blockHeaderRes(p *peer, payload []byte) {
 func accRes(p *peer, payload []byte) {
 	var packet []byte
 	var hash [32]byte
+	if len(payload) != 32 {
+		return
+	}
 	copy(hash[:], payload[0:32])
 
 	acc, _ := storage.GetAccount(hash)
@@ -115,6 +258,9 @@ func accRes(p *peer, payload []byte) {
 func rootAccRes(p *peer, payload []byte) {
 	var packet []byte
 	var hash [32]byte
+	if len(payload) != 32 {
+		return
+	}
 	copy(hash[:], payload[0:32])
 
 	acc, _ := storage.GetRootAccount(hash)
@@ -217,7 +363,9 @@ func intermediateNodesRes(p *peer, payload []byte) {
 	var blockHash, txHash [32]byte
 	var nodeHashes [][]byte
 	var packet []byte
-
+	if len(payload) != 64 {
+		return
+	}
 	copy(blockHash[:], payload[:32])
 	copy(txHash[:], payload[32:64])
 

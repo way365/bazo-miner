@@ -13,6 +13,8 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 		processTxBrdcst(p, payload, CONFIGTX_BRDCST)
 	case STAKETX_BRDCST:
 		processTxBrdcst(p, payload, STAKETX_BRDCST)
+	case AGGTX_BRDCST:
+		processTxBrdcst(p, payload, AGGTX_BRDCST)
 	case BLOCK_BRDCST:
 		forwardBlockToMiner(p, payload)
 	case TIME_BRDCST:
@@ -27,6 +29,16 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 		txRes(p, payload, CONFIGTX_REQ)
 	case STAKETX_REQ:
 		txRes(p, payload, STAKETX_REQ)
+	case AGGTX_REQ:
+		txRes(p, payload, AGGTX_REQ)
+	case UNKNOWNTX_REQ:
+		txRes(p, payload, UNKNOWNTX_REQ)
+	case SPECIALTX_REQ:
+		specialTxRes(p, payload, SPECIALTX_REQ)
+	case NOT_FOUND_TX_REQ:
+		if !peerSelfConn(p.getIPPort()) {
+			notFoundTxRes(payload)
+		}
 	case BLOCK_REQ:
 		blockRes(p, payload)
 	case BLOCK_HEADER_REQ:
@@ -46,7 +58,9 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 
 		//RESPONSES
 	case NEIGHBOR_RES:
-		processNeighborRes(p, payload)
+		if !peerSelfConn(p.getIPPort()){
+			processNeighborRes(p, payload)
+		}
 	case BLOCK_RES:
 		forwardBlockReqToMiner(p, payload)
 	case FUNDSTX_RES:
@@ -57,5 +71,8 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 		forwardTxReqToMiner(p, payload, CONFIGTX_RES)
 	case STAKETX_RES:
 		forwardTxReqToMiner(p, payload, STAKETX_RES)
+	case AGGTX_RES:
+		forwardTxReqToMiner(p, payload, AGGTX_RES)
 	}
+
 }

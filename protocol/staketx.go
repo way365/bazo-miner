@@ -128,6 +128,8 @@ func (*StakeTx) Decode(encodedTx []byte) (tx *StakeTx) {
 
 func (tx *StakeTx) TxFee() uint64 { return tx.Fee }
 func (tx *StakeTx) Size() uint64  { return STAKETX_SIZE }
+func (tx *StakeTx) Sender() [32]byte { return [32]byte{} } //return empty because it is not needed.
+func (tx *StakeTx) Receiver() [32]byte { return [32]byte{}}
 
 func (tx StakeTx) String() string {
 	return fmt.Sprintf(

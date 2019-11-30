@@ -2,14 +2,21 @@ package miner
 
 import (
 	"errors"
+	"github.com/bazo-blockchain/bazo-miner/p2p"
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
+	"sync"
+	"time"
 )
 
 type SlashingProof struct {
 	ConflictingBlockHash1 [32]byte
 	ConflictingBlockHash2 [32]byte
+	ConflictingBlockHashWithoutTx1 [32]byte
+	ConflictingBlockHashWithoutTx2 [32]byte
 }
+
+var SameChainMutex = sync.Mutex{}
 
 //Find a proof where a validator votes on two different chains within the slashing window
 func seekSlashingProof(block *protocol.Block) error {
@@ -24,7 +31,6 @@ func seekSlashingProof(block *protocol.Block) error {
 		return nil
 	} else {
 		//Get the latest blocks and check if there is proof for multi-voting within the slashing window
-		//TODO @simibac Why loading all closed blocks if we check over the slashing window?
 		prevBlocks := storage.ReadAllClosedBlocks()
 
 		if prevBlocks == nil {
@@ -37,7 +43,7 @@ func seekSlashingProof(block *protocol.Block) error {
 			if prevBlock.Beneficiary == block.Beneficiary &&
 				(uint64(prevBlock.Height) < uint64(block.Height)+activeParameters.Slashing_window_size ||
 					uint64(block.Height) < uint64(prevBlock.Height)+activeParameters.Slashing_window_size) {
-				slashingDict[block.Beneficiary] = SlashingProof{ConflictingBlockHash1: block.Hash, ConflictingBlockHash2: prevBlock.Hash}
+				slashingDict[block.Beneficiary] = SlashingProof{ConflictingBlockHash1: block.Hash, ConflictingBlockHash2: prevBlock.Hash, ConflictingBlockHashWithoutTx1: block.HashWithoutTx, ConflictingBlockHashWithoutTx2: block.PrevHashWithoutTx}
 			}
 		}
 	}
@@ -46,8 +52,10 @@ func seekSlashingProof(block *protocol.Block) error {
 
 //Check if two blocks are part of the same chain or if they appear in two competing chains
 func IsInSameChain(b1, b2 *protocol.Block) bool {
-	var higherBlock *protocol.Block
-	var lowerBlock *protocol.Block
+
+	SameChainMutex.Lock()
+	defer SameChainMutex.Unlock()
+	var higherBlock, lowerBlock  *protocol.Block
 
 	if b1.Height == b2.Height {
 		return false
@@ -62,9 +70,40 @@ func IsInSameChain(b1, b2 *protocol.Block) bool {
 	}
 
 	for higherBlock.Height > 0 {
-		higherBlock = storage.ReadClosedBlock(higherBlock.PrevHash)
-		if higherBlock.Hash == lowerBlock.Hash {
-			return true
+		newHigherBlock := storage.ReadClosedBlock(higherBlock.PrevHash)
+		//Check blocks without transactions
+		if newHigherBlock == nil {
+			newHigherBlock = storage.ReadClosedBlockWithoutTx(higherBlock.PrevHashWithoutTx)
+		}
+		if newHigherBlock == nil {
+			p2p.BlockReq(higherBlock.PrevHash, higherBlock.PrevHashWithoutTx)
+
+			//Blocking wait
+			select {
+			case encodedBlock := <-p2p.BlockReqChan:
+				newHigherBlock = newHigherBlock.Decode(encodedBlock)
+				storage.WriteToReceivedStash(newHigherBlock)
+				//Limit waiting time to BLOCKFETCH_TIMEOUT seconds before aborting.
+			case <-time.After(BLOCKFETCH_TIMEOUT * time.Second):
+				if p2p.BlockAlreadyReceived(storage.ReadReceivedBlockStash(), higherBlock.PrevHash) {
+					for _, block := range storage.ReadReceivedBlockStash() {
+						if block.Hash == higherBlock.PrevHash {
+							newHigherBlock = block
+							break
+						}
+					}
+					logger.Printf("Block %x received Before", higherBlock.PrevHash)
+					break
+				}
+				logger.Printf("Higher Block %x, %x  is nil --> Break", higherBlock.PrevHash, higherBlock.PrevHashWithoutTx)
+				break
+			}
+		}
+		if higherBlock != nil {
+			higherBlock = newHigherBlock
+			if higherBlock.Hash == lowerBlock.Hash {
+				return true
+			}
 		}
 	}
 

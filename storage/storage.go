@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/bazo-blockchain/bazo-miner/protocol"
@@ -10,13 +11,28 @@ import (
 )
 
 var (
-	db                 *bolt.DB
-	logger             *log.Logger
-	State              = make(map[[32]byte]*protocol.Account)
-	RootKeys           = make(map[[32]byte]*protocol.Account)
-	txMemPool          = make(map[[32]byte]protocol.Transaction)
+	db                 				*bolt.DB
+	logger             				*log.Logger
+	State              				= make(map[[32]byte]*protocol.Account)
+	RootKeys           				= make(map[[32]byte]*protocol.Account)
+	txMemPool          				= make(map[[32]byte]protocol.Transaction)
+	txINVALIDMemPool   				= make(map[[32]byte]protocol.Transaction)
+	bootstrapReceivedMemPool		= make(map[[32]byte]protocol.Transaction)
+	DifferentSenders   				= make(map[[32]byte]uint32)
+	DifferentReceivers				= make(map[[32]byte]uint32)
+	FundsTxBeforeAggregation		= make([]*protocol.FundsTx, 0)
+	ReceivedBlockStash				= make([]*protocol.Block, 0)
+	TxcntToTxMap					= make(map[uint32][][32]byte)
 	AllClosedBlocksAsc []*protocol.Block
-	Bootstrap_Server   string
+	Bootstrap_Server string
+	averageTxSize float32 				= 0
+	totalTransactionSize float32 		= 0
+	nrClosedTransactions float32 		= 0
+	openTxMutex 						= &sync.Mutex{}
+	openINVALIDTxMutex 					= &sync.Mutex{}
+	openFundsTxBeforeAggregationMutex	= &sync.Mutex{}
+	txcntToTxMapMutex					= &sync.Mutex{}
+	ReceivedBlockStashMutex				= &sync.Mutex{}
 )
 
 const (
@@ -69,6 +85,13 @@ func Init(dbname string, bootstrapIpport string) {
 		return nil
 	})
 	db.Update(func(tx *bolt.Tx) error {
+		_, err = tx.CreateBucket([]byte("closedblockswithouttx"))
+		if err != nil {
+			return fmt.Errorf(ERROR_MSG+"Create bucket: %s", err)
+		}
+		return nil
+	})
+	db.Update(func(tx *bolt.Tx) error {
 		_, err = tx.CreateBucket([]byte("closedfunds"))
 		if err != nil {
 			return fmt.Errorf(ERROR_MSG+"Create bucket: %s", err)
@@ -84,6 +107,13 @@ func Init(dbname string, bootstrapIpport string) {
 	})
 	db.Update(func(tx *bolt.Tx) error {
 		_, err = tx.CreateBucket([]byte("closedstakes"))
+		if err != nil {
+			return fmt.Errorf(ERROR_MSG+"Create bucket: %s", err)
+		}
+		return nil
+	})
+	db.Update(func(tx *bolt.Tx) error {
+		_, err = tx.CreateBucket([]byte("closedaggregations"))
 		if err != nil {
 			return fmt.Errorf(ERROR_MSG+"Create bucket: %s", err)
 		}

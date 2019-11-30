@@ -5,13 +5,18 @@ import (
 	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/bazo-blockchain/bazo-miner/storage"
 	"strconv"
+	"sync"
+)
+
+var (
+	processTxBroadcastMutex = &sync.Mutex{}
 )
 
 //Process tx broadcasts from other miners. We can't broadcast incoming messages directly, first check if
 //the tx has already been broadcast before, whether it is a valid tx etc.
 func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
-	var tx protocol.Transaction
 
+	var tx protocol.Transaction
 	//Make sure the transaction can be properly decoded, verification is done at a later stage to reduce latency
 	switch brdcstType {
 	case FUNDSTX_BRDCST:
@@ -42,28 +47,43 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 			return
 		}
 		tx = sTx
+	case AGGTX_BRDCST:
+		var aTx *protocol.AggTx
+		aTx = aTx.Decode(payload)
+		if aTx == nil {
+			return
+		}
+		tx = aTx
 	}
 
 	//Response tx acknowledgment if the peer is a client
-	if !peers.minerConns[p] {
+	//if !peers.minerConns[p] {
+	if !peers.contains(p.getIPPort(), PEERTYPE_MINER) {
 		packet := BuildPacket(TX_BRDCST_ACK, nil)
 		sendData(p, packet)
 	}
 
 	if storage.ReadOpenTx(tx.Hash()) != nil {
-		logger.Printf("Received transaction (%x) already in the mempool.\n", tx.Hash())
+		//logger.Printf("Received transaction (%x) already in the mempool.\n", tx.Hash())
 		return
 	}
 	if storage.ReadClosedTx(tx.Hash()) != nil {
-		logger.Printf("Received transaction (%x) already validated.\n", tx.Hash())
+		//logger.Printf("Received transaction (%x) already validated.\n", tx.Hash())
 		return
 	}
 
+	if storage.ReadClosedTx(tx.Hash()) != nil {
+		//logger.Printf("Received transaction (%x) already validated.\n", tx.Hash())
+		return
+	}
+
+
+	//logger.Printf("Received Tx %x from %v", tx.Hash(), p.getIPPort())
 	//Write to mempool and rebroadcast
-	logger.Printf("Writing transaction (%x) in the mempool.\n", tx.Hash())
 	storage.WriteOpenTx(tx)
 	toBrdcst := BuildPacket(brdcstType, payload)
 	minerBrdcstMsg <- toBrdcst
+
 }
 
 func processTimeRes(p *peer, payload []byte) {
@@ -82,9 +102,11 @@ func processNeighborRes(p *peer, payload []byte) {
 	ipportList := _processNeighborRes(payload)
 
 	for _, ipportIter := range ipportList {
-		logger.Printf("IP/Port received: %v\n", ipportIter)
+		//logger.Printf("IP/Port received: %v\n", ipportIter)
 		//iplistChan is a buffered channel to handle ips asynchronously.
-		iplistChan <- ipportIter
+		if !peers.contains(ipportIter, PEERTYPE_MINER) && !peerSelfConn(ipportIter) && len(iplistChan) <= (MIN_MINERS * MIN_MINERS) {
+			iplistChan <- ipportIter
+		}
 	}
 }
 
@@ -110,4 +132,10 @@ func _processNeighborRes(payload []byte) (ipportList []string) {
 	}
 
 	return ipportList
+}
+
+func EmptyingiplistChan() {
+	for i := 0; i < len(iplistChan); i++ {
+		<- iplistChan
+	}
 }
