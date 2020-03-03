@@ -2,8 +2,8 @@ package p2p
 
 import (
 	"encoding/binary"
-	"github.com/bazo-blockchain/bazo-miner/protocol"
-	"github.com/bazo-blockchain/bazo-miner/storage"
+	"github.com/julwil/bazo-miner/protocol"
+	"github.com/julwil/bazo-miner/storage"
 	"strconv"
 	"sync"
 )
@@ -77,7 +77,6 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 		return
 	}
 
-
 	//logger.Printf("Received Tx %x from %v", tx.Hash(), p.getIPPort())
 	//Write to mempool and rebroadcast
 	storage.WriteOpenTx(tx)
@@ -104,7 +103,7 @@ func processNeighborRes(p *peer, payload []byte) {
 	for _, ipportIter := range ipportList {
 		//logger.Printf("IP/Port received: %v\n", ipportIter)
 		//iplistChan is a buffered channel to handle ips asynchronously.
-		if !peers.contains(ipportIter, PEERTYPE_MINER) && !peerSelfConn(ipportIter) && len(iplistChan) <= (MIN_MINERS * MIN_MINERS) {
+		if !peers.contains(ipportIter, PEERTYPE_MINER) && !peerSelfConn(ipportIter) && len(iplistChan) <= (MIN_MINERS*MIN_MINERS) {
 			iplistChan <- ipportIter
 		}
 	}
@@ -136,6 +135,6 @@ func _processNeighborRes(payload []byte) (ipportList []string) {
 
 func EmptyingiplistChan() {
 	for i := 0; i < len(iplistChan); i++ {
-		<- iplistChan
+		<-iplistChan
 	}
 }

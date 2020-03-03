@@ -2,14 +2,14 @@ package miner
 
 import (
 	"fmt"
-	"github.com/bazo-blockchain/bazo-miner/crypto"
+	"github.com/julwil/bazo-miner/crypto"
 	"math/rand"
 	"reflect"
 	"testing"
 
-	"github.com/bazo-blockchain/bazo-miner/protocol"
-	"github.com/bazo-blockchain/bazo-miner/storage"
-	"github.com/bazo-blockchain/bazo-miner/vm"
+	"github.com/julwil/bazo-miner/protocol"
+	"github.com/julwil/bazo-miner/storage"
+	"github.com/julwil/bazo-miner/vm"
 )
 
 // This test deploys a smart contract in the first block and calls the smart contract in the second block

@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/boltdb/bolt"
+	"github.com/julwil/bazo-miner/protocol"
 )
 
 //There exist open/closed buckets and closed tx buckets for all types (open txs are in volatile storage)
@@ -61,8 +61,7 @@ func DeleteINVALIDOpenTx(transaction protocol.Transaction) {
 	openINVALIDTxMutex.Unlock()
 }
 
-
-func DeleteAllFundsTxBeforeAggregation(){
+func DeleteAllFundsTxBeforeAggregation() {
 	FundsTxBeforeAggregation = nil
 }
 
@@ -80,7 +79,7 @@ func DeleteClosedTx(transaction protocol.Transaction) {
 	case *protocol.AggTx:
 		bucket = "closedaggregations"
 	}
-	
+
 	hash := transaction.Hash()
 	db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
@@ -90,7 +89,7 @@ func DeleteClosedTx(transaction protocol.Transaction) {
 
 	nrClosedTransactions = nrClosedTransactions - 1
 	totalTransactionSize = totalTransactionSize - float32(transaction.Size())
-	averageTxSize = totalTransactionSize/nrClosedTransactions
+	averageTxSize = totalTransactionSize / nrClosedTransactions
 }
 
 func DeleteBootstrapReceivedMempool() {

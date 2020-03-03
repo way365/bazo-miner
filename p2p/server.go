@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/bazo-blockchain/bazo-miner/storage"
+	"github.com/julwil/bazo-miner/storage"
 	"net"
 	"strconv"
 	"strings"
@@ -18,13 +18,13 @@ var (
 	Ipport string
 	peers  peersStruct
 
-	iplistChan      = make(chan string, MIN_MINERS * MIN_MINERS)
+	iplistChan      = make(chan string, MIN_MINERS*MIN_MINERS)
 	minerBrdcstMsg  = make(chan []byte, 1000)
 	clientBrdcstMsg = make(chan []byte)
 	register        = make(chan *peer, MIN_MINERS)
 	disconnect      = make(chan *peer)
-	lastpeerMutex	= &sync.Mutex{}
-	lastTriedPeer string
+	lastpeerMutex   = &sync.Mutex{}
+	lastTriedPeer   string
 )
 
 //Entry point for p2p package
@@ -199,10 +199,10 @@ func peerConn(p *peer) {
 	}
 }
 
-func setLastTriedPeer(ipPort string) () {
+func setLastTriedPeer(ipPort string) {
 	lastTriedPeer = ipPort
 }
 
-func getLastTriedPeer() (string) {
+func getLastTriedPeer() string {
 	return lastTriedPeer
 }

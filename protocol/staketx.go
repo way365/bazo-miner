@@ -6,7 +6,7 @@ import (
 	"crypto/rsa"
 	"encoding/binary"
 	"fmt"
-	"github.com/bazo-blockchain/bazo-miner/crypto"
+	"github.com/julwil/bazo-miner/crypto"
 )
 
 const (
@@ -16,11 +16,11 @@ const (
 //when we broadcast transactions we need a way to distinguish with a type
 
 type StakeTx struct {
-	Header        byte                  // 1 Byte
-	Fee           uint64                // 8 Byte
-	IsStaking     bool                  // 1 Byte
-	Account       [32]byte              // 32 Byte
-	Sig           [64]byte              // 64 Byte
+	Header        byte                         // 1 Byte
+	Fee           uint64                       // 8 Byte
+	IsStaking     bool                         // 1 Byte
+	Account       [32]byte                     // 32 Byte
+	Sig           [64]byte                     // 64 Byte
 	CommitmentKey [crypto.COMM_KEY_LENGTH]byte // the modulus N of the RSA public key
 }
 
@@ -55,11 +55,11 @@ func (tx *StakeTx) Hash() (hash [32]byte) {
 	}
 
 	txHash := struct {
-		Header     byte
-		Fee        uint64
-		IsStaking  bool
-		Account    [32]byte
-		CommKey    [crypto.COMM_KEY_LENGTH]byte
+		Header    byte
+		Fee       uint64
+		IsStaking bool
+		Account   [32]byte
+		CommKey   [crypto.COMM_KEY_LENGTH]byte
 	}{
 		tx.Header,
 		tx.Fee,
@@ -126,10 +126,10 @@ func (*StakeTx) Decode(encodedTx []byte) (tx *StakeTx) {
 	return tx
 }
 
-func (tx *StakeTx) TxFee() uint64 { return tx.Fee }
-func (tx *StakeTx) Size() uint64  { return STAKETX_SIZE }
-func (tx *StakeTx) Sender() [32]byte { return [32]byte{} } //return empty because it is not needed.
-func (tx *StakeTx) Receiver() [32]byte { return [32]byte{}}
+func (tx *StakeTx) TxFee() uint64      { return tx.Fee }
+func (tx *StakeTx) Size() uint64       { return STAKETX_SIZE }
+func (tx *StakeTx) Sender() [32]byte   { return [32]byte{} } //return empty because it is not needed.
+func (tx *StakeTx) Receiver() [32]byte { return [32]byte{} }
 
 func (tx StakeTx) String() string {
 	return fmt.Sprintf(

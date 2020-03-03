@@ -5,8 +5,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/bazo-blockchain/bazo-miner/protocol"
-	"github.com/bazo-blockchain/bazo-miner/storage"
+	"github.com/julwil/bazo-miner/protocol"
+	"github.com/julwil/bazo-miner/storage"
 	"net"
 	"strings"
 	"time"
@@ -59,7 +59,6 @@ func RcvData(p *peer) (header *Header, payload []byte, err error) {
 			return nil, nil, errors.New(fmt.Sprintf("Connection to %v aborted: %v", p.getIPPort(), err))
 		}
 	}
-
 
 	//logger.Printf("Receive message:\nSender: %v\nType: %v\nPayload length: %v\n", p.getIPPort(), LogMapping[header.TypeID], len(payload))
 
@@ -190,4 +189,3 @@ func IsBootstrap() bool {
 	}
 	return false
 }
-

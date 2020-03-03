@@ -2,16 +2,16 @@ package miner
 
 import (
 	"errors"
-	"github.com/bazo-blockchain/bazo-miner/p2p"
-	"github.com/bazo-blockchain/bazo-miner/protocol"
-	"github.com/bazo-blockchain/bazo-miner/storage"
+	"github.com/julwil/bazo-miner/p2p"
+	"github.com/julwil/bazo-miner/protocol"
+	"github.com/julwil/bazo-miner/storage"
 	"sync"
 	"time"
 )
 
 type SlashingProof struct {
-	ConflictingBlockHash1 [32]byte
-	ConflictingBlockHash2 [32]byte
+	ConflictingBlockHash1          [32]byte
+	ConflictingBlockHash2          [32]byte
 	ConflictingBlockHashWithoutTx1 [32]byte
 	ConflictingBlockHashWithoutTx2 [32]byte
 }
@@ -55,7 +55,7 @@ func IsInSameChain(b1, b2 *protocol.Block) bool {
 
 	SameChainMutex.Lock()
 	defer SameChainMutex.Unlock()
-	var higherBlock, lowerBlock  *protocol.Block
+	var higherBlock, lowerBlock *protocol.Block
 
 	if b1.Height == b2.Height {
 		return false

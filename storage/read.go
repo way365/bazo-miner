@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/boltdb/bolt"
+	"github.com/julwil/bazo-miner/protocol"
 	"sort"
 )
 
@@ -78,7 +78,7 @@ func ReadAllClosedBlocksWithTransactions() (allClosedBlocks []*protocol.Block) {
 	//This does return all blocks which are either in closedblocks or closedblockswithouttx bucket of the Database.
 	//They are not ordered at teh request, but this does actually not matter. Because it will be ordered below
 	block := ReadLastClosedBlock()
-	if  block != nil {
+	if block != nil {
 		db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket([]byte("closedblocks"))
 			b.ForEach(func(k, v []byte) error {
@@ -120,7 +120,7 @@ func ReadAllClosedFundsAndAggTransactions() (allClosedTransactions []protocol.Tr
 		b.ForEach(func(k, v []byte) error {
 			if v != nil {
 				encodedAggTx := v
-				if encodedAggTx != nil{
+				if encodedAggTx != nil {
 					allClosedTransactions = append(allClosedTransactions, aggTx.Decode(encodedAggTx))
 				}
 			}
@@ -138,7 +138,7 @@ func ReadAllClosedBlocks() (allClosedBlocks []*protocol.Block) {
 	//This does return all blocks which are either in closedblocks or closedblockswithouttx bucket of the Database.
 	//They are not ordered at teh request, but this does actually not matter. Because it will be ordered below
 	block := ReadLastClosedBlock()
-	if  block != nil {
+	if block != nil {
 		db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket([]byte("closedblocks"))
 			b.ForEach(func(k, v []byte) error {
@@ -173,12 +173,12 @@ func ReadAllClosedBlocks() (allClosedBlocks []*protocol.Block) {
 //The three functions and the type below are used to order the gathered closed blocks from below according to
 //their block height.
 type ByHeight []*protocol.Block
+
 func (a ByHeight) Len() int           { return len(a) }
 func (a ByHeight) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByHeight) Less(i, j int) bool { return a[i].Height < a[j].Height }
 
-
-func ReadReceivedBlockStash() (receivedBlocks []*protocol.Block){
+func ReadReceivedBlockStash() (receivedBlocks []*protocol.Block) {
 	return ReceivedBlockStash
 }
 
@@ -194,7 +194,7 @@ func ReadTxcntToTx(txCnt uint32) (transactions [][32]byte) {
 	return TxcntToTxMap[txCnt]
 }
 
-func ReadFundsTxBeforeAggregation() ([]*protocol.FundsTx) {
+func ReadFundsTxBeforeAggregation() []*protocol.FundsTx {
 	openFundsTxBeforeAggregationMutex.Lock()
 	defer openFundsTxBeforeAggregationMutex.Unlock()
 	return FundsTxBeforeAggregation

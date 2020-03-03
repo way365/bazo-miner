@@ -4,19 +4,19 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"github.com/bazo-blockchain/bazo-miner/crypto"
+	"github.com/julwil/bazo-miner/crypto"
 )
 
 type Account struct {
-	Address            [64]byte              // 64 Byte
-	Issuer             [32]byte              // 32 Byte
-	Balance            uint64                // 8 Byte
-	TxCnt              uint32                // 4 Byte
-	IsStaking          bool                  // 1 Byte
+	Address            [64]byte                     // 64 Byte
+	Issuer             [32]byte                     // 32 Byte
+	Balance            uint64                       // 8 Byte
+	TxCnt              uint32                       // 4 Byte
+	IsStaking          bool                         // 1 Byte
 	CommitmentKey      [crypto.COMM_KEY_LENGTH]byte // represents the modulus N of the RSA public key
-	StakingBlockHeight uint32                // 4 Byte
-	Contract           []byte                // Arbitrary length
-	ContractVariables  []ByteArray           // Arbitrary length
+	StakingBlockHeight uint32                       // 4 Byte
+	Contract           []byte                       // Arbitrary length
+	ContractVariables  []ByteArray                  // Arbitrary length
 }
 
 func NewAccount(address [64]byte,
@@ -61,7 +61,7 @@ func (acc *Account) Encode() []byte {
 		Balance:            acc.Balance,
 		TxCnt:              acc.TxCnt,
 		IsStaking:          acc.IsStaking,
-		CommitmentKey:   	acc.CommitmentKey,
+		CommitmentKey:      acc.CommitmentKey,
 		StakingBlockHeight: acc.StakingBlockHeight,
 		Contract:           acc.Contract,
 		ContractVariables:  acc.ContractVariables,
@@ -83,17 +83,17 @@ func (*Account) Decode(encoded []byte) (acc *Account) {
 func (acc Account) String() string {
 	addressHash := acc.Hash()
 	return fmt.Sprintf(
-		"Hash: %x, " +			//TODO: uncomment this
-			"Address: %x, " +
+		"Hash: %x, "+ //TODO: uncomment this
+			"Address: %x, "+
 			//"Issuer: %x, " +
-			"TxCnt: %v, " +
-			"Balance: %v, " +
-			"IsStaking: %v, " ,
-			//+
-			//"CommitmentKey: %x, " +
-			//"StakingBlockHeight: %v, " +
-			//"Contract: %v, " +
-			//"ContractVariables: %v",
+			"TxCnt: %v, "+
+			"Balance: %v, "+
+			"IsStaking: %v, ",
+		//+
+		//"CommitmentKey: %x, " +
+		//"StakingBlockHeight: %v, " +
+		//"Contract: %v, " +
+		//"ContractVariables: %v",
 		addressHash[0:8],
 		acc.Address[0:8],
 		//acc.Issuer[0:8],

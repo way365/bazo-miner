@@ -3,17 +3,17 @@ package p2p
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/bazo-blockchain/bazo-miner/protocol"
-	"github.com/bazo-blockchain/bazo-miner/storage"
+	"github.com/julwil/bazo-miner/protocol"
+	"github.com/julwil/bazo-miner/storage"
 	"strconv"
 	"strings"
 	"sync"
 )
 
-var(
+var (
 	lastNotFoundTxWithHash = [32]byte{}
-	notFoundTxMutex = &sync.Mutex{}
-	)
+	notFoundTxMutex        = &sync.Mutex{}
+)
 
 //This file responds to incoming requests from miners in a synchronous fashion
 func txRes(p *peer, payload []byte, txKind uint8) {
@@ -76,7 +76,6 @@ func txRes(p *peer, payload []byte, txKind uint8) {
 	sendData(p, packet)
 }
 
-
 func notFoundTxRes(payload []byte) {
 	var txHash [32]byte
 	if len(payload) != 32 {
@@ -95,7 +94,7 @@ func notFoundTxRes(payload []byte) {
 	}
 	if closedTx != nil {
 		tx = closedTx
-	}//
+	} //
 	if invalidTx != nil {
 		tx = invalidTx
 	}
@@ -187,7 +186,7 @@ func blockRes(p *peer, payload []byte) {
 	var blockHashWithoutTx [32]byte
 
 	//If no specific block is requested, send latest
-	if len(payload) > 0 && len(payload) == 64  {
+	if len(payload) > 0 && len(payload) == 64 {
 		copy(blockHash[:], payload[:32])
 		copy(blockHashWithoutTx[:], payload[32:])
 

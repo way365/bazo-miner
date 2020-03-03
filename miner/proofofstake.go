@@ -4,15 +4,17 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"github.com/bazo-blockchain/bazo-miner/crypto"
+	"github.com/julwil/bazo-miner/crypto"
 	"sync"
 	"time"
 
-	"github.com/bazo-blockchain/bazo-miner/protocol"
-	"github.com/bazo-blockchain/bazo-miner/storage"
+	"github.com/julwil/bazo-miner/protocol"
+	"github.com/julwil/bazo-miner/storage"
 	"golang.org/x/crypto/sha3"
 )
+
 var validateMutex = sync.Mutex{}
+
 //Tests whether the first diff bits are zero
 func validateProofOfStake(diff uint8,
 	prevProofs [][crypto.COMM_PROOF_LENGTH]byte,
@@ -27,7 +29,7 @@ func validateProofOfStake(diff uint8,
 	var (
 		heightBuf    [4]byte
 		timestampBuf [8]byte
-		hashArgs []byte
+		hashArgs     []byte
 	)
 
 	// allocate memory
@@ -39,13 +41,13 @@ func validateProofOfStake(diff uint8,
 
 	index := 0
 	for _, prevProof := range prevProofs {
-		copy(hashArgs[index:index + crypto.COMM_PROOF_LENGTH], prevProof[:])
+		copy(hashArgs[index:index+crypto.COMM_PROOF_LENGTH], prevProof[:])
 		index += crypto.COMM_PROOF_LENGTH
 	}
 
-	copy(hashArgs[index:index + crypto.COMM_PROOF_LENGTH], commitmentProof[:]) // COMM_KEY_LENGTH bytes
+	copy(hashArgs[index:index+crypto.COMM_PROOF_LENGTH], commitmentProof[:]) // COMM_KEY_LENGTH bytes
 	index += crypto.COMM_PROOF_LENGTH
-	copy(hashArgs[index:index + 4], heightBuf[:]) 		// 4 bytes
+	copy(hashArgs[index:index+4], heightBuf[:]) // 4 bytes
 	index += 4
 
 	copy(hashArgs[index:index+8], timestampBuf[:])
@@ -106,13 +108,13 @@ func proofOfStake(diff uint8,
 	// ([PrevProofs] ⋅ CommitmentProof ⋅ CurrentBlockHeight ⋅ Seconds)
 	index := 0
 	for _, prevProof := range prevProofs {
-		copy(hashArgs[index:index + crypto.COMM_PROOF_LENGTH], prevProof[:])
+		copy(hashArgs[index:index+crypto.COMM_PROOF_LENGTH], prevProof[:])
 		index += crypto.COMM_PROOF_LENGTH
 	}
 
-	copy(hashArgs[index:index + crypto.COMM_PROOF_LENGTH], commitmentProof[:]) // COMM_KEY_LENGTH bytes
+	copy(hashArgs[index:index+crypto.COMM_PROOF_LENGTH], commitmentProof[:]) // COMM_KEY_LENGTH bytes
 	index += crypto.COMM_PROOF_LENGTH
-	copy(hashArgs[index:index + 4], heightBuf[:]) 		// 4 bytes
+	copy(hashArgs[index:index+4], heightBuf[:]) // 4 bytes
 	index += 4
 
 	timestampBufIndexStart := index
@@ -126,7 +128,7 @@ func proofOfStake(diff uint8,
 		logger.Printf("Try Block with Time: %v and cnt: %v", time.Now().Format("030405"), cnt)
 
 		//If 30 blocks should have been received, break
-		if cnt >= 30 * BLOCK_INTERVAL {
+		if cnt >= 30*BLOCK_INTERVAL {
 			logger.Printf("Mined %v sec and no block validated...? --> Strange... ", 30*BLOCK_INTERVAL)
 			return -1, errors.New("Abort mining, Mined too long")
 		}

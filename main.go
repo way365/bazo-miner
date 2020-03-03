@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/bazo-blockchain/bazo-miner/cli"
-	"github.com/bazo-blockchain/bazo-miner/storage"
-	cli2 "github.com/urfave/cli"
+	"github.com/julwil/bazo-miner/cli"
+	"github.com/julwil/bazo-miner/storage"
+	cli2 "github.com/urfave/cli@v1"
 	"os"
 )
 
@@ -16,7 +16,7 @@ func main() {
 	app.Usage = "the command line interface for running a full Bazo blockchain node implemented in Go."
 	app.Version = "1.0.0"
 	app.EnableBashCompletion = true
-	app.Commands = []cli2.Command {
+	app.Commands = []cli2.Command{
 		cli.GetStartCommand(logger),
 		cli.GetGenerateWalletCommand(),
 		cli.GetGenerateCommitmentCommand(),

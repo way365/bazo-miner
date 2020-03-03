@@ -3,10 +3,10 @@ package miner
 import (
 	"crypto/ecdsa"
 	"crypto/rsa"
-	"github.com/bazo-blockchain/bazo-miner/crypto"
-	"github.com/bazo-blockchain/bazo-miner/p2p"
-	"github.com/bazo-blockchain/bazo-miner/protocol"
-	"github.com/bazo-blockchain/bazo-miner/storage"
+	"github.com/julwil/bazo-miner/crypto"
+	"github.com/julwil/bazo-miner/p2p"
+	"github.com/julwil/bazo-miner/protocol"
+	"github.com/julwil/bazo-miner/storage"
 	"log"
 	"sync"
 	"time"
@@ -27,7 +27,6 @@ var (
 //Miner entry point
 func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validatorCommitment, rootCommitment *rsa.PrivateKey) {
 	var err error
-
 
 	validatorAccAddress = crypto.GetAddressFromPubKey(validatorWallet)
 	multisigPubKey = multisigWallet
@@ -56,7 +55,7 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 
 	logger.Printf("\n\n\n-------------------- START MINER ---------------------")
 	logger.Printf("This Miners IP-Address: %v\n\n", p2p.Ipport)
-	time.Sleep(2*time.Second)
+	time.Sleep(2 * time.Second)
 	parameterSlice = append(parameterSlice, NewDefaultParameters())
 	activeParameters = &parameterSlice[0]
 
@@ -117,8 +116,6 @@ func mining(initialBlock *protocol.Block) {
 		//Prints miner connections
 		p2p.EmptyingiplistChan()
 		p2p.PrintMinerConns()
-
-
 
 		//This is the same mutex that is claimed at the beginning of a block validation. The reason we do this is
 		//that before start mining a new block we empty the mempool which contains tx data that is likely to be

@@ -2,8 +2,8 @@ package miner
 
 import (
 	"errors"
-	"github.com/bazo-blockchain/bazo-miner/protocol"
-	"github.com/bazo-blockchain/bazo-miner/storage"
+	"github.com/julwil/bazo-miner/protocol"
+	"github.com/julwil/bazo-miner/storage"
 )
 
 //Already validated block but not part of the current longest chain.
@@ -14,7 +14,7 @@ func rollback(b *protocol.Block) error {
 		return err
 	}
 
-	data := blockData{accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggTxSlice, nil,b}
+	data := blockData{accTxSlice, fundsTxSlice, configTxSlice, stakeTxSlice, aggTxSlice, nil, b}
 
 	//Going back to pre-block system parameters before the state is rolled back.
 	configStateChangeRollback(data.configTxSlice, b.Hash)
@@ -44,7 +44,7 @@ func preValidateRollback(b *protocol.Block) (accTxSlice []*protocol.AccTx, funds
 		var fundsTx *protocol.FundsTx
 		tx := storage.ReadClosedTx(hash)
 		if tx == nil {
-			return nil, nil, nil, nil,nil, errors.New("CRITICAL: Validated fundsTx was not in the confirmed tx storage")
+			return nil, nil, nil, nil, nil, errors.New("CRITICAL: Validated fundsTx was not in the confirmed tx storage")
 		} else {
 			fundsTx = tx.(*protocol.FundsTx)
 		}
@@ -78,8 +78,8 @@ func preValidateRollback(b *protocol.Block) (accTxSlice []*protocol.AccTx, funds
 		tx := storage.ReadClosedTx(hash)
 		if tx == nil {
 			tx = storage.ReadOpenTx(hash)
-			 if tx != nil {
-			 }
+			if tx != nil {
+			}
 			return nil, nil, nil, nil, nil, errors.New("CRITICAL: Aggregated Transaction was not in the confirmed tx storage")
 		} else {
 			aggTx = tx.(*protocol.AggTx)
@@ -96,7 +96,7 @@ func validateStateRollback(data blockData) {
 	collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 	stakeStateChangeRollback(data.stakeTxSlice)
 	fundsStateChangeRollback(data.fundsTxSlice)
-	aggregatedStateRollback(data.aggTxSlice, data.block.HashWithoutTx,  data.block.Beneficiary)
+	aggregatedStateRollback(data.aggTxSlice, data.block.HashWithoutTx, data.block.Beneficiary)
 	accStateChangeRollback(data.accTxSlice)
 }
 

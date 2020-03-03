@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"github.com/bazo-blockchain/bazo-miner/protocol"
 	"github.com/boltdb/bolt"
+	"github.com/julwil/bazo-miner/protocol"
 )
 
 func WriteOpenBlock(block *protocol.Block) (err error) {
@@ -132,6 +132,6 @@ func WriteClosedTx(transaction protocol.Transaction) (err error) {
 
 	nrClosedTransactions = nrClosedTransactions + 1
 	totalTransactionSize = totalTransactionSize + float32(transaction.Size())
-	averageTxSize = totalTransactionSize/nrClosedTransactions
+	averageTxSize = totalTransactionSize / nrClosedTransactions
 	return err
 }

@@ -1,11 +1,10 @@
 package storage
 
 import (
-	"github.com/bazo-blockchain/bazo-miner/protocol"
+	"github.com/julwil/bazo-miner/protocol"
 )
 
-
-func UpdateBlocksToBlocksWithoutTx(block *protocol.Block) (err error){
+func UpdateBlocksToBlocksWithoutTx(block *protocol.Block) (err error) {
 
 	if BlockReadyToAggregate(block) {
 		block.Aggregated = true

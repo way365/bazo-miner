@@ -1,17 +1,16 @@
 package p2p
 
 import (
-	"github.com/bazo-blockchain/bazo-miner/storage"
+	"github.com/julwil/bazo-miner/storage"
 	"time"
 )
 
-
 var (
-	sendingMap  map[string]*delayedMessagesPerSender
+	sendingMap map[string]*delayedMessagesPerSender
 )
 
 type delayedMessagesPerSender struct {
-	peer *peer
+	peer            *peer
 	delayedMessages [][]byte
 }
 
@@ -52,7 +51,7 @@ func clientBroadcastService() {
 		select {
 		case msg := <-clientBrdcstMsg:
 			for p := range peers.clientConns {
-				if peers.contains(p.getIPPort(),PEERTYPE_CLIENT) {
+				if peers.contains(p.getIPPort(), PEERTYPE_CLIENT) {
 					p.ch <- msg
 				} else {
 					logger.Printf("CHANNEL_CLIENT: Wanted to send to %v, but %v is not in the peers.minerConns anymore", p.getIPPort(), p.getIPPort())
@@ -141,7 +140,7 @@ func checkHealthService() {
 			nrOfMiners = 6
 		}
 
-		time.Sleep(time.Duration(nrOfMiners) * 5 * time.Second)  //Dynamic searching for neighbours interval --> 5 times the number of miners
+		time.Sleep(time.Duration(nrOfMiners) * 5 * time.Second) //Dynamic searching for neighbours interval --> 5 times the number of miners
 
 		if Ipport != storage.Bootstrap_Server && !peers.contains(storage.Bootstrap_Server, PEERTYPE_MINER) {
 			p, err := initiateNewMinerConnection(storage.Bootstrap_Server)
@@ -153,18 +152,17 @@ func checkHealthService() {
 			}
 		}
 
-	//	//Periodically check if we are well-connected
-	//	if peers.len(PEERTYPE_MINER) >= MIN_MINERS {
-	//		logger.Printf("Miner %v is well connected.", Ipport)
-	//		continue
-	//	}
-
+		//	//Periodically check if we are well-connected
+		//	if peers.len(PEERTYPE_MINER) >= MIN_MINERS {
+		//		logger.Printf("Miner %v is well connected.", Ipport)
+		//		continue
+		//	}
 
 		//The only goto in the code (I promise), but best solution here IMHO.
 	RETRY:
 		select {
 		//iplistChan gets filled with every incoming neighborRes, they're consumed here.
-		case ipaddr := <- iplistChan:
+		case ipaddr := <-iplistChan:
 			if !peerExists(ipaddr) && !peerSelfConn(ipaddr) {
 				p, err := initiateNewMinerConnection(ipaddr)
 				if err != nil {

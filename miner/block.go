@@ -9,23 +9,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bazo-blockchain/bazo-miner/crypto"
-	"github.com/bazo-blockchain/bazo-miner/p2p"
-	"github.com/bazo-blockchain/bazo-miner/protocol"
-	"github.com/bazo-blockchain/bazo-miner/storage"
-	"github.com/bazo-blockchain/bazo-miner/vm"
+	"github.com/julwil/bazo-miner/crypto"
+	"github.com/julwil/bazo-miner/p2p"
+	"github.com/julwil/bazo-miner/protocol"
+	"github.com/julwil/bazo-miner/storage"
+	"github.com/julwil/bazo-miner/vm"
 	"golang.org/x/crypto/sha3"
 )
 
 //Datastructure to fetch the payload of all transactions, needed for state validation.
 type blockData struct {
-	accTxSlice    		  		[]*protocol.AccTx
-	fundsTxSlice  		  		[]*protocol.FundsTx
-	configTxSlice 		  		[]*protocol.ConfigTx
-	stakeTxSlice  		  		[]*protocol.StakeTx
-	aggTxSlice	  		  		[]*protocol.AggTx
-	aggregatedFundsTxSlice  	[]*protocol.FundsTx
-	block        		  		*protocol.Block
+	accTxSlice             []*protocol.AccTx
+	fundsTxSlice           []*protocol.FundsTx
+	configTxSlice          []*protocol.ConfigTx
+	stakeTxSlice           []*protocol.StakeTx
+	aggTxSlice             []*protocol.AggTx
+	aggregatedFundsTxSlice []*protocol.FundsTx
+	block                  *protocol.Block
 }
 
 //Block constructor, argument is the previous block in the blockchain.
@@ -43,7 +43,7 @@ func newBlock(prevHash [32]byte, prevHashWithoutTx [32]byte, commitmentProof [cr
 
 var (
 	aggregationMutex = &sync.Mutex{}
-	addFundsTxMutex = &sync.Mutex{}
+	addFundsTxMutex  = &sync.Mutex{}
 )
 
 //This function prepares the block to broadcast into the network. No new txs are added at this point.
@@ -79,7 +79,6 @@ func finalizeBlock(block *protocol.Block) error {
 	if err != nil {
 		return err
 	}
-
 
 	//Block hash with MerkleTree and therefore, including all transactions
 	partialHash := block.HashBlock()
@@ -132,7 +131,7 @@ func addTx(b *protocol.Block, tx protocol.Transaction) error {
 	switch tx.(type) {
 	case *protocol.AggTx:
 		return nil
-	default :
+	default:
 		if tx.TxFee() < activeParameters.Fee_minimum {
 			err := fmt.Sprintf("Transaction fee too low: %v (minimum is: %v)\n", tx.TxFee(), activeParameters.Fee_minimum)
 			return errors.New(err)
@@ -154,7 +153,7 @@ func addTx(b *protocol.Block, tx protocol.Transaction) error {
 	case *protocol.AccTx:
 		err := addAccTx(b, tx.(*protocol.AccTx))
 		if err != nil {
-			logger.Printf("Adding accTx (%x) failed (%v): %v\n",tx.Hash(), err, tx.(*protocol.AccTx))
+			logger.Printf("Adding accTx (%x) failed (%v): %v\n", tx.Hash(), err, tx.(*protocol.AccTx))
 
 			return err
 		}
@@ -168,13 +167,13 @@ func addTx(b *protocol.Block, tx protocol.Transaction) error {
 	case *protocol.ConfigTx:
 		err := addConfigTx(b, tx.(*protocol.ConfigTx))
 		if err != nil {
-			logger.Printf("Adding configTx (%x) failed (%v): %v\n",tx.Hash(), err, tx.(*protocol.ConfigTx))
+			logger.Printf("Adding configTx (%x) failed (%v): %v\n", tx.Hash(), err, tx.(*protocol.ConfigTx))
 			return err
 		}
 	case *protocol.StakeTx:
 		err := addStakeTx(b, tx.(*protocol.StakeTx))
 		if err != nil {
-			logger.Printf("Adding stakeTx (%x) failed (%v): %v\n",tx.Hash(), err, tx.(*protocol.StakeTx))
+			logger.Printf("Adding stakeTx (%x) failed (%v): %v\n", tx.Hash(), err, tx.(*protocol.StakeTx))
 			return err
 		}
 	default:
@@ -262,7 +261,7 @@ func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
 		} else {
 			storage.WriteINVALIDOpenTx(tx)
 		}
-		err := fmt.Sprintf("Sender %x txCnt does not match: %v (tx.txCnt) vs. %v (state txCnt)\nAggrgated: %t",tx.From, tx.TxCnt, b.StateCopy[tx.From].TxCnt, tx.Aggregated)
+		err := fmt.Sprintf("Sender %x txCnt does not match: %v (tx.txCnt) vs. %v (state txCnt)\nAggrgated: %t", tx.From, tx.TxCnt, b.StateCopy[tx.From].TxCnt, tx.Aggregated)
 		storage.WriteINVALIDOpenTx(tx)
 		addFundsTxMutex.Unlock()
 		return errors.New(err)
@@ -318,7 +317,7 @@ func addAggTxFinal(b *protocol.Block, tx *protocol.AggTx) error {
 	return nil
 }
 
-func splitSortedAggregatableTransactions(b *protocol.Block){
+func splitSortedAggregatableTransactions(b *protocol.Block) {
 	txToAggregate := make([]protocol.Transaction, 0)
 	moreTransactionsToAggregate := true
 
@@ -336,7 +335,7 @@ func splitSortedAggregatableTransactions(b *protocol.Block){
 		// The sender or receiver which is most common is selected and all transactions are added to the txToAggregate
 		// slice. The number of transactions sent/Received will lower with every tx added. Then the splitted transactions
 		// get aggregated into the correct aggregation transaction type and then written into the block.
-		i:=0
+		i := 0
 		if maxSender >= maxReceiver {
 			for _, tx := range PossibleTransactionsToAggregate {
 				if tx.From == addressSender {
@@ -374,11 +373,11 @@ func splitSortedAggregatableTransactions(b *protocol.Block){
 		//Empty Slice
 		txToAggregate = txToAggregate[:0]
 
-		if len(PossibleTransactionsToAggregate) > 0 && len(storage.DifferentSenders) > 0 && len(storage.DifferentReceivers) > 0  {
+		if len(PossibleTransactionsToAggregate) > 0 && len(storage.DifferentSenders) > 0 && len(storage.DifferentReceivers) > 0 {
 			if cnt > 20 {
 				moreTransactionsToAggregate = false
 			}
-			cnt ++
+			cnt++
 
 			moreTransactionsToAggregate = true
 		} else {
@@ -474,7 +473,7 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 
 	// set addresses by which historic transactions should be searched.
 	// If Zero-32byte array is sent, it will not find any addresses, because BAZOAccountAddresses
-	if len(nrOfSenders) == len(nrOfReceivers){
+	if len(nrOfSenders) == len(nrOfReceivers) {
 		//Here transactions are searched to aggregate. if one is fund, it will aggregate accordingly.
 		breakingForLoop := false
 		for _, block := range storage.ReadAllClosedBlocksWithTransactions() {
@@ -553,7 +552,7 @@ func AggregateTransactions(SortedAndSelectedFundsTx []protocol.Transaction, bloc
 		transactionReceivers = nil
 		transactionHashes = nil
 
-	} else if len(SortedAndSelectedFundsTx) > 0{
+	} else if len(SortedAndSelectedFundsTx) > 0 {
 		addFundsTxFinal(block, SortedAndSelectedFundsTx[0].(*protocol.FundsTx))
 	} else {
 		err := errors.New("NullPointer")
@@ -571,7 +570,7 @@ type lessFunc func(p1, p2 *protocol.FundsTx) bool
 
 type multiSorter struct {
 	transactions []*protocol.FundsTx
-	less    []lessFunc
+	less         []lessFunc
 }
 
 func (ms *multiSorter) Sort(transactionsToSort []*protocol.FundsTx) {
@@ -614,8 +613,8 @@ func sortTxBeforeAggregation(Slice []*protocol.FundsTx) {
 	sender := func(c1, c2 *protocol.FundsTx) bool {
 		return string(c1.From[:32]) < string(c2.From[:32])
 	}
-	txcount:= func(c1, c2 *protocol.FundsTx) bool {
-		return c1.TxCnt< c2.TxCnt
+	txcount := func(c1, c2 *protocol.FundsTx) bool {
+		return c1.TxCnt < c2.TxCnt
 	}
 
 	OrderedBy(sender, txcount).Sort(Slice)
@@ -743,7 +742,7 @@ func fetchFundsTxData(block *protocol.Block, fundsTxSlice []*protocol.FundsTx, i
 		txINVALID := storage.ReadINVALIDOpenTx(txHash)
 		if tx != nil {
 			fundsTx = tx.(*protocol.FundsTx)
-		} else if  txINVALID != nil && verify(txINVALID) {
+		} else if txINVALID != nil && verify(txINVALID) {
 			fundsTx = txINVALID.(*protocol.FundsTx)
 		} else {
 			err := p2p.TxReq(txHash, p2p.FUNDSTX_REQ)
@@ -759,7 +758,7 @@ func fetchFundsTxData(block *protocol.Block, fundsTxSlice []*protocol.FundsTx, i
 				}
 			case <-time.After(TXFETCH_TIMEOUT * time.Second):
 				stash := p2p.ReceivedFundsTXStash
-				if p2p.FundsTxAlreadyInStash(stash, txHash){
+				if p2p.FundsTxAlreadyInStash(stash, txHash) {
 					for _, tx := range stash {
 						if tx.Hash() == txHash {
 							fundsTx = tx
@@ -874,7 +873,7 @@ func fetchStakeTxData(block *protocol.Block, stakeTxSlice []*protocol.StakeTx, i
 
 //This function fetches the funds transactions recursively --> When a aggTx is agregated in another aggTx.
 // This is mainly needed for the startup process. It is recursively searching until only funds transactions are in the list.
-func fetchFundsTxRecursively(AggregatedTxSlice [][32]byte) (aggregatedFundsTxSlice []*protocol.FundsTx, err error){
+func fetchFundsTxRecursively(AggregatedTxSlice [][32]byte) (aggregatedFundsTxSlice []*protocol.FundsTx, err error) {
 	for _, txHash := range AggregatedTxSlice {
 		//Try To read the transaction from closed storage.
 		tx := storage.ReadClosedTx(txHash)
@@ -903,7 +902,7 @@ func fetchFundsTxRecursively(AggregatedTxSlice [][32]byte) (aggregatedFundsTxSli
 				stash := p2p.ReceivedFundsTXStash
 				aggTxStash := p2p.ReceivedAggTxStash
 
-				if p2p.FundsTxAlreadyInStash(stash, txHash){
+				if p2p.FundsTxAlreadyInStash(stash, txHash) {
 					for _, trx := range stash {
 						if trx.Hash() == txHash {
 							tx = trx
@@ -911,7 +910,7 @@ func fetchFundsTxRecursively(AggregatedTxSlice [][32]byte) (aggregatedFundsTxSli
 						}
 					}
 					break
-				} else if p2p.AggTxAlreadyInStash(aggTxStash, txHash){
+				} else if p2p.AggTxAlreadyInStash(aggTxStash, txHash) {
 					for _, trx := range stash {
 						if trx.Hash() == txHash {
 							tx = trx
@@ -959,7 +958,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 		aggTx := storage.ReadClosedTx(aggTxHash)
 
 		//Check if transaction was already in another block, expect it is aggregated.
-		if !initialSetup && aggTx != nil && aggTx.(*protocol.AggTx).Aggregated == false{
+		if !initialSetup && aggTx != nil && aggTx.(*protocol.AggTx).Aggregated == false {
 			if !aggTx.(*protocol.AggTx).Aggregated {
 				logger.Printf("Block validation had AggTx (%x) that was already in a previous block.", aggTx.Hash())
 				errChan <- errors.New("Block validation had AggTx that was already in a previous block.")
@@ -979,7 +978,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 		if aggTx == nil {
 			//Transaction need to be fetched from the network.
 			cnt := 0
-			HERE:
+		HERE:
 			logger.Printf("Request AGGTX: %x for block %x", aggTxHash, block.Hash[0:8])
 			err := p2p.TxReq(aggTxHash, p2p.AGGTX_REQ)
 			if err != nil {
@@ -993,7 +992,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 				logger.Printf("  Received AGGTX: %x for block %x", aggTxHash, block.Hash[0:8])
 			case <-time.After(TXFETCH_TIMEOUT * time.Second):
 				stash := p2p.ReceivedAggTxStash
-				if p2p.AggTxAlreadyInStash(stash, aggTxHash){
+				if p2p.AggTxAlreadyInStash(stash, aggTxHash) {
 					for _, tx := range stash {
 						if tx.Hash() == aggTxHash {
 							aggTx = tx
@@ -1004,7 +1003,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 					break
 				}
 				if cnt < 2 {
-					cnt ++
+					cnt++
 					goto HERE
 				}
 				logger.Printf("  TIME OUT: Request AGGTX: %x for block %x", aggTxHash, block.Hash[0:8])
@@ -1018,7 +1017,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 		}
 
 		//At this point the aggTx visible in the blocks body should be received.
-		if aggTx == nil{
+		if aggTx == nil {
 			errChan <- errors.New("AggTx Could not be found ")
 			return
 		}
@@ -1071,7 +1070,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 						} else {
 							//Need to fetch transaction from the network. At this point it is unknown what type of tx we request.
 							cnt := 0
-							NEXTTRY:
+						NEXTTRY:
 							err := p2p.TxReq(txHash, p2p.UNKNOWNTX_REQ)
 							if err != nil {
 								errChan <- errors.New(fmt.Sprintf("Tx could not be read: %v", err))
@@ -1089,7 +1088,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 								transactions = append(transactions, tx.(*protocol.FundsTx))
 							case <-time.After(TXFETCH_TIMEOUT * time.Second):
 								aggTxStash := p2p.ReceivedAggTxStash
-								if p2p.AggTxAlreadyInStash(aggTxStash, txHash){
+								if p2p.AggTxAlreadyInStash(aggTxStash, txHash) {
 									for _, trx := range aggTxStash {
 										if trx.Hash() == txHash {
 											tx = trx
@@ -1100,7 +1099,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 									break
 								}
 								fundsTxStash := p2p.ReceivedFundsTXStash
-								if p2p.FundsTxAlreadyInStash(fundsTxStash, txHash){
+								if p2p.FundsTxAlreadyInStash(fundsTxStash, txHash) {
 									for _, trx := range fundsTxStash {
 										if trx.Hash() == txHash {
 											tx = trx
@@ -1112,7 +1111,7 @@ func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initial
 									break
 								}
 								if cnt < 2 {
-									cnt ++
+									cnt++
 									goto NEXTTRY
 								}
 								logger.Printf("Fetching UnknownTX %x timed out for block %x", txHash, block.Hash[0:8])
@@ -1204,14 +1203,14 @@ func validate(b *protocol.Block, initialSetup bool) error {
 				return err
 			}
 
-			blockDataMap[block.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice,block}
+			blockDataMap[block.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice, block}
 			if err := validateState(blockDataMap[block.Hash], initialSetup); err != nil {
 				return err
 			}
 
 			postValidate(blockDataMap[block.Hash], initialSetup)
 			if i != len(blocksToValidate)-1 {
-				logger.Printf("Validated block (During Validation of other block %v): %vState:\n%v", b.Hash[0:8] , block, getState())
+				logger.Printf("Validated block (During Validation of other block %v): %vState:\n%v", b.Hash[0:8], block, getState())
 			}
 		}
 	} else {
@@ -1237,7 +1236,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 				return err
 			}
 
-			blockDataMap[block.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice,block}
+			blockDataMap[block.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice, block}
 			if err := validateState(blockDataMap[block.Hash], initialSetup); err != nil {
 				return err
 			}
@@ -1270,7 +1269,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	duplicates := make(map[[32]byte]bool)
 	for _, txHash := range block.AccTxData {
 		if _, exists := duplicates[txHash]; exists {
-			return nil, nil, nil, nil,  nil, nil, errors.New("Duplicate Account Transaction Hash detected.")
+			return nil, nil, nil, nil, nil, nil, errors.New("Duplicate Account Transaction Hash detected.")
 		}
 		duplicates[txHash] = true
 	}
@@ -1326,10 +1325,10 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 		}
 	}
 
-	if len(aggTxSlice) > 0{
+	if len(aggTxSlice) > 0 {
 		logger.Printf("-- Fetch AggTxData - Start")
 		select {
-		case aggregatedFundsTxSlice = <- aggregatedFundsChan:
+		case aggregatedFundsTxSlice = <-aggregatedFundsChan:
 		case <-time.After(10 * time.Minute):
 			return nil, nil, nil, nil, nil, nil, errors.New("Fetching FundsTx aggregated in AggTx failed.")
 		}
@@ -1357,7 +1356,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 
 	err = crypto.VerifyMessageWithRSAKey(commitmentPubKey, fmt.Sprint(block.Height), block.CommitmentProof)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil,  errors.New("The submitted commitment proof can not be verified.")
+		return nil, nil, nil, nil, nil, nil, errors.New("The submitted commitment proof can not be verified.")
 	}
 
 	//Invalid if PoS calculation is not correct.
@@ -1366,7 +1365,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	//PoS validation
 	if !initialSetup && !validateProofOfStake(getDifficulty(), prevProofs, block.Height, acc.Balance, block.CommitmentProof, block.Timestamp) {
 		logger.Printf("____________________NONCE (%x) in block %x is problematic", block.Nonce, block.Hash[0:8])
-		logger.Printf("|  block.Height: %d, acc.Address %x, acc.txCount %v, acc.Balance %v, block.CommitmentProf: %x, block.Timestamp %v ", block.Height, acc.Address[0:8], acc.TxCnt,  acc.Balance, block.CommitmentProof[0:8], block.Timestamp)
+		logger.Printf("|  block.Height: %d, acc.Address %x, acc.txCount %v, acc.Balance %v, block.CommitmentProf: %x, block.Timestamp %v ", block.Height, acc.Address[0:8], acc.TxCnt, acc.Balance, block.CommitmentProof[0:8], block.Timestamp)
 		logger.Printf("|_____________________________________________________")
 
 		return nil, nil, nil, nil, nil, nil, errors.New("The nonce is incorrect.")
@@ -1519,7 +1518,7 @@ func postValidate(data blockData, initialSetup bool) {
 			for _, aggregatedTxHash := range tx.AggregatedTxSlice {
 				trx := storage.ReadClosedTx(aggregatedTxHash)
 				if trx != nil {
-					switch trx.(type){
+					switch trx.(type) {
 					case *protocol.AggTx:
 						trx.(*protocol.AggTx).Aggregated = true
 					case *protocol.FundsTx:
@@ -1534,7 +1533,7 @@ func postValidate(data blockData, initialSetup bool) {
 							}
 						}
 					}
-					switch trx.(type){
+					switch trx.(type) {
 					case *protocol.AggTx:
 						trx.(*protocol.AggTx).Aggregated = true
 					case *protocol.FundsTx:
@@ -1577,7 +1576,7 @@ func postValidate(data blockData, initialSetup bool) {
 		//logger.Printf("Inside Validation for block %x --> Inside Postvalidation (13)", data.block.Hash)
 
 		//Do not empty last three blocks and only if it not aggregated already.
-		for _, block := range storage.ReadAllClosedBlocks(){
+		for _, block := range storage.ReadAllClosedBlocks() {
 
 			//Empty all blocks despite the last NO_AGGREGATION_LENGTH and genesis block.
 			if !block.Aggregated && block.Height > 0 {
@@ -1598,11 +1597,11 @@ func timestampCheck(timestamp int64) error {
 	systemTime := p2p.ReadSystemTime()
 
 	if timestamp > systemTime {
-		if timestamp-systemTime > int64(2 * time.Hour.Seconds()) {
+		if timestamp-systemTime > int64(2*time.Hour.Seconds()) {
 			return errors.New("Timestamp was too far in the future.System time: " + strconv.FormatInt(systemTime, 10) + " vs. timestamp " + strconv.FormatInt(timestamp, 10) + "\n")
 		}
 	} else {
-		if systemTime-timestamp > int64(10 * time.Hour.Seconds()) {
+		if systemTime-timestamp > int64(10*time.Hour.Seconds()) {
 			return errors.New("Timestamp was too far in the past. System time: " + strconv.FormatInt(systemTime, 10) + " vs. timestamp " + strconv.FormatInt(timestamp, 10) + "\n")
 		}
 	}

@@ -1,7 +1,7 @@
 package miner
 
 import (
-	"github.com/bazo-blockchain/bazo-miner/protocol"
+	"github.com/julwil/bazo-miner/protocol"
 )
 
 func InvertBlockArray(array []*protocol.Block) []*protocol.Block {

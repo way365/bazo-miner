@@ -2,7 +2,7 @@ package storage
 
 import (
 	"fmt"
-	"github.com/bazo-blockchain/bazo-miner/protocol"
+	"github.com/julwil/bazo-miner/protocol"
 	"math/big"
 	"testing"
 )
@@ -14,7 +14,7 @@ func TestSerializeHashContent(t *testing.T) {
 
 	hash := protocol.SerializeHashContent(data)
 
-  if fmt.Sprintf("%x", hash) != "ca4510738395af1429224dd785675309c344b2b549632e20275c69b15ed1d210" {
+	if fmt.Sprintf("%x", hash) != "ca4510738395af1429224dd785675309c344b2b549632e20275c69b15ed1d210" {
 		t.Errorf("Error serializing: %x != %v\n", hash, "ca4510738395af1429224dd785675309c344b2b549632e20275c69b15ed1d210")
 	}
 }

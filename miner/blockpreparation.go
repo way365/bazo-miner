@@ -2,9 +2,9 @@ package miner
 
 import (
 	"encoding/binary"
-	"github.com/bazo-blockchain/bazo-miner/p2p"
-	"github.com/bazo-blockchain/bazo-miner/protocol"
-	"github.com/bazo-blockchain/bazo-miner/storage"
+	"github.com/julwil/bazo-miner/p2p"
+	"github.com/julwil/bazo-miner/protocol"
+	"github.com/julwil/bazo-miner/storage"
 	"sort"
 	"time"
 )
@@ -17,12 +17,11 @@ import (
 type openTxs []protocol.Transaction
 
 var (
-	receivedBlockInTheMeantime 	bool
-	nonAggregatableTxCounter 	int
-	blockSize					int
-	transactionHashSize			int
+	receivedBlockInTheMeantime bool
+	nonAggregatableTxCounter   int
+	blockSize                  int
+	transactionHashSize        int
 )
-
 
 func prepareBlock(block *protocol.Block) {
 	//Fetch all txs from mempool (opentxs).
@@ -36,10 +35,10 @@ func prepareBlock(block *protocol.Block) {
 	tmpCopy = opentxs
 	sort.Sort(tmpCopy)
 
-	nonAggregatableTxCounter = 0 //Counter for all transactions which will not be aggregated. (Stake-, config-, acctx)
+	nonAggregatableTxCounter = 0                             //Counter for all transactions which will not be aggregated. (Stake-, config-, acctx)
 	blockSize = int(activeParameters.Block_size) - (650 + 8) //Set blocksize - (fixed space + Bloomfiltersize
 	logger.Printf("block.GetBloomFilterSize() %v", block.GetBloomFilterSize())
-	transactionHashSize = 32  //It is 32 bytes
+	transactionHashSize = 32 //It is 32 bytes
 
 	//map where all senders from FundsTx and AggTx are added to. --> this ensures that tx with same sender are only counted once.
 	storage.DifferentSenders = map[[32]byte]uint32{}
@@ -47,8 +46,8 @@ func prepareBlock(block *protocol.Block) {
 	storage.FundsTxBeforeAggregation = nil
 
 	type senderTxCounterForMissingTransactions struct {
-		senderAddress [32]byte
-		txcnt uint32
+		senderAddress       [32]byte
+		txcnt               uint32
 		missingTransactions []uint32
 	}
 
@@ -236,7 +235,7 @@ func checkBestCombination(openTxs []protocol.Transaction) (TxToAppend []protocol
 				if (nonAggregatableTxCounter+1)*transactionHashSize < blockSize {
 					nonAggregatableTxCounter += 1
 					TxToAppend = append(TxToAppend, tx)
-					if i != len(openTxs){
+					if i != len(openTxs) {
 						openTxs = append(openTxs[:i], openTxs[i+1:]...)
 					}
 				} else {

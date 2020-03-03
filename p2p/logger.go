@@ -1,7 +1,7 @@
 package p2p
 
 import (
-	"github.com/bazo-blockchain/bazo-miner/storage"
+	"github.com/julwil/bazo-miner/storage"
 	"log"
 )
 
@@ -16,15 +16,15 @@ func InitLogging() {
 	//Instead of logging just the integer, we log the corresponding semantic meaning, makes scrolling through
 	//the log file more comfortable
 	LogMapping = make(map[uint8]string)
-	LogMapping[1]  = "FUNDSTX_BRDCST"
-	LogMapping[2]  = "ACCTX_BRDCST"
-	LogMapping[3]  = "CONFIGTX_BRDCST"
-	LogMapping[4]  = "STAKETX_BRDCST"
-	LogMapping[5]  = "VERIFIEDTX_BRDCST"
-	LogMapping[6]  = "BLOCK_BRDCST"
-	LogMapping[7]  = "BLOCK_HEADER_BRDCST"
-	LogMapping[8]  = "TX_BRDCST_ACK"
-	LogMapping[9]  = "AGGTX_BRDCST"
+	LogMapping[1] = "FUNDSTX_BRDCST"
+	LogMapping[2] = "ACCTX_BRDCST"
+	LogMapping[3] = "CONFIGTX_BRDCST"
+	LogMapping[4] = "STAKETX_BRDCST"
+	LogMapping[5] = "VERIFIEDTX_BRDCST"
+	LogMapping[6] = "BLOCK_BRDCST"
+	LogMapping[7] = "BLOCK_HEADER_BRDCST"
+	LogMapping[8] = "TX_BRDCST_ACK"
+	LogMapping[9] = "AGGTX_BRDCST"
 
 	LogMapping[20] = "FUNDSTX_REQ"
 	LogMapping[21] = "ACCTX_REQ"

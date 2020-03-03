@@ -1,8 +1,8 @@
 package miner
 
 import (
-	"github.com/bazo-blockchain/bazo-miner/protocol"
-	"github.com/bazo-blockchain/bazo-miner/storage"
+	"github.com/julwil/bazo-miner/protocol"
+	"github.com/julwil/bazo-miner/storage"
 	"sort"
 )
 
@@ -51,12 +51,12 @@ func fundsStateChangeRollback(txSlice []*protocol.FundsTx) {
 //This method does search historic blocks which do not have any transactions inside and now have to be reactivated
 // because a transaction validated in this block was aggregated later in a block which now is rolled back. Thus all the
 // transactions in this block need ot be reactivated such that they are visible in the chain.
-func reactivateHistoricBlockDueToRollback(tx protocol.Transaction)() {
+func reactivateHistoricBlockDueToRollback(tx protocol.Transaction) {
 	var fundsTx *protocol.FundsTx
 	var aggTx *protocol.AggTx
 	var blockHash [32]byte
 
-	switch tx.(type){
+	switch tx.(type) {
 	case *protocol.FundsTx:
 		fundsTx = tx.(*protocol.FundsTx)
 		fundsTx.Aggregated = false
@@ -78,7 +78,7 @@ func reactivateHistoricBlockDueToRollback(tx protocol.Transaction)() {
 
 	//Search all transactions which were validated in the "empty" block. This may be very time consuming.
 	for _, tx := range storage.ReadAllClosedFundsAndAggTransactions() {
-		switch tx.(type){
+		switch tx.(type) {
 		case *protocol.FundsTx:
 			FTX := tx.(*protocol.FundsTx)
 			if FTX.Block == blockHash {
@@ -96,7 +96,6 @@ func reactivateHistoricBlockDueToRollback(tx protocol.Transaction)() {
 		}
 	}
 
-
 	sort.Sort(ByHash(block.AggTxData))
 
 	//Write block back to bucket closed blocks with transactions.
@@ -107,6 +106,7 @@ func reactivateHistoricBlockDueToRollback(tx protocol.Transaction)() {
 }
 
 type ByHash [][32]byte
+
 func (a ByHash) Len() int           { return len(a) }
 func (a ByHash) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByHash) Less(i, j int) bool { return string(a[i][0:32]) < string(a[j][0:32]) }
@@ -125,7 +125,7 @@ func aggregatedStateRollback(txSlice []*protocol.AggTx, blockHash [32]byte, mine
 			case *protocol.FundsTx:
 				//Only rollback FundsTx which are validated in the current block.
 				if trx.(*protocol.FundsTx).Block == blockHash {
-					fundsTxSlice = append([]*protocol.FundsTx{trx.(*protocol.FundsTx)},fundsTxSlice...)
+					fundsTxSlice = append([]*protocol.FundsTx{trx.(*protocol.FundsTx)}, fundsTxSlice...)
 				} else {
 					//Transaction is not validated in the current block --> Need to be reactivated in the historic block.
 					reactivateHistoricBlockDueToRollback(trx)
