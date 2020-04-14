@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/julwil/bazo-miner/cli"
 	"github.com/julwil/bazo-miner/storage"
-	cli2 "github.com/urfave/cli@v1"
+	cli2 "github.com/urfave/cli"
 	"os"
 )
 

@@ -5,8 +5,9 @@
 
 ## Setup Instructions
 
-The programming language Go (developed and tested with version >= 1.9) must be installed, the properties $GOROOT and $GOPATH must be set. For more information, please check out the [official documentation](https://github.com/golang/go/wiki/SettingGOPATH).
-
+1. Install Go (developed and tested with version >= 1.14)
+2. Set $GOROOT and $GOPATH. For more information, please check out the [official documentation](https://github.com/golang/go/wiki/SettingGOPATH).
+3. run `./scripts/build_project.sh`
 ## Getting Started
 
 The Bazo miner provides an intuitive and beginner-friendly command line interface.
