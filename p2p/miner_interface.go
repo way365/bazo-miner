@@ -23,19 +23,22 @@ var (
 	ConfigTxChan = make(chan *protocol.ConfigTx)
 	StakeTxChan  = make(chan *protocol.StakeTx)
 	AggTxChan    = make(chan *protocol.AggTx)
+	DeleteTxChan = make(chan *protocol.DeleteTx)
 
 	BlockReqChan = make(chan []byte)
 
-	ReceivedFundsTXStash = make([]*protocol.FundsTx, 0)
-	ReceivedAggTxStash   = make([]*protocol.AggTx, 0)
-	ReceivedStakeTxStash = make([]*protocol.StakeTx, 0)
-	ReceivedAccTxStash   = make([]*protocol.AccTx, 0)
+	ReceivedFundsTXStash  = make([]*protocol.FundsTx, 0)
+	ReceivedAggTxStash    = make([]*protocol.AggTx, 0)
+	ReceivedStakeTxStash  = make([]*protocol.StakeTx, 0)
+	ReceivedAccTxStash    = make([]*protocol.AccTx, 0)
+	ReceivedDeleteTxStash = make([]*protocol.DeleteTx, 0)
 
-	fundsTxSashMutex  = &sync.Mutex{}
-	aggTxStashMutex   = &sync.Mutex{}
-	blockStashMutex   = &sync.Mutex{}
-	stakeTxStashMutex = &sync.Mutex{}
-	accTxStashMutex   = &sync.Mutex{}
+	fundsTxSashMutex   = &sync.Mutex{}
+	aggTxStashMutex    = &sync.Mutex{}
+	blockStashMutex    = &sync.Mutex{}
+	stakeTxStashMutex  = &sync.Mutex{}
+	accTxStashMutex    = &sync.Mutex{}
+	deleteTxStashMutex = &sync.Mutex{}
 )
 
 //This is for blocks and txs that the miner successfully validated.
