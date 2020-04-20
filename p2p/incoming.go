@@ -9,6 +9,8 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 		processTxBrdcst(p, payload, FUNDSTX_BRDCST)
 	case ACCTX_BRDCST:
 		processTxBrdcst(p, payload, ACCTX_BRDCST)
+	case DELTX_BRDCST:
+		processTxBrdcst(p, payload, DELTX_BRDCST)
 	case CONFIGTX_BRDCST:
 		processTxBrdcst(p, payload, CONFIGTX_BRDCST)
 	case STAKETX_BRDCST:
@@ -58,7 +60,7 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 
 		//RESPONSES
 	case NEIGHBOR_RES:
-		if !peerSelfConn(p.getIPPort()){
+		if !peerSelfConn(p.getIPPort()) {
 			processNeighborRes(p, payload)
 		}
 	case BLOCK_RES:
