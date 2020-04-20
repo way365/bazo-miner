@@ -9,5 +9,5 @@ type Transaction interface {
 	Size() uint64
 	Sender() [32]byte
 	Receiver() [32]byte
-
+	String() string
 }
