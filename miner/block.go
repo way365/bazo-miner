@@ -4,17 +4,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"sort"
-	"strconv"
-	"sync"
-	"time"
-
 	"github.com/julwil/bazo-miner/crypto"
-	"github.com/julwil/bazo-miner/p2p"
 	"github.com/julwil/bazo-miner/protocol"
 	"github.com/julwil/bazo-miner/storage"
-	"github.com/julwil/bazo-miner/vm"
 	"golang.org/x/crypto/sha3"
+	"sync"
 )
 
 //Datastructure to fetch the payload of all transactions, needed for state validation.
