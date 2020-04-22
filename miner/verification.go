@@ -15,29 +15,23 @@ import (
 //should only be of concern to the miner, not to the protocol package. However, this has the disadvantage
 //that we have to do case distinction here.
 func verify(tx protocol.Transaction) bool {
-	var verified bool
-
 	switch tx.(type) {
 	case *protocol.FundsTx:
-		verified = verifyFundsTx(tx.(*protocol.FundsTx))
+		return verifyFundsTx(tx.(*protocol.FundsTx))
 	case *protocol.AccTx:
-		verified = verifyAccTx(tx.(*protocol.AccTx))
+		return verifyAccTx(tx.(*protocol.AccTx))
 	case *protocol.ConfigTx:
-		verified = verifyConfigTx(tx.(*protocol.ConfigTx))
+		return verifyConfigTx(tx.(*protocol.ConfigTx))
 	case *protocol.StakeTx:
-		verified = verifyStakeTx(tx.(*protocol.StakeTx))
+		return verifyStakeTx(tx.(*protocol.StakeTx))
 	case *protocol.AggTx:
-		verified = verifyAggTx(tx.(*protocol.AggTx))
+		return verifyAggTx(tx.(*protocol.AggTx))
+	default: // In case tx is nil or we encounter an unknown transaction type
+		return false
 	}
-
-	return verified
 }
 
 func verifyFundsTx(tx *protocol.FundsTx) bool {
-	if tx == nil {
-		return false
-	}
-
 	pubKey1Sig1, pubKey2Sig1 := new(big.Int), new(big.Int)
 	r, s := new(big.Int), new(big.Int)
 
@@ -97,10 +91,6 @@ func verifyFundsTx(tx *protocol.FundsTx) bool {
 }
 
 func verifyAccTx(tx *protocol.AccTx) bool {
-	if tx == nil {
-		return false
-	}
-
 	r, s := new(big.Int), new(big.Int)
 	pub1, pub2 := new(big.Int), new(big.Int)
 
@@ -124,10 +114,6 @@ func verifyAccTx(tx *protocol.AccTx) bool {
 }
 
 func verifyConfigTx(tx *protocol.ConfigTx) bool {
-	if tx == nil {
-		return false
-	}
-
 	//account creation can only be done with a valid priv/pub key which is hard-coded
 	r, s := new(big.Int), new(big.Int)
 	pub1, pub2 := new(big.Int), new(big.Int)
@@ -150,11 +136,6 @@ func verifyConfigTx(tx *protocol.ConfigTx) bool {
 }
 
 func verifyStakeTx(tx *protocol.StakeTx) bool {
-	if tx == nil {
-		logger.Println("Transactions does not exist.")
-		return false
-	}
-
 	//Check if account is present in the actual state
 	accFrom := storage.State[tx.Account]
 
@@ -186,11 +167,6 @@ func verifyStakeTx(tx *protocol.StakeTx) bool {
 
 //TODO Update this function
 func verifyAggTx(tx *protocol.AggTx) bool {
-	if tx == nil {
-		logger.Println("Transactions does not exist.")
-		return false
-	}
-
 	//Check if accounts are existent
 	//accSender, err := storage.GetAccount(tx.From)
 	//if tx.From //!= protocol.SerializeHashContent(accSender.Address) || tx.To == nil || err != nil {
