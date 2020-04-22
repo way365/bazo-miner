@@ -82,17 +82,10 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 
 	logger.Printf("Received Tx:%v", tx.String())
 
-	if brdcstType == DELTX_BRDCST { //TODO: handle the receipt of delete transaction.
-		logger.Println("DISCARDING DELETE TX\n")
-
-		return
-	}
-
-	//Write to mempool and rebroadcast
+	// If it's the first time, we receive the tx, we write to mempool and rebroadcast
 	storage.WriteOpenTx(tx)
 	toBrdcst := BuildPacket(brdcstType, payload)
 	minerBrdcstMsg <- toBrdcst
-
 }
 
 func processTimeRes(p *peer, payload []byte) {
