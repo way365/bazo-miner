@@ -26,7 +26,7 @@ func ConstrDeleteTx(
 	fee uint64,
 	txToDeleteHash [32]byte,
 	issuer [32]byte,
-	sigKey *ecdsa.PrivateKey,
+	privateKey *ecdsa.PrivateKey,
 	txCnt uint32,
 ) (tx *DeleteTx, err error) {
 	tx = new(DeleteTx)
@@ -40,14 +40,14 @@ func ConstrDeleteTx(
 	txHash := tx.Hash()
 
 	// Sign the Tx
-	r, s, err := ecdsa.Sign(rand.Reader, sigKey, txHash[:])
+	r, s, err := ecdsa.Sign(rand.Reader, privateKey, txHash[:])
 	if err != nil {
 		return nil, err
 	}
 	copy(tx.Sig[32-len(r.Bytes()):32], r.Bytes())
 	copy(tx.Sig[64-len(s.Bytes()):], s.Bytes())
 
-	return tx, nil
+	return tx, err
 }
 
 func (tx *DeleteTx) Hash() (hash [32]byte) {
@@ -61,14 +61,12 @@ func (tx *DeleteTx) Hash() (hash [32]byte) {
 		Fee            uint64
 		TxToDeleteHash [32]byte
 		Issuer         [32]byte
-		Sig            [64]byte
 		TxCnt          uint32
 	}{
 		tx.Header,
 		tx.Fee,
 		tx.TxToDeleteHash,
 		tx.Issuer,
-		tx.Sig,
 		tx.TxCnt,
 	}
 
