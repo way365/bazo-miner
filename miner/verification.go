@@ -26,7 +26,9 @@ func verify(tx protocol.Transaction) bool {
 		return verifyStakeTx(tx.(*protocol.StakeTx))
 	case *protocol.AggTx:
 		return verifyAggTx(tx.(*protocol.AggTx))
-	default: // In case tx is nil or we encounter an unknown transaction type
+	case *protocol.DeleteTx:
+		return verifyDeleteTx(tx.(*protocol.DeleteTx))
+	default: // In case tx is nil or we encounter an unhandled transaction type
 		return false
 	}
 }
@@ -140,6 +142,73 @@ func verifyAggTx(tx *protocol.AggTx) bool {
 	//}
 
 	return true
+}
+
+func verifyDeleteTx(tx *protocol.DeleteTx) bool {
+
+	// First we make sure that the account of the tx issuer exists.
+	issuerAccount := storage.State[tx.Issuer]
+	if issuerAccount == nil {
+		logger.Printf("Account of tx issuer does not exist: %v", tx.Issuer)
+		return false
+	}
+
+	// Next we check if the tx to delete actually exists
+	var txToDelete protocol.Transaction
+
+	switch true {
+	case storage.ReadOpenTx(tx.TxToDeleteHash) != nil:
+		txToDelete = storage.ReadOpenTx(tx.TxToDeleteHash)
+	case storage.ReadClosedTx(tx.TxToDeleteHash) != nil:
+		txToDelete = storage.ReadClosedTx(tx.TxToDeleteHash)
+	default: // If we don't find the tx to delete in the storage, we also can't delete it.
+		logger.Printf("Can't find TxToDelete: %v", tx.TxToDeleteHash)
+		return false
+	}
+
+	txHash := tx.Hash()
+	isTxSigned := isSigned(txHash, tx.Sig, issuerAccount.Address)
+
+	if !isTxSigned {
+		logger.Printf("Tx: %x not signed correctly", txHash)
+		return false
+	}
+
+	// Lastly we check if the issuer of the delete-tx also signed the tx to delete. This makes sure that you only delete your own txs.
+	// Get the hash
+	txToDeleteHash := txToDelete.Hash()
+	var txToDeleteSig [64]byte
+
+	// Now we retrieve the signature. Since 'Sig' is not part of the transaction interface, we need to check for tx type. Really bad :(
+	switch txToDelete.(type) {
+	case *protocol.FundsTx:
+		txToDeleteSig = txToDelete.(*protocol.FundsTx).Sig1
+	case *protocol.AccTx:
+		txToDeleteSig = txToDelete.(*protocol.AccTx).Sig
+	case *protocol.ConfigTx:
+		txToDeleteSig = txToDelete.(*protocol.ConfigTx).Sig
+	case *protocol.StakeTx:
+		txToDeleteSig = txToDelete.(*protocol.StakeTx).Sig
+	case *protocol.AggTx:
+		return false // We can't delete an aggregate tx
+	case *protocol.DeleteTx:
+		txToDeleteSig = txToDelete.(*protocol.DeleteTx).Sig
+	default: // In case we can't convert the tx to a type, abort
+		return false
+	}
+
+	isAuthorized := isSigned(txToDeleteHash, txToDeleteSig, issuerAccount.Address)
+
+	if !isAuthorized {
+		logger.Printf("\nISSUER NOT ALLOWED TO DELETE TX."+
+			"\nTxToDelete was not signed by Issuer. (You can only delete your own tx)"+
+			"\nIssuer: %x"+
+			"\nTxToDelete: %x"+
+			"\nAbort deletion.", tx.Issuer, txToDeleteHash)
+		return false
+	}
+
+	return false //TODO: change to true. We return false here because we don't yet handle the deletion.
 }
 
 //Returns true if id is in the list of possible ids and rational value for payload parameter.
