@@ -80,7 +80,7 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 		return
 	}
 
-	logger.Printf("Received Tx:%v", tx.String())
+	logger.Printf("Received Tx:%v", tx.Hash())
 
 	// If it's the first time, we receive the tx, we write to mempool and rebroadcast
 	storage.WriteOpenTx(tx)
