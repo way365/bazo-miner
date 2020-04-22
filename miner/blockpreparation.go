@@ -35,8 +35,9 @@ func prepareBlock(block *protocol.Block) {
 	tmpCopy = opentxs
 	sort.Sort(tmpCopy)
 
-	nonAggregatableTxCounter = 0                             //Counter for all transactions which will not be aggregated. (Stake-, config-, acctx)
-	blockSize = int(activeParameters.Block_size) - (650 + 8) //Set blocksize - (fixed space + Bloomfiltersize
+	//Counter for all transactions which will not be aggregated. (Stake-, config-, acctx)
+	nonAggregatableTxCounter = 0
+	blockSize = int(activeParameters.BlockSize) - (activeParameters.FixedSpace + activeParameters.BloomFilterSize)
 	logger.Printf("block.GetBloomFilterSize() %v", block.GetBloomFilterSize())
 	transactionHashSize = 32 //It is 32 bytes
 
@@ -93,8 +94,8 @@ func prepareBlock(block *protocol.Block) {
 	for _, sender := range missingTxCntSender {
 
 		//This limits the searching process to teh block interval * TX_FETCH_TIMEOUT
-		if len(missingTxCntSender[sender.senderAddress].missingTransactions) > int(activeParameters.Block_interval) {
-			missingTxCntSender[sender.senderAddress].missingTransactions = missingTxCntSender[sender.senderAddress].missingTransactions[0:int(activeParameters.Block_interval)]
+		if len(missingTxCntSender[sender.senderAddress].missingTransactions) > int(activeParameters.BlockInterval) {
+			missingTxCntSender[sender.senderAddress].missingTransactions = missingTxCntSender[sender.senderAddress].missingTransactions[0:int(activeParameters.BlockInterval)]
 		}
 
 		if len(missingTxCntSender[sender.senderAddress].missingTransactions) > 0 {

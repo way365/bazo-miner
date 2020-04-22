@@ -213,7 +213,7 @@ func collectSlashRewardRollback(reward uint64, block *protocol.Block) {
 		slashedAcc, _ := storage.GetAccount(block.SlashedAddress)
 
 		minerAcc.Balance -= reward
-		slashedAcc.Balance += activeParameters.Staking_minimum
+		slashedAcc.Balance += activeParameters.StakingMinimum
 		slashedAcc.IsStaking = true
 	}
 }

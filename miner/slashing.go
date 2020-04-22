@@ -41,8 +41,8 @@ func seekSlashingProof(block *protocol.Block) error {
 				return nil
 			}
 			if prevBlock.Beneficiary == block.Beneficiary &&
-				(uint64(prevBlock.Height) < uint64(block.Height)+activeParameters.Slashing_window_size ||
-					uint64(block.Height) < uint64(prevBlock.Height)+activeParameters.Slashing_window_size) {
+				(uint64(prevBlock.Height) < uint64(block.Height)+activeParameters.SlashingWindowSize ||
+					uint64(block.Height) < uint64(prevBlock.Height)+activeParameters.SlashingWindowSize) {
 				slashingDict[block.Beneficiary] = SlashingProof{ConflictingBlockHash1: block.Hash, ConflictingBlockHash2: prevBlock.Hash, ConflictingBlockHashWithoutTx1: block.HashWithoutTx, ConflictingBlockHashWithoutTx2: block.PrevHashWithoutTx}
 			}
 		}

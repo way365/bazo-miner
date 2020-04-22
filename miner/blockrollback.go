@@ -91,8 +91,8 @@ func preValidateRollback(b *protocol.Block) (accTxSlice []*protocol.AccTx, funds
 }
 
 func validateStateRollback(data blockData) {
-	collectSlashRewardRollback(activeParameters.Slash_reward, data.block)
-	collectBlockRewardRollback(activeParameters.Block_reward, data.block.Beneficiary)
+	collectSlashRewardRollback(activeParameters.SlashReward, data.block)
+	collectBlockRewardRollback(activeParameters.BlockReward, data.block.Beneficiary)
 	collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 	stakeStateChangeRollback(data.stakeTxSlice)
 	fundsStateChangeRollback(data.fundsTxSlice)

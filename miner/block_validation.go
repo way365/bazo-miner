@@ -134,7 +134,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	}
 
 	//Check block size.
-	if block.GetSize() > activeParameters.Block_size {
+	if block.GetSize() > activeParameters.BlockSize {
 		return nil, nil, nil, nil, nil, nil, errors.New("Block size too large.")
 	}
 
@@ -233,7 +233,7 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 	}
 
 	//Invalid if PoS calculation is not correct.
-	prevProofs := GetLatestProofs(activeParameters.num_included_prev_proofs, block)
+	prevProofs := GetLatestProofs(activeParameters.numIncludedPrevProofs, block)
 
 	//PoS validation
 	if !initialSetup && !validateProofOfStake(getDifficulty(), prevProofs, block.Height, acc.Balance, block.CommitmentProof, block.Timestamp) {
@@ -246,13 +246,13 @@ func preValidate(block *protocol.Block, initialSetup bool) (accTxSlice []*protoc
 
 	//Invalid if PoS is too far in the future.
 	now := time.Now()
-	if block.Timestamp > now.Unix()+int64(activeParameters.Accepted_time_diff) {
+	if block.Timestamp > now.Unix()+int64(activeParameters.AcceptedTimeDiff) {
 		return nil, nil, nil, nil, nil, nil, errors.New("The timestamp is too far in the future. " + string(block.Timestamp) + " vs " + string(now.Unix()))
 	}
 
 	//Check for minimum waiting time.
-	if block.Height-acc.StakingBlockHeight < uint32(activeParameters.Waiting_minimum) {
-		return nil, nil, nil, nil, nil, nil, errors.New("The miner must wait a minimum amount of blocks before start validating. Block Height:" + fmt.Sprint(block.Height) + " - Height when started validating " + string(acc.StakingBlockHeight) + " MinWaitingTime: " + string(activeParameters.Waiting_minimum))
+	if block.Height-acc.StakingBlockHeight < uint32(activeParameters.WaitingMinimum) {
+		return nil, nil, nil, nil, nil, nil, errors.New("The miner must wait a minimum amount of blocks before start validating. Block Height:" + fmt.Sprint(block.Height) + " - Height when started validating " + string(acc.StakingBlockHeight) + " MinWaitingTime: " + string(activeParameters.WaitingMinimum))
 	}
 
 	//Check if block contains a proof for two conflicting block hashes, else no proof provided.
@@ -305,7 +305,7 @@ func validateState(data blockData, initialSetup bool) error {
 		return err
 	}
 
-	if err := collectBlockReward(activeParameters.Block_reward, data.block.Beneficiary, initialSetup); err != nil {
+	if err := collectBlockReward(activeParameters.BlockReward, data.block.Beneficiary, initialSetup); err != nil {
 		collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
@@ -314,8 +314,8 @@ func validateState(data blockData, initialSetup bool) error {
 		return err
 	}
 
-	if err := collectSlashReward(activeParameters.Slash_reward, data.block); err != nil {
-		collectBlockRewardRollback(activeParameters.Block_reward, data.block.Beneficiary)
+	if err := collectSlashReward(activeParameters.SlashReward, data.block); err != nil {
+		collectBlockRewardRollback(activeParameters.BlockReward, data.block.Beneficiary)
 		collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
@@ -325,8 +325,8 @@ func validateState(data blockData, initialSetup bool) error {
 	}
 
 	if err := updateStakingHeight(data.block); err != nil {
-		collectSlashRewardRollback(activeParameters.Slash_reward, data.block)
-		collectBlockRewardRollback(activeParameters.Block_reward, data.block.Beneficiary)
+		collectSlashRewardRollback(activeParameters.SlashReward, data.block)
+		collectBlockRewardRollback(activeParameters.BlockReward, data.block.Beneficiary)
 		collectTxFeesRollback(data.accTxSlice, data.fundsTxSlice, data.configTxSlice, data.stakeTxSlice, data.block.Beneficiary)
 		stakeStateChangeRollback(data.stakeTxSlice)
 		fundsStateChangeRollback(data.fundsTxSlice)
@@ -579,7 +579,7 @@ func slashingCheck(slashedAddress, conflictingBlockHash1, conflictingBlockHash2,
 
 	// We found the height of the blocks and the height of the blocks can be checked.
 	// If the height is not within the active slashing window size, we must throw an error. If not, the proof is valid.
-	if !(conflictingBlock1.Height < uint32(activeParameters.Slashing_window_size)+conflictingBlock2.Height) {
+	if !(conflictingBlock1.Height < uint32(activeParameters.SlashingWindowSize)+conflictingBlock2.Height) {
 		return false, errors.New(fmt.Sprintf(prefix + "Could not find a ancestor for the provided conflicting hash (2)."))
 	}
 

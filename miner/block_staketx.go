@@ -28,7 +28,7 @@ func addStakeTx(b *protocol.Block, tx *protocol.StakeTx) error {
 	//Root accounts are exempt from balance requirements. All other accounts need to have (at least)
 	//fee + minimum amount that is required for staking.
 	if !storage.IsRootKey(tx.Account) {
-		if (tx.Fee + activeParameters.Staking_minimum) >= b.StateCopy[tx.Account].Balance {
+		if (tx.Fee + activeParameters.StakingMinimum) >= b.StateCopy[tx.Account].Balance {
 			return errors.New("Not enough funds to complete the transaction!")
 		}
 	}

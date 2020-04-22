@@ -80,7 +80,7 @@ func finalizeBlock(block *protocol.Block) error {
 	//Block hash without MerkleTree and therefore, without any transactions
 	partialHashWithoutMerkleRoot := block.HashBlockWithoutMerkleRoot()
 
-	prevProofs := GetLatestProofs(activeParameters.num_included_prev_proofs, block)
+	prevProofs := GetLatestProofs(activeParameters.numIncludedPrevProofs, block)
 	nonce, err := proofOfStake(getDifficulty(), block.PrevHash, prevProofs, block.Height, validatorAcc.Balance, commitmentProof)
 	if err != nil {
 		//Delete all partially added transactions.
@@ -126,8 +126,8 @@ func addTx(b *protocol.Block, tx protocol.Transaction) error {
 	case *protocol.AggTx:
 		return nil
 	default:
-		if tx.TxFee() < activeParameters.Fee_minimum {
-			err := fmt.Sprintf("Transaction fee too low: %v (minimum is: %v)\n", tx.TxFee(), activeParameters.Fee_minimum)
+		if tx.TxFee() < activeParameters.FeeMinimum {
+			err := fmt.Sprintf("Transaction fee too low: %v (minimum is: %v)\n", tx.TxFee(), activeParameters.FeeMinimum)
 			return errors.New(err)
 		}
 	}

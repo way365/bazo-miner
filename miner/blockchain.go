@@ -141,7 +141,7 @@ func initRootKey(rootKey *ecdsa.PublicKey) error {
 	var commPubKey [crypto.COMM_KEY_LENGTH]byte
 	copy(commPubKey[:], rootCommPrivKey.N.Bytes())
 
-	rootAcc := protocol.NewAccount(address, [32]byte{}, activeParameters.Staking_minimum, true, commPubKey, nil, nil)
+	rootAcc := protocol.NewAccount(address, [32]byte{}, activeParameters.StakingMinimum, true, commPubKey, nil, nil)
 	storage.State[addressHash] = &rootAcc
 	storage.RootKeys[addressHash] = &rootAcc
 
