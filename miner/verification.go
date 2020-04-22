@@ -32,8 +32,6 @@ func verify(tx protocol.Transaction) bool {
 }
 
 func verifyFundsTx(tx *protocol.FundsTx) bool {
-	pubKey1Sig1, pubKey2Sig1 := new(big.Int), new(big.Int)
-	r, s := new(big.Int), new(big.Int)
 
 	//fundsTx only makes sense if amount > 0
 	if tx.Amount == 0 || tx.Amount > MAX_MONEY {
@@ -53,22 +51,13 @@ func verifyFundsTx(tx *protocol.FundsTx) bool {
 
 	accFromHash := protocol.SerializeHashContent(accFrom.Address)
 	accToHash := protocol.SerializeHashContent(accTo.Address)
-
-	pubKey1Sig1.SetBytes(accFrom.Address[:32])
-	pubKey2Sig1.SetBytes(accFrom.Address[32:])
-
-	r.SetBytes(tx.Sig1[:32])
-	s.SetBytes(tx.Sig1[32:])
-
 	tx.From = accFromHash
 	tx.To = accToHash
-
 	txHash := tx.Hash()
 
 	var validSig1, validSig2 bool
 
-	pubKey := ecdsa.PublicKey{elliptic.P256(), pubKey1Sig1, pubKey2Sig1}
-	if ecdsa.Verify(&pubKey, txHash[:], r, s) && !reflect.DeepEqual(accFrom, accTo) {
+	if isSigned(txHash, tx.Sig1, accFrom.Address) && !reflect.DeepEqual(accFrom, accTo) {
 		tx.From = accFromHash
 		tx.To = accToHash
 		validSig1 = true
@@ -77,6 +66,7 @@ func verifyFundsTx(tx *protocol.FundsTx) bool {
 		return false
 	}
 
+	r, s := new(big.Int), new(big.Int)
 	r.SetBytes(tx.Sig2[:32])
 	s.SetBytes(tx.Sig2[32:])
 
@@ -91,46 +81,33 @@ func verifyFundsTx(tx *protocol.FundsTx) bool {
 }
 
 func verifyAccTx(tx *protocol.AccTx) bool {
-	r, s := new(big.Int), new(big.Int)
-	pub1, pub2 := new(big.Int), new(big.Int)
-
-	r.SetBytes(tx.Sig[:32])
-	s.SetBytes(tx.Sig[32:])
-
 	for _, rootAcc := range storage.RootKeys {
-		pub1.SetBytes(rootAcc.Address[:32])
-		pub2.SetBytes(rootAcc.Address[32:])
-
-		pubKey := ecdsa.PublicKey{elliptic.P256(), pub1, pub2}
+		signature := tx.Sig
+		address := rootAcc.Address
 		txHash := tx.Hash()
 
-		//Only the hash of the pubkey is hashed and verified here
-		if ecdsa.Verify(&pubKey, txHash[:], r, s) == true {
+		if isSigned(txHash, signature, address) {
 			return true
 		}
 	}
 
+	logger.Printf("No valid root account.")
 	return false
 }
 
 func verifyConfigTx(tx *protocol.ConfigTx) bool {
 	//account creation can only be done with a valid priv/pub key which is hard-coded
-	r, s := new(big.Int), new(big.Int)
-	pub1, pub2 := new(big.Int), new(big.Int)
-
-	r.SetBytes(tx.Sig[:32])
-	s.SetBytes(tx.Sig[32:])
 
 	for _, rootAcc := range storage.RootKeys {
-		pub1.SetBytes(rootAcc.Address[:32])
-		pub2.SetBytes(rootAcc.Address[32:])
-
-		pubKey := ecdsa.PublicKey{elliptic.P256(), pub1, pub2}
+		signature := tx.Sig
+		address := rootAcc.Address
 		txHash := tx.Hash()
-		if ecdsa.Verify(&pubKey, txHash[:], r, s) == true {
+		if isSigned(txHash, signature, address) {
 			return true
 		}
 	}
+
+	logger.Printf("No valid root account.")
 
 	return false
 }
@@ -142,27 +119,15 @@ func verifyStakeTx(tx *protocol.StakeTx) bool {
 	//Account non existent
 	if accFrom == nil {
 		logger.Println("Account does not exist.")
+
 		return false
 	}
 
 	accFromHash := protocol.SerializeHashContent(accFrom.Address)
-
-	pub1, pub2 := new(big.Int), new(big.Int)
-	r, s := new(big.Int), new(big.Int)
-
-	pub1.SetBytes(accFrom.Address[:32])
-	pub2.SetBytes(accFrom.Address[32:])
-
-	r.SetBytes(tx.Sig[:32])
-	s.SetBytes(tx.Sig[32:])
-
 	tx.Account = accFromHash
-
 	txHash := tx.Hash()
 
-	pubKey := ecdsa.PublicKey{elliptic.P256(), pub1, pub2}
-
-	return ecdsa.Verify(&pubKey, txHash[:], r, s)
+	return isSigned(txHash, tx.Sig, accFrom.Address)
 }
 
 //TODO Update this function
@@ -224,4 +189,23 @@ func parameterBoundsChecking(id uint8, payload uint64) bool {
 	}
 
 	return false
+}
+
+// Checks if the hash is signed by the provided signature and address
+func isSigned(hash [32]byte, signature [64]byte, address [64]byte) bool {
+	pub1, pub2 := new(big.Int), new(big.Int)
+	r, s := new(big.Int), new(big.Int)
+
+	r.SetBytes(signature[:32])
+	s.SetBytes(signature[32:])
+	pub1.SetBytes(address[:32])
+	pub2.SetBytes(address[32:])
+	publicKey := ecdsa.PublicKey{elliptic.P256(), pub1, pub2}
+
+	isSigned := ecdsa.Verify(&publicKey, hash[:], r, s)
+	if !isSigned {
+		logger.Printf("Could not verfiy signature.")
+	}
+
+	return isSigned
 }
