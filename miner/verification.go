@@ -15,31 +15,25 @@ import (
 //should only be of concern to the miner, not to the protocol package. However, this has the disadvantage
 //that we have to do case distinction here.
 func verify(tx protocol.Transaction) bool {
-	var verified bool
-
 	switch tx.(type) {
 	case *protocol.FundsTx:
-		verified = verifyFundsTx(tx.(*protocol.FundsTx))
+		return verifyFundsTx(tx.(*protocol.FundsTx))
 	case *protocol.AccTx:
-		verified = verifyAccTx(tx.(*protocol.AccTx))
+		return verifyAccTx(tx.(*protocol.AccTx))
 	case *protocol.ConfigTx:
-		verified = verifyConfigTx(tx.(*protocol.ConfigTx))
+		return verifyConfigTx(tx.(*protocol.ConfigTx))
 	case *protocol.StakeTx:
-		verified = verifyStakeTx(tx.(*protocol.StakeTx))
+		return verifyStakeTx(tx.(*protocol.StakeTx))
 	case *protocol.AggTx:
-		verified = verifyAggTx(tx.(*protocol.AggTx))
+		return verifyAggTx(tx.(*protocol.AggTx))
+	case *protocol.DeleteTx:
+		return verifyDeleteTx(tx.(*protocol.DeleteTx))
+	default: // In case tx is nil or we encounter an unhandled transaction type
+		return false
 	}
-
-	return verified
 }
 
 func verifyFundsTx(tx *protocol.FundsTx) bool {
-	if tx == nil {
-		return false
-	}
-
-	pubKey1Sig1, pubKey2Sig1 := new(big.Int), new(big.Int)
-	r, s := new(big.Int), new(big.Int)
 
 	//fundsTx only makes sense if amount > 0
 	if tx.Amount == 0 || tx.Amount > MAX_MONEY {
@@ -59,22 +53,13 @@ func verifyFundsTx(tx *protocol.FundsTx) bool {
 
 	accFromHash := protocol.SerializeHashContent(accFrom.Address)
 	accToHash := protocol.SerializeHashContent(accTo.Address)
-
-	pubKey1Sig1.SetBytes(accFrom.Address[:32])
-	pubKey2Sig1.SetBytes(accFrom.Address[32:])
-
-	r.SetBytes(tx.Sig1[:32])
-	s.SetBytes(tx.Sig1[32:])
-
 	tx.From = accFromHash
 	tx.To = accToHash
-
 	txHash := tx.Hash()
 
 	var validSig1, validSig2 bool
 
-	pubKey := ecdsa.PublicKey{elliptic.P256(), pubKey1Sig1, pubKey2Sig1}
-	if ecdsa.Verify(&pubKey, txHash[:], r, s) && !reflect.DeepEqual(accFrom, accTo) {
+	if isSigned(txHash, tx.Sig1, accFrom.Address) && !reflect.DeepEqual(accFrom, accTo) {
 		tx.From = accFromHash
 		tx.To = accToHash
 		validSig1 = true
@@ -83,6 +68,7 @@ func verifyFundsTx(tx *protocol.FundsTx) bool {
 		return false
 	}
 
+	r, s := new(big.Int), new(big.Int)
 	r.SetBytes(tx.Sig2[:32])
 	s.SetBytes(tx.Sig2[32:])
 
@@ -97,100 +83,57 @@ func verifyFundsTx(tx *protocol.FundsTx) bool {
 }
 
 func verifyAccTx(tx *protocol.AccTx) bool {
-	if tx == nil {
-		return false
-	}
-
-	r, s := new(big.Int), new(big.Int)
-	pub1, pub2 := new(big.Int), new(big.Int)
-
-	r.SetBytes(tx.Sig[:32])
-	s.SetBytes(tx.Sig[32:])
-
 	for _, rootAcc := range storage.RootKeys {
-		pub1.SetBytes(rootAcc.Address[:32])
-		pub2.SetBytes(rootAcc.Address[32:])
-
-		pubKey := ecdsa.PublicKey{elliptic.P256(), pub1, pub2}
+		signature := tx.Sig
+		address := rootAcc.Address
 		txHash := tx.Hash()
 
-		//Only the hash of the pubkey is hashed and verified here
-		if ecdsa.Verify(&pubKey, txHash[:], r, s) == true {
+		if isSigned(txHash, signature, address) {
 			return true
 		}
 	}
 
+	logger.Printf("No valid root account.")
 	return false
 }
 
 func verifyConfigTx(tx *protocol.ConfigTx) bool {
-	if tx == nil {
-		return false
-	}
-
 	//account creation can only be done with a valid priv/pub key which is hard-coded
-	r, s := new(big.Int), new(big.Int)
-	pub1, pub2 := new(big.Int), new(big.Int)
-
-	r.SetBytes(tx.Sig[:32])
-	s.SetBytes(tx.Sig[32:])
 
 	for _, rootAcc := range storage.RootKeys {
-		pub1.SetBytes(rootAcc.Address[:32])
-		pub2.SetBytes(rootAcc.Address[32:])
-
-		pubKey := ecdsa.PublicKey{elliptic.P256(), pub1, pub2}
+		signature := tx.Sig
+		address := rootAcc.Address
 		txHash := tx.Hash()
-		if ecdsa.Verify(&pubKey, txHash[:], r, s) == true {
+		if isSigned(txHash, signature, address) {
 			return true
 		}
 	}
+
+	logger.Printf("No valid root account.")
 
 	return false
 }
 
 func verifyStakeTx(tx *protocol.StakeTx) bool {
-	if tx == nil {
-		logger.Println("Transactions does not exist.")
-		return false
-	}
-
 	//Check if account is present in the actual state
 	accFrom := storage.State[tx.Account]
 
 	//Account non existent
 	if accFrom == nil {
 		logger.Println("Account does not exist.")
+
 		return false
 	}
 
 	accFromHash := protocol.SerializeHashContent(accFrom.Address)
-
-	pub1, pub2 := new(big.Int), new(big.Int)
-	r, s := new(big.Int), new(big.Int)
-
-	pub1.SetBytes(accFrom.Address[:32])
-	pub2.SetBytes(accFrom.Address[32:])
-
-	r.SetBytes(tx.Sig[:32])
-	s.SetBytes(tx.Sig[32:])
-
 	tx.Account = accFromHash
-
 	txHash := tx.Hash()
 
-	pubKey := ecdsa.PublicKey{elliptic.P256(), pub1, pub2}
-
-	return ecdsa.Verify(&pubKey, txHash[:], r, s)
+	return isSigned(txHash, tx.Sig, accFrom.Address)
 }
 
 //TODO Update this function
 func verifyAggTx(tx *protocol.AggTx) bool {
-	if tx == nil {
-		logger.Println("Transactions does not exist.")
-		return false
-	}
-
 	//Check if accounts are existent
 	//accSender, err := storage.GetAccount(tx.From)
 	//if tx.From //!= protocol.SerializeHashContent(accSender.Address) || tx.To == nil || err != nil {
@@ -199,6 +142,73 @@ func verifyAggTx(tx *protocol.AggTx) bool {
 	//}
 
 	return true
+}
+
+func verifyDeleteTx(tx *protocol.DeleteTx) bool {
+
+	// First we make sure that the account of the tx issuer exists.
+	issuerAccount := storage.State[tx.Issuer]
+	if issuerAccount == nil {
+		logger.Printf("Account of tx issuer does not exist: %v", tx.Issuer)
+		return false
+	}
+
+	// Next we check if the tx to delete actually exists
+	var txToDelete protocol.Transaction
+
+	switch true {
+	case storage.ReadOpenTx(tx.TxToDeleteHash) != nil:
+		txToDelete = storage.ReadOpenTx(tx.TxToDeleteHash)
+	case storage.ReadClosedTx(tx.TxToDeleteHash) != nil:
+		txToDelete = storage.ReadClosedTx(tx.TxToDeleteHash)
+	default: // If we don't find the tx to delete in the storage, we also can't delete it.
+		logger.Printf("Can't find TxToDelete: %v", tx.TxToDeleteHash)
+		return false
+	}
+
+	txHash := tx.Hash()
+	isTxSigned := isSigned(txHash, tx.Sig, issuerAccount.Address)
+
+	if !isTxSigned {
+		logger.Printf("Tx: %x not signed correctly", txHash)
+		return false
+	}
+
+	// Lastly we check if the issuer of the delete-tx also signed the tx to delete. This makes sure that you only delete your own txs.
+	// Get the hash
+	txToDeleteHash := txToDelete.Hash()
+	var txToDeleteSig [64]byte
+
+	// Now we retrieve the signature. Since 'Sig' is not part of the transaction interface, we need to check for tx type. Really bad :(
+	switch txToDelete.(type) {
+	case *protocol.FundsTx:
+		txToDeleteSig = txToDelete.(*protocol.FundsTx).Sig1
+	case *protocol.AccTx:
+		txToDeleteSig = txToDelete.(*protocol.AccTx).Sig
+	case *protocol.ConfigTx:
+		txToDeleteSig = txToDelete.(*protocol.ConfigTx).Sig
+	case *protocol.StakeTx:
+		txToDeleteSig = txToDelete.(*protocol.StakeTx).Sig
+	case *protocol.AggTx:
+		return false // We can't delete an aggregate tx
+	case *protocol.DeleteTx:
+		txToDeleteSig = txToDelete.(*protocol.DeleteTx).Sig
+	default: // In case we can't convert the tx to a type, abort
+		return false
+	}
+
+	isAuthorized := isSigned(txToDeleteHash, txToDeleteSig, issuerAccount.Address)
+
+	if !isAuthorized {
+		logger.Printf("\nISSUER NOT ALLOWED TO DELETE TX."+
+			"\nTxToDelete was not signed by Issuer. (You can only delete your own tx)"+
+			"\nIssuer: %x"+
+			"\nTxToDelete: %x"+
+			"\nAbort deletion.", tx.Issuer, txToDeleteHash)
+		return false
+	}
+
+	return false //TODO: change to true. We return false here because we don't yet handle the deletion.
 }
 
 //Returns true if id is in the list of possible ids and rational value for payload parameter.
@@ -248,4 +258,23 @@ func parameterBoundsChecking(id uint8, payload uint64) bool {
 	}
 
 	return false
+}
+
+// Checks if the hash is signed by the provided signature and address
+func isSigned(hash [32]byte, signature [64]byte, address [64]byte) bool {
+	pub1, pub2 := new(big.Int), new(big.Int)
+	r, s := new(big.Int), new(big.Int)
+
+	r.SetBytes(signature[:32])
+	s.SetBytes(signature[32:])
+	pub1.SetBytes(address[:32])
+	pub2.SetBytes(address[32:])
+	publicKey := ecdsa.PublicKey{elliptic.P256(), pub1, pub2}
+
+	isSigned := ecdsa.Verify(&publicKey, hash[:], r, s)
+	if !isSigned {
+		logger.Printf("Could not verfiy signature.")
+	}
+
+	return isSigned
 }

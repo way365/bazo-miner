@@ -18,35 +18,35 @@ func CheckAndChangeParameters(parameters *Parameters, configTxSlice *[]*protocol
 		switch tx.Id {
 		case protocol.FEE_MINIMUM_ID:
 			if parameterBoundsChecking(protocol.FEE_MINIMUM_ID, tx.Payload) {
-				parameters.Fee_minimum = tx.Payload
+				parameters.FeeMinimum = tx.Payload
 				change = true
 			}
 		case protocol.BLOCK_SIZE_ID:
 			if parameterBoundsChecking(protocol.BLOCK_SIZE_ID, tx.Payload) {
-				parameters.Block_size = tx.Payload
-				logger.Printf("BLOCK_SIZE: %v", parameters.Block_size)
+				parameters.BlockSize = tx.Payload
+				logger.Printf("BLOCK_SIZE: %v", parameters.BlockSize)
 				change = true
 			}
 		case protocol.BLOCK_REWARD_ID:
 			if parameterBoundsChecking(protocol.BLOCK_REWARD_ID, tx.Payload) {
-				parameters.Block_reward = tx.Payload
+				parameters.BlockReward = tx.Payload
 				change = true
 			}
 		case protocol.DIFF_INTERVAL_ID:
 			if parameterBoundsChecking(protocol.DIFF_INTERVAL_ID, tx.Payload) {
-				parameters.Diff_interval = tx.Payload
-				logger.Printf("BLOCK_DIFF: %v", parameters.Diff_interval)
+				parameters.DiffInterval = tx.Payload
+				logger.Printf("BLOCK_DIFF: %v", parameters.DiffInterval)
 				change = true
 			}
 		case protocol.BLOCK_INTERVAL_ID:
 			if parameterBoundsChecking(protocol.BLOCK_INTERVAL_ID, tx.Payload) {
-				parameters.Block_interval = tx.Payload
-				logger.Printf("BLOCK_INVTERVAL: %v", parameters.Block_interval)
+				parameters.BlockInterval = tx.Payload
+				logger.Printf("BLOCK_INVTERVAL: %v", parameters.BlockInterval)
 				change = true
 			}
 		case protocol.STAKING_MINIMUM_ID:
 			if parameterBoundsChecking(protocol.STAKING_MINIMUM_ID, tx.Payload) {
-				parameters.Staking_minimum = tx.Payload
+				parameters.StakingMinimum = tx.Payload
 				change = true
 				//Go through all accounts and remove all validators from the validator sett that no longer fulfill the minimum staking amount
 				for _, account := range storage.State {
@@ -57,22 +57,22 @@ func CheckAndChangeParameters(parameters *Parameters, configTxSlice *[]*protocol
 			}
 		case protocol.WAITING_MINIMUM_ID:
 			if parameterBoundsChecking(protocol.WAITING_MINIMUM_ID, tx.Payload) {
-				parameters.Waiting_minimum = tx.Payload
+				parameters.WaitingMinimum = tx.Payload
 				change = true
 			}
 		case protocol.ACCEPTANCE_TIME_DIFF_ID:
 			if parameterBoundsChecking(protocol.ACCEPTANCE_TIME_DIFF_ID, tx.Payload) {
-				parameters.Accepted_time_diff = tx.Payload
+				parameters.AcceptedTimeDiff = tx.Payload
 				change = true
 			}
 		case protocol.SLASHING_WINDOW_SIZE_ID:
 			if parameterBoundsChecking(protocol.SLASHING_WINDOW_SIZE_ID, tx.Payload) {
-				parameters.Slashing_window_size = tx.Payload
+				parameters.SlashingWindowSize = tx.Payload
 				change = true
 			}
 		case protocol.SLASHING_REWARD_ID:
 			if parameterBoundsChecking(protocol.SLASHING_REWARD_ID, tx.Payload) {
-				parameters.Slash_reward = tx.Payload
+				parameters.SlashReward = tx.Payload
 				change = true
 			}
 		}
@@ -382,7 +382,7 @@ func stakeStateChange(txSlice []*protocol.StakeTx, height uint32, initialSetup b
 		}
 
 		//Check minimum amount
-		if !initialSetup && tx.IsStaking && accSender.Balance < tx.Fee+activeParameters.Staking_minimum {
+		if !initialSetup && tx.IsStaking && accSender.Balance < tx.Fee+activeParameters.StakingMinimum {
 			err = errors.New(fmt.Sprintf("Sender wants to stake but does not have enough funds (%v) in order to fulfill the required staking minimum (%v).", accSender.Balance, STAKING_MINIMUM))
 		}
 
@@ -548,7 +548,7 @@ func collectSlashReward(reward uint64, block *protocol.Block) (err error) {
 		//Validator is rewarded with slashing reward for providing a valid slashing proof
 		minerAcc.Balance += reward
 		//Slashed account looses the minimum staking amount
-		slashedAcc.Balance -= activeParameters.Staking_minimum
+		slashedAcc.Balance -= activeParameters.StakingMinimum
 		//Slashed account is being removed from the validator set
 		slashedAcc.IsStaking = false
 	}

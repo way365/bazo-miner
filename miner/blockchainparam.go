@@ -20,18 +20,20 @@ var (
 //This is necessary, because the system records ALL config txs (even those who have no corresponding
 //code to execute [e.g., when they're running an older version of the code]).
 type Parameters struct {
-	BlockHash                [BLOCKHASH_SIZE]byte
-	Fee_minimum              uint64 //Paid minimum fee for sending a tx.
-	Block_size               uint64 //Block size in bytes.
-	Diff_interval            uint64
-	Block_interval           uint64
-	Block_reward             uint64 //Reward for delivering the correct PoS.
-	Staking_minimum          uint64 //Minimum amount a validator must own for staking.
-	Waiting_minimum          uint64 //Number of blocks that must a new validator must wait before it can start validating.
-	Accepted_time_diff       uint64 //Number of seconds that a block can be received in the future.
-	Slashing_window_size     uint64 //Number of blocks that a validator cannot vote on two competing chains.
-	Slash_reward             uint64 //Reward for providing the correct slashing proof.
-	num_included_prev_proofs int
+	BlockHash             [BLOCKHASH_SIZE]byte
+	FeeMinimum            uint64 //Paid minimum fee for sending a tx.
+	BlockSize             uint64 //Block size in bytes.
+	DiffInterval          uint64
+	BlockInterval         uint64
+	BlockReward           uint64 //Reward for delivering the correct PoS.
+	StakingMinimum        uint64 //Minimum amount a validator must own for staking.
+	WaitingMinimum        uint64 //Number of blocks that must a new validator must wait before it can start validating.
+	AcceptedTimeDiff      uint64 //Number of seconds that a block can be received in the future.
+	SlashingWindowSize    uint64 //Number of blocks that a validator cannot vote on two competing chains.
+	SlashReward           uint64 //Reward for providing the correct slashing proof.
+	numIncludedPrevProofs int
+	FixedSpace            int
+	BloomFilterSize       int
 }
 
 func NewDefaultParameters() Parameters {
@@ -48,6 +50,8 @@ func NewDefaultParameters() Parameters {
 		SLASHING_WINDOW_SIZE,
 		SLASH_REWARD,
 		NUM_INCL_PREV_PROOFS,
+		FIXED_SPACE,
+		BLOOM_FILTER_SIZE,
 	}
 
 	return newParameters
@@ -66,7 +70,7 @@ func collectStatistics(b *protocol.Block) {
 	globalBlockCount++
 	localBlockCount++
 
-	if localBlockCount >= int64(activeParameters.Diff_interval) {
+	if localBlockCount >= int64(activeParameters.DiffInterval) {
 		currentTargetTime.last = b.Timestamp
 		//The genesis block has timestamp = 0. This simplifies certain things: Every miner can start with an already
 		//existing genesis block (because all fields are set to 0). The "find common ancestor" algorithm can then
@@ -93,7 +97,7 @@ func collectStatisticsRollback(b *protocol.Block) {
 
 	//Never rollback the genesis blocks.
 	if localBlockCount == 0 && globalBlockCount != 0 {
-		localBlockCount = int64(activeParameters.Diff_interval) - 1
+		localBlockCount = int64(activeParameters.DiffInterval) - 1
 		//Target rollback
 		target = target[:len(target)-1]
 		currentTargetTime.first = targetTimes[len(targetTimes)-1].first
@@ -110,7 +114,7 @@ func calculateNewDifficulty(t *timerange) uint8 {
 	diff_now := t.last - t.first
 
 	//This is how long it should have taken.
-	diff_wanted := activeParameters.Block_interval * (activeParameters.Diff_interval)
+	diff_wanted := activeParameters.BlockInterval * (activeParameters.DiffInterval)
 
 	diff_ratio := float64(diff_wanted) / float64(diff_now)
 
@@ -166,16 +170,16 @@ func (param Parameters) String() string {
 			"Slash reward: %v\n"+
 			"Num of previous proofs included in PoS: %v\n",
 		param.BlockHash[0:8],
-		param.Block_size,
-		param.Diff_interval,
-		param.Fee_minimum,
-		param.Block_interval,
-		param.Block_reward,
-		param.Staking_minimum,
-		param.Waiting_minimum,
-		param.Accepted_time_diff,
-		param.Slashing_window_size,
-		param.Slash_reward,
-		param.num_included_prev_proofs,
+		param.BlockSize,
+		param.DiffInterval,
+		param.FeeMinimum,
+		param.BlockInterval,
+		param.BlockReward,
+		param.StakingMinimum,
+		param.WaitingMinimum,
+		param.AcceptedTimeDiff,
+		param.SlashingWindowSize,
+		param.SlashReward,
+		param.numIncludedPrevProofs,
 	)
 }

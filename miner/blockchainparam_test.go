@@ -10,8 +10,8 @@ import (
 func TestTargetHistory(t *testing.T) {
 	cleanAndPrepare()
 
-	activeParameters.Diff_interval = 5
-	activeParameters.Block_interval = 5
+	activeParameters.DiffInterval = 5
+	activeParameters.BlockInterval = 5
 
 	//Build 5 blocks, this results in a targets update and a targetTime update
 	//with timerange.first = 0 because of the genesis block
@@ -67,8 +67,8 @@ func TestTimestamps(t *testing.T) {
 	cleanAndPrepare()
 
 	//tweak parameters to test target update
-	activeParameters.Diff_interval = 5
-	activeParameters.Block_interval = 10
+	activeParameters.DiffInterval = 5
+	activeParameters.BlockInterval = 10
 
 	prevHash := [32]byte{}
 	for cnt := 0; cnt < 0; cnt++ {
@@ -92,10 +92,10 @@ func TestTimestamps(t *testing.T) {
 
 		//block is validated, check if configtx are now in the system
 		if cnt == 8 {
-			if activeParameters.Block_interval != 60 || activeParameters.Diff_interval != 20 || localBlockCount != 0 {
+			if activeParameters.BlockInterval != 60 || activeParameters.DiffInterval != 20 || localBlockCount != 0 {
 				t.Errorf("Block Interval: %v, Diff Interval: %v, LocalBlockCnt: %v\n",
-					activeParameters.Block_interval,
-					activeParameters.Diff_interval,
+					activeParameters.BlockInterval,
+					activeParameters.DiffInterval,
 					localBlockCount,
 				)
 			}
@@ -109,8 +109,8 @@ func TestCalculateNewDifficulty(t *testing.T) {
 
 	//set new system parameters
 	target[len(target)-1] = 10
-	activeParameters.Block_interval = 10
-	activeParameters.Diff_interval = 10
+	activeParameters.BlockInterval = 10
+	activeParameters.DiffInterval = 10
 	time := timerange{0, 100}
 
 	if calculateNewDifficulty(&time) != 10 {

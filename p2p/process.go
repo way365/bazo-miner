@@ -70,33 +70,22 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 		sendData(p, packet)
 	}
 
+	// Tx already in mempool of open tx
 	if storage.ReadOpenTx(tx.Hash()) != nil {
-		//logger.Printf("Received transaction (%x) already in the mempool.\n", tx.Hash())
 		return
 	}
+
+	// Tx already in mempool of closed tx
 	if storage.ReadClosedTx(tx.Hash()) != nil {
-		//logger.Printf("Received transaction (%x) already validated.\n", tx.Hash())
 		return
 	}
 
-	if storage.ReadClosedTx(tx.Hash()) != nil {
-		//logger.Printf("Received transaction (%x) already validated.\n", tx.Hash())
-		return
-	}
+	logger.Printf("Received Tx: %x", tx.Hash())
 
-	logger.Printf("Received Tx:%v", tx.String())
-
-	if brdcstType == DELTX_BRDCST { //TODO: handle the receipt of delete transaction.
-		logger.Println("DISCARDING DELETE TX\n")
-
-		return
-	}
-
-	//Write to mempool and rebroadcast
+	// If it's the first time, we receive the tx, we write to mempool and rebroadcast
 	storage.WriteOpenTx(tx)
 	toBrdcst := BuildPacket(brdcstType, payload)
 	minerBrdcstMsg <- toBrdcst
-
 }
 
 func processTimeRes(p *peer, payload []byte) {

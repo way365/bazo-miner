@@ -35,23 +35,24 @@ func prepareBlock(block *protocol.Block) {
 	tmpCopy = opentxs
 	sort.Sort(tmpCopy)
 
-	nonAggregatableTxCounter = 0                             //Counter for all transactions which will not be aggregated. (Stake-, config-, acctx)
-	blockSize = int(activeParameters.Block_size) - (650 + 8) //Set blocksize - (fixed space + Bloomfiltersize
+	//Counter for all transactions which will not be aggregated. (Stake-, config-, acctx)
+	nonAggregatableTxCounter = 0
+	blockSize = int(activeParameters.BlockSize) - (activeParameters.FixedSpace + activeParameters.BloomFilterSize)
 	logger.Printf("block.GetBloomFilterSize() %v", block.GetBloomFilterSize())
-	transactionHashSize = 32 //It is 32 bytes
+	transactionHashSize = protocol.TRANSACTION_HASH_SIZE // in bytes
 
 	//map where all senders from FundsTx and AggTx are added to. --> this ensures that tx with same sender are only counted once.
-	storage.DifferentSenders = map[[32]byte]uint32{}
-	storage.DifferentReceivers = map[[32]byte]uint32{}
+	storage.DifferentSenders = map[[protocol.TRANSACTION_SENDER_SIZE]byte]uint32{}
+	storage.DifferentReceivers = map[[protocol.TRANSACTION_RECEIVER_SIZE]byte]uint32{}
 	storage.FundsTxBeforeAggregation = nil
 
 	type senderTxCounterForMissingTransactions struct {
-		senderAddress       [32]byte
+		senderAddress       [protocol.TRANSACTION_SENDER_SIZE]byte
 		txcnt               uint32
 		missingTransactions []uint32
 	}
 
-	var missingTxCntSender = map[[32]byte]*senderTxCounterForMissingTransactions{}
+	var missingTxCntSender = map[[protocol.TRANSACTION_SENDER_SIZE]byte]*senderTxCounterForMissingTransactions{}
 
 	//Get Best combination of transactions
 	opentxToAdd = checkBestCombination(opentxs)
@@ -93,8 +94,8 @@ func prepareBlock(block *protocol.Block) {
 	for _, sender := range missingTxCntSender {
 
 		//This limits the searching process to teh block interval * TX_FETCH_TIMEOUT
-		if len(missingTxCntSender[sender.senderAddress].missingTransactions) > int(activeParameters.Block_interval) {
-			missingTxCntSender[sender.senderAddress].missingTransactions = missingTxCntSender[sender.senderAddress].missingTransactions[0:int(activeParameters.Block_interval)]
+		if len(missingTxCntSender[sender.senderAddress].missingTransactions) > int(activeParameters.BlockInterval) {
+			missingTxCntSender[sender.senderAddress].missingTransactions = missingTxCntSender[sender.senderAddress].missingTransactions[0:int(activeParameters.BlockInterval)]
 		}
 
 		if len(missingTxCntSender[sender.senderAddress].missingTransactions) > 0 {

@@ -70,8 +70,8 @@ func TestFundsTxStateChange(t *testing.T) {
 
 	t.Log(activeParameters)
 	balBeforeRew := validatorAcc.Balance
-	collectBlockReward(activeParameters.Block_reward, minerAccHash)
-	if validatorAcc.Balance != balBeforeRew+activeParameters.Block_reward {
+	collectBlockReward(activeParameters.BlockReward, minerAccHash)
+	if validatorAcc.Balance != balBeforeRew+activeParameters.BlockReward {
 		t.Error("Block reward collection failed!")
 	}
 }
@@ -205,16 +205,16 @@ func TestConfigTxStateChange(t *testing.T) {
 	configs2 = append(configs2, tx10)
 
 	configStateChange(configs2, [32]byte{})
-	if activeParameters.Block_size != 1000 ||
-		activeParameters.Diff_interval != 2000 ||
-		activeParameters.Fee_minimum != 3000 ||
-		activeParameters.Block_interval != 4000 ||
-		activeParameters.Block_reward != 5000 ||
-		activeParameters.Staking_minimum != 6000 ||
-		activeParameters.Waiting_minimum != 7 ||
-		activeParameters.Accepted_time_diff != 8 ||
-		activeParameters.Slashing_window_size != 9000 ||
-		activeParameters.Slash_reward != 10000 {
+	if activeParameters.BlockSize != 1000 ||
+		activeParameters.DiffInterval != 2000 ||
+		activeParameters.FeeMinimum != 3000 ||
+		activeParameters.BlockInterval != 4000 ||
+		activeParameters.BlockReward != 5000 ||
+		activeParameters.StakingMinimum != 6000 ||
+		activeParameters.WaitingMinimum != 7 ||
+		activeParameters.AcceptedTimeDiff != 8 ||
+		activeParameters.SlashingWindowSize != 9000 ||
+		activeParameters.SlashReward != 10000 {
 		t.Error("Config StateChanged didn't set the correct parameters!", activeParameters)
 	}
 }
