@@ -25,6 +25,7 @@ func InitLogging() {
 	LogMapping[7] = "BLOCK_HEADER_BRDCST"
 	LogMapping[8] = "TX_BRDCST_ACK"
 	LogMapping[9] = "AGGTX_BRDCST"
+	LogMapping[10] = "DELTX_BRDCST"
 
 	LogMapping[20] = "FUNDSTX_REQ"
 	LogMapping[21] = "ACCTX_REQ"

@@ -33,6 +33,13 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 			return
 		}
 		tx = aTx
+	case DELTX_BRDCST:
+		var dTx *protocol.DeleteTx
+		dTx = dTx.Decode(payload)
+		if dTx == nil {
+			return
+		}
+		tx = dTx
 	case CONFIGTX_BRDCST:
 		var cTx *protocol.ConfigTx
 		cTx = cTx.Decode(payload)
@@ -77,7 +84,14 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 		return
 	}
 
-	//logger.Printf("Received Tx %x from %v", tx.Hash(), p.getIPPort())
+	logger.Printf("Received Tx:%v", tx.String())
+
+	if brdcstType == DELTX_BRDCST { //TODO: handle the receipt of delete transaction.
+		logger.Println("DISCARDING DELETE TX\n")
+
+		return
+	}
+
 	//Write to mempool and rebroadcast
 	storage.WriteOpenTx(tx)
 	toBrdcst := BuildPacket(brdcstType, payload)
