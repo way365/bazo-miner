@@ -192,12 +192,28 @@ func initState() (initialBlock *protocol.Block, err error) {
 		//Do not validate the genesis block, since a lot of properties are set to nil
 		if blockToValidate.Hash != [32]byte{} {
 			//Fetching payload data from the txs (if necessary, ask other miners)
-			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice, err := preValidate(blockToValidate, true)
+			accTxs,
+				fundsTxs,
+				configTxs,
+				stakeTxs,
+				aggTxs,
+				aggregatedFundsTxSlice,
+				deleteTxs,
+				err := preValidate(blockToValidate, true)
 			if err != nil {
 				return nil, errors.New(fmt.Sprintf("Block (%x) could not be prevalidated: %v\n", blockToValidate.Hash[0:8], err))
 			}
 
-			blockDataMap[blockToValidate.Hash] = blockData{accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice, blockToValidate}
+			blockDataMap[blockToValidate.Hash] = blockData{
+				accTxs,
+				fundsTxs,
+				configTxs,
+				stakeTxs,
+				aggTxs,
+				aggregatedFundsTxSlice,
+				deleteTxs,
+				blockToValidate,
+			}
 
 			err = validateState(blockDataMap[blockToValidate.Hash], true)
 			if err != nil {
@@ -206,7 +222,16 @@ func initState() (initialBlock *protocol.Block, err error) {
 
 			postValidate(blockDataMap[blockToValidate.Hash], true)
 		} else {
-			blockDataMap[blockToValidate.Hash] = blockData{nil, nil, nil, nil, nil, nil, blockToValidate}
+			blockDataMap[blockToValidate.Hash] = blockData{
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				blockToValidate,
+			}
 
 			postValidate(blockDataMap[blockToValidate.Hash], true)
 		}
