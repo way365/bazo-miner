@@ -111,7 +111,7 @@ func addFundsTx(b *protocol.Block, tx *protocol.FundsTx) error {
 	accReceiver := b.StateCopy[tx.To]
 	accReceiver.Balance += tx.Amount
 
-	//Add teh transaction to the storage where all Funds-transactions are stored before they where aggregated.
+	//Add the transaction to the storage where all Funds-transactions are stored before they are aggregated.
 	storage.WriteFundsTxBeforeAggregation(tx)
 
 	addFundsTxMutex.Unlock()
