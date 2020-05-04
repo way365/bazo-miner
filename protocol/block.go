@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	HASH_LEN   = 32
-	HEIGHT_LEN = 4
+	BLOCK_HASH_LEN = 32
+	HEIGHT_LEN     = 4
 	//All fixed sizes form the Block struct are 254
 	MIN_BLOCKSIZE           = 393 + crypto.COMM_PROOF_LENGTH + 1 // = 650 bytes
 	MIN_BLOCKHEADER_SIZE    = 104
@@ -25,7 +25,6 @@ type Block struct {
 	PrevHash          [32]byte
 	HashWithoutTx     [32]byte //valid hash once all tx are aggregated
 	PrevHashWithoutTx [32]byte //valid hash of ancestor once all tx are aggregated
-	NrConfigTx        uint8
 	NrElementsBF      uint16
 	BloomFilter       *bloom.BloomFilter //8 byte
 	Height            uint32
@@ -38,9 +37,11 @@ type Block struct {
 	Timestamp                      int64
 	MerkleRoot                     [32]byte
 	NrAccTx                        uint16
+	NrConfigTx                     uint8
 	NrFundsTx                      uint16
 	NrStakeTx                      uint16
 	NrAggTx                        uint16
+	NrDeleteTx                     uint16
 	SlashedAddress                 [32]byte
 	CommitmentProof                [crypto.COMM_PROOF_LENGTH]byte
 	ConflictingBlockHash1          [32]byte
@@ -55,6 +56,7 @@ type Block struct {
 	ConfigTxData [][32]byte
 	StakeTxData  [][32]byte
 	AggTxData    [][32]byte
+	DeleteTxData [][32]byte
 }
 
 func NewBlock(prevHash [32]byte, height uint32) *Block {
@@ -186,6 +188,7 @@ func (block *Block) GetBodySize() uint64 {
 		reflect.TypeOf(block.NrFundsTx).Size()+
 		reflect.TypeOf(block.NrStakeTx).Size()+
 		reflect.TypeOf(block.NrAggTx).Size()+
+		reflect.TypeOf(block.NrDeleteTx).Size()+
 		reflect.TypeOf(block.SlashedAddress).Size()+
 		reflect.TypeOf(block.CommitmentProof).Size()+
 		reflect.TypeOf(block.ConflictingBlockHash1).Size()+
@@ -200,11 +203,12 @@ func (block *Block) GetBodySize() uint64 {
 }
 
 func (block *Block) GetTxDataSize() uint64 {
-	size := int(block.NrAccTx)*HASH_LEN +
-		int(block.NrFundsTx)*HASH_LEN +
-		int(block.NrConfigTx)*HASH_LEN +
-		int(block.NrStakeTx)*HASH_LEN +
-		int(block.NrAggTx)*HASH_LEN
+	size := int(block.NrAccTx)*BLOCK_HASH_LEN +
+		int(block.NrFundsTx)*BLOCK_HASH_LEN +
+		int(block.NrConfigTx)*BLOCK_HASH_LEN +
+		int(block.NrStakeTx)*BLOCK_HASH_LEN +
+		int(block.NrAggTx)*BLOCK_HASH_LEN +
+		int(block.NrDeleteTx)*BLOCK_HASH_LEN
 
 	return uint64(size)
 }
@@ -240,6 +244,7 @@ func (block *Block) Encode() []byte {
 		NrConfigTx:                     block.NrConfigTx,
 		NrStakeTx:                      block.NrStakeTx,
 		NrAggTx:                        block.NrAggTx,
+		NrDeleteTx:                     block.NrDeleteTx,
 		NrElementsBF:                   block.NrElementsBF,
 		BloomFilter:                    block.BloomFilter,
 		SlashedAddress:                 block.SlashedAddress,
@@ -255,6 +260,7 @@ func (block *Block) Encode() []byte {
 		ConfigTxData: block.ConfigTxData,
 		StakeTxData:  block.StakeTxData,
 		AggTxData:    block.AggTxData,
+		DeleteTxData: block.DeleteTxData,
 	}
 
 	buffer := new(bytes.Buffer)
@@ -312,6 +318,7 @@ func (block Block) String() string {
 		"Amount of configTx: %v --> %x\n"+
 		"Amount of stakeTx: %v --> %x\n"+
 		"Amount of aggTx: %v --> %x\n"+
+		"Amount of deleteTx: %v --> %x\n"+
 		"Total Transactions in this block: %v\n"+
 		"Height: %d\n"+
 		"Commitment Proof: %x\n"+
@@ -330,7 +337,9 @@ func (block Block) String() string {
 		block.NrConfigTx, block.ConfigTxData,
 		block.NrStakeTx, block.StakeTxData,
 		block.NrAggTx, block.AggTxData,
-		uint16(block.NrFundsTx)+uint16(block.NrAccTx)+uint16(block.NrConfigTx)+uint16(block.NrStakeTx)+uint16(block.NrAggTx),
+		block.NrDeleteTx, block.DeleteTxData,
+		uint16(block.NrFundsTx)+uint16(block.NrAccTx)+uint16(block.NrConfigTx)+
+			uint16(block.NrStakeTx)+uint16(block.NrAggTx)+uint16(block.NrDeleteTx),
 		block.Height,
 		block.CommitmentProof[0:8],
 		block.SlashedAddress[0:8],

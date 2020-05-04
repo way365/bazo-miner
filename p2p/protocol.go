@@ -30,6 +30,7 @@ const (
 	UNKNOWNTX_REQ          = 30
 	SPECIALTX_REQ          = 31
 	NOT_FOUND_TX_REQ       = 32
+	DELTX_REQ              = 33
 
 	FUNDSTX_RES            = 40
 	ACCTX_RES              = 41
@@ -41,6 +42,7 @@ const (
 	ROOTACC_RES            = 47
 	INTERMEDIATE_NODES_RES = 48
 	AGGTX_RES              = 49
+	DELTX_RES              = 50
 
 	NEIGHBOR_REQ = 130
 	NEIGHBOR_RES = 140

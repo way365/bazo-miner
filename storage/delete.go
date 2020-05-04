@@ -78,6 +78,8 @@ func DeleteClosedTx(transaction protocol.Transaction) {
 		bucket = "closedstakes"
 	case *protocol.AggTx:
 		bucket = "closedaggregations"
+	case *protocol.DeleteTx:
+		bucket = "closeddeletes"
 	}
 
 	hash := transaction.Hash()
@@ -164,6 +166,15 @@ func DeleteAll() {
 	})
 	db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("lastclosedblock"))
+		b.ForEach(func(k, v []byte) error {
+			b.Delete(k)
+			return nil
+		})
+		return nil
+	})
+
+	db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("closeddeletes"))
 		b.ForEach(func(k, v []byte) error {
 			b.Delete(k)
 			return nil

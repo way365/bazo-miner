@@ -33,6 +33,8 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 		txRes(p, payload, STAKETX_REQ)
 	case AGGTX_REQ:
 		txRes(p, payload, AGGTX_REQ)
+	case DELTX_REQ:
+		txRes(p, payload, DELTX_REQ)
 	case UNKNOWNTX_REQ:
 		txRes(p, payload, UNKNOWNTX_REQ)
 	case SPECIALTX_REQ:
@@ -75,6 +77,7 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 		forwardTxReqToMiner(p, payload, STAKETX_RES)
 	case AGGTX_RES:
 		forwardTxReqToMiner(p, payload, AGGTX_RES)
+	case DELTX_RES:
+		forwardTxReqToMiner(p, payload, DELTX_RES)
 	}
-
 }

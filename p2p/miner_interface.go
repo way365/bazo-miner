@@ -127,6 +127,15 @@ func AccTxAlreadyInStash(slice []*protocol.AccTx, newTXHash [32]byte) bool {
 	return false
 }
 
+func DeleteTxAlreadyInStash(slice []*protocol.DeleteTx, newTXHash [32]byte) bool {
+	for _, txInStash := range slice {
+		if txInStash.Hash() == newTXHash {
+			return true
+		}
+	}
+	return false
+}
+
 func BlockAlreadyReceived(slice []*protocol.Block, newBlockHash [32]byte) bool {
 	for _, block := range slice {
 		if block.Hash == newBlockHash {
@@ -219,6 +228,22 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 			}
 		}
 		aggTxStashMutex.Unlock()
+
+	case DELTX_RES:
+		var deleteTx *protocol.DeleteTx
+		deleteTx = deleteTx.Decode(payload)
+		if deleteTx == nil {
+			return
+		}
+		deleteTxStashMutex.Lock()
+		if !DeleteTxAlreadyInStash(ReceivedDeleteTxStash, deleteTx.Hash()) {
+			ReceivedDeleteTxStash = append(ReceivedDeleteTxStash, deleteTx)
+			DeleteTxChan <- deleteTx
+			if len(ReceivedDeleteTxStash) > 100 {
+				ReceivedDeleteTxStash = append(ReceivedDeleteTxStash[:0], ReceivedDeleteTxStash[1:]...)
+			}
+		}
+		deleteTxStashMutex.Unlock()
 	}
 }
 

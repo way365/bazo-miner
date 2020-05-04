@@ -261,6 +261,16 @@ func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
 		return acctx.Decode(encodedTx)
 	}
 
+	var deleteTx *protocol.DeleteTx
+	db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("closeddeletes"))
+		encodedTx = b.Get(hash[:])
+		return nil
+	})
+	if encodedTx != nil {
+		return deleteTx.Decode(encodedTx)
+	}
+
 	var configtx *protocol.ConfigTx
 	db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("closedconfigs"))
@@ -292,4 +302,26 @@ func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
 	}
 
 	return nil
+}
+
+// Returns the block which contains the given tx hash.
+func ReadBlockByTxHash(txHash [32]byte) (block *protocol.Block) {
+
+	var blockHash [32]byte
+	db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("blocksbytxhash"))
+		copy(blockHash[:], bucket.Get(txHash[:]))
+		return nil
+	})
+
+	switch true {
+	case ReadOpenBlock(blockHash) != nil:
+		return ReadOpenBlock(blockHash)
+
+	case ReadClosedBlock(blockHash) != nil:
+		return ReadClosedBlock(blockHash)
+
+	default:
+		return nil
+	}
 }

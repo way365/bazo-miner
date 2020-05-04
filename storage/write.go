@@ -121,6 +121,8 @@ func WriteClosedTx(transaction protocol.Transaction) (err error) {
 		bucket = "closedstakes"
 	case *protocol.AggTx:
 		bucket = "closedaggregations"
+	case *protocol.DeleteTx:
+		bucket = "closeddeletes"
 	}
 
 	hash := transaction.Hash()
@@ -133,5 +135,15 @@ func WriteClosedTx(transaction protocol.Transaction) (err error) {
 	nrClosedTransactions = nrClosedTransactions + 1
 	totalTransactionSize = totalTransactionSize + float32(transaction.Size())
 	averageTxSize = totalTransactionSize / nrClosedTransactions
+	return err
+}
+
+func WriteBlockHashByTxHash(txHash [32]byte, bHash [32]byte) (err error) {
+	err = db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("blocksbytxhash"))
+		err := bucket.Put(txHash[:], bHash[:])
+		return err
+	})
+
 	return err
 }
