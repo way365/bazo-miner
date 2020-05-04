@@ -19,6 +19,7 @@ type blockData struct {
 	stakeTxSlice           []*protocol.StakeTx
 	aggTxSlice             []*protocol.AggTx
 	aggregatedFundsTxSlice []*protocol.FundsTx
+	deleteTxSlice          []*protocol.DeleteTx
 	block                  *protocol.Block
 }
 
@@ -108,6 +109,7 @@ func finalizeBlock(block *protocol.Block) error {
 	block.NrConfigTx = uint8(len(block.ConfigTxData))
 	block.NrStakeTx = uint16(len(block.StakeTxData))
 	block.NrAggTx = uint16(len(block.AggTxData))
+	block.NrDeleteTx = uint16(len(block.DeleteTxData))
 
 	copy(block.CommitmentProof[0:crypto.COMM_PROOF_LENGTH], commitmentProof[:])
 	logger.Printf("-- End Finalization")
@@ -169,6 +171,11 @@ func addTx(b *protocol.Block, tx protocol.Transaction) error {
 		if err != nil {
 			logger.Printf("Adding stakeTx (%x) failed (%v): %v\n", tx.Hash(), err, tx.(*protocol.StakeTx))
 			return err
+		}
+	case *protocol.DeleteTx:
+		err := addDeleteTx(b, tx.(*protocol.DeleteTx))
+		if err != nil {
+			logger.Printf("Adding deleteTx (%x) failed (%v): %v\n", tx.Hash(), err, tx.(*protocol.DeleteTx))
 		}
 	default:
 		return errors.New("Transaction type not recognized.")
