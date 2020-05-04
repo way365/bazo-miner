@@ -18,16 +18,22 @@ func verify(tx protocol.Transaction) bool {
 	switch tx.(type) {
 	case *protocol.FundsTx:
 		return verifyFundsTx(tx.(*protocol.FundsTx))
+
 	case *protocol.AccTx:
 		return verifyAccTx(tx.(*protocol.AccTx))
+
 	case *protocol.ConfigTx:
 		return verifyConfigTx(tx.(*protocol.ConfigTx))
+
 	case *protocol.StakeTx:
 		return verifyStakeTx(tx.(*protocol.StakeTx))
+
 	case *protocol.AggTx:
 		return verifyAggTx(tx.(*protocol.AggTx))
+
 	case *protocol.DeleteTx:
 		return verifyDeleteTx(tx.(*protocol.DeleteTx))
+
 	default: // In case tx is nil or we encounter an unhandled transaction type
 		return false
 	}
@@ -159,10 +165,12 @@ func verifyDeleteTx(tx *protocol.DeleteTx) bool {
 	switch true {
 	case storage.ReadOpenTx(tx.TxToDeleteHash) != nil:
 		txToDelete = storage.ReadOpenTx(tx.TxToDeleteHash)
+
 	case storage.ReadClosedTx(tx.TxToDeleteHash) != nil:
 		txToDelete = storage.ReadClosedTx(tx.TxToDeleteHash)
+
 	default: // If we don't find the tx to delete in the storage, we also can't delete it.
-		logger.Printf("Can't find TxToDelete: %v", tx.TxToDeleteHash)
+		logger.Printf("Can't find TxToDelete: %x", tx.TxToDeleteHash)
 		return false
 	}
 
@@ -174,26 +182,38 @@ func verifyDeleteTx(tx *protocol.DeleteTx) bool {
 		return false
 	}
 
-	// Lastly we check if the issuer of the delete-tx also signed the tx to delete. This makes sure that you only delete your own txs.
+	// Lastly we check if the issuer of the delete-tx also signed the tx to delete.
+	// This makes sure that you only delete your own txs.
 	// Get the hash
 	txToDeleteHash := txToDelete.Hash()
 	var txToDeleteSig [64]byte
 
-	// Now we retrieve the signature. Since 'Sig' is not part of the transaction interface, we need to check for tx type. Really bad :(
+	// Now we validate the txToDelete and retrieve its signature.
 	switch txToDelete.(type) {
 	case *protocol.FundsTx:
 		txToDeleteSig = txToDelete.(*protocol.FundsTx).Sig1
+
 	case *protocol.AccTx:
-		txToDeleteSig = txToDelete.(*protocol.AccTx).Sig
+		logger.Printf("\nCan't delete account tx")
+		return false
+
 	case *protocol.ConfigTx:
-		txToDeleteSig = txToDelete.(*protocol.ConfigTx).Sig
+		logger.Printf("\nCan't delete config tx")
+		return false
+
 	case *protocol.StakeTx:
-		txToDeleteSig = txToDelete.(*protocol.StakeTx).Sig
+		logger.Printf("\nCan't delete stake tx")
+		return false
+
 	case *protocol.AggTx:
-		return false // We can't delete an aggregate tx
+		logger.Printf("\nCan't delete aggregate tx")
+		return false
+
 	case *protocol.DeleteTx:
-		txToDeleteSig = txToDelete.(*protocol.DeleteTx).Sig
-	default: // In case we can't convert the tx to a type, abort
+		logger.Printf("\nCan't delete delete tx")
+		return false
+
+	default: // In case we can't cast the tx to a known type, abort
 		return false
 	}
 
@@ -208,7 +228,7 @@ func verifyDeleteTx(tx *protocol.DeleteTx) bool {
 		return false
 	}
 
-	return false //TODO: change to true. We return false here because we don't yet handle the deletion.
+	return true
 }
 
 //Returns true if id is in the list of possible ids and rational value for payload parameter.
