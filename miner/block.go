@@ -113,6 +113,9 @@ func finalizeBlock(block *protocol.Block) error {
 
 	copy(block.CommitmentProof[0:crypto.COMM_PROOF_LENGTH], commitmentProof[:])
 	logger.Printf("-- End Finalization")
+
+	storeBlockByTxs(block)
+
 	return nil
 }
 
@@ -181,4 +184,33 @@ func addTx(b *protocol.Block, tx protocol.Transaction) error {
 		return errors.New("Transaction type not recognized.")
 	}
 	return nil
+}
+
+// Adds a mapping (key: txHash, value: blockHash) for all txs of a block to the local storage.
+func storeBlockByTxs(block *protocol.Block) {
+
+	// Agg
+	for _, txHash := range block.AggTxData {
+		storage.WriteBlockHashByTxHash(txHash, block.Hash)
+	}
+
+	// Funds
+	for _, txHash := range block.FundsTxData {
+		storage.WriteBlockHashByTxHash(txHash, block.Hash)
+	}
+
+	// Accounts
+	for _, txHash := range block.AccTxData {
+		storage.WriteBlockHashByTxHash(txHash, block.Hash)
+	}
+
+	// Config
+	for _, txHash := range block.ConfigTxData {
+		storage.WriteBlockHashByTxHash(txHash, block.Hash)
+	}
+
+	// Delete
+	for _, txHash := range block.DeleteTxData {
+		storage.WriteBlockHashByTxHash(txHash, block.Hash)
+	}
 }
