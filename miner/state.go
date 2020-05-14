@@ -191,15 +191,31 @@ func initState() (initialBlock *protocol.Block, err error) {
 
 		//Do not validate the genesis block, since a lot of properties are set to nil
 		if blockToValidate.Hash != [32]byte{} {
-			//Fetching payload data from the txs (if necessary, ask other miners)
-			accTxs,
-				fundsTxs,
-				configTxs,
-				stakeTxs,
-				aggTxs,
-				aggregatedFundsTxSlice,
-				deleteTxs,
-				err := preValidate(blockToValidate, true)
+			// We need to allocate slice space for the underlying array when we pass them as reference.
+			accTxs := make([]*protocol.AccTx, blockToValidate.NrAccTx)
+			fundsTxs := make([]*protocol.FundsTx, blockToValidate.NrFundsTx) // TODO: Duplicate?
+			configTxs := make([]*protocol.ConfigTx, blockToValidate.NrConfigTx)
+			stakeTxs := make([]*protocol.StakeTx, blockToValidate.NrStakeTx)
+			aggTxs := make([]*protocol.AggTx, blockToValidate.NrAggTx)
+			deleteTxs := make([]*protocol.DeleteTx, blockToValidate.NrDeleteTx)
+			var aggregatedFundsTxs []*protocol.FundsTx // TODO: Duplicate?
+
+			err = preValidate(blockToValidate, true)
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf("Block (%x) could not be prevalidated: %v\n", blockToValidate.Hash[0:8], err))
+			}
+
+			err = fetchTransactions(
+				true,
+				blockToValidate,
+				&accTxs,
+				&fundsTxs,
+				&configTxs,
+				&stakeTxs,
+				&aggTxs,
+				&aggregatedFundsTxs,
+				&deleteTxs,
+			)
 			if err != nil {
 				return nil, errors.New(fmt.Sprintf("Block (%x) could not be prevalidated: %v\n", blockToValidate.Hash[0:8], err))
 			}
@@ -210,7 +226,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 				configTxs,
 				stakeTxs,
 				aggTxs,
-				aggregatedFundsTxSlice,
+				aggregatedFundsTxs,
 				deleteTxs,
 				blockToValidate,
 			}

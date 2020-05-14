@@ -26,9 +26,6 @@ func validate(b *protocol.Block, initialSetup bool) error {
 		return errors.New("Received Block has already been validated.")
 	}
 
-	//Prepare datastructure to fill tx payloads.
-	blockDataMap := make(map[[32]byte]blockData)
-
 	//Get the right branch, and a list of blocks to rollback (if necessary).
 	blocksToRollback, blocksToValidate, err := getBlockSequences(b)
 	if err != nil {
@@ -54,295 +51,118 @@ func validate(b *protocol.Block, initialSetup bool) error {
 	//If we are syncing or far behind, we cannot do this dynamic check,
 	//therefore we include a boolean uptodate. If it's true we consider ourselves uptodate and
 	//do dynamic time checking.
-	if len(blocksToValidate) > DELAYED_BLOCKS {
-		uptodate = false
-	} else {
-		uptodate = true
+	uptodate = len(blocksToValidate) < DELAYED_BLOCKS
+
+	//Prepare datastructure to fill tx payloads.
+	blockDataMap := make(map[[32]byte]blockData)
+
+	// First perform rollback (if necessary)
+	for _, block := range blocksToRollback {
+		if err := rollback(block); err != nil {
+			return err
+		}
 	}
 
-	//No rollback needed, just a new block to validate.
-	if len(blocksToRollback) == 0 {
-		for i, block := range blocksToValidate {
-			//Fetching payload data from the txs (if necessary, ask other miners).
+	// Secondly, perform the validation.
+	for _, block := range blocksToValidate {
+
+		// We need to allocate slice space for the underlying array when we pass them as reference.
+		accTxs := make([]*protocol.AccTx, block.NrAccTx)
+		fundsTxs := make([]*protocol.FundsTx, block.NrFundsTx) // TODO: Duplicate?
+		configTxs := make([]*protocol.ConfigTx, block.NrConfigTx)
+		stakeTxs := make([]*protocol.StakeTx, block.NrStakeTx)
+		aggTxs := make([]*protocol.AggTx, block.NrAggTx)
+		deleteTxs := make([]*protocol.DeleteTx, block.NrDeleteTx)
+		var aggregatedFundsTxs []*protocol.FundsTx // TODO: Duplicate?
+
+		err = preValidate(block, initialSetup)
+		if err != nil {
+			return err
+		}
+
+		// Fetching payload data from the txs (if necessary, ask other miners).
+		err = fetchTransactions(
+			initialSetup,
+			block,
+			&accTxs,
+			&fundsTxs,
+			&configTxs,
+			&stakeTxs,
+			&aggTxs,
+			&aggregatedFundsTxs,
+			&deleteTxs,
+		)
+		if err != nil {
+			return err
+		}
+
+		//Check if the validator that added the block has previously voted on different competing chains (find slashing proof).
+		//The proof will be stored in the global slashing dictionary.
+		if block.Height > 0 {
+			seekSlashingProof(block)
+		}
+
+		if err != nil {
+			return err
+		}
+
+		blockDataMap[block.Hash] = blockData{
 			accTxs,
-				fundsTxs,
-				configTxs,
-				stakeTxs,
-				aggTxs,
-				aggregatedFundsTxSlice,
-				deleteTxSlice,
-				err := preValidate(block, initialSetup)
-
-			//Check if the validator that added the block has previously voted on different competing chains (find slashing proof).
-			//The proof will be stored in the global slashing dictionary.
-			if block.Height > 0 {
-				seekSlashingProof(block)
-			}
-
-			if err != nil {
-				return err
-			}
-
-			blockDataMap[block.Hash] = blockData{
-				accTxs,
-				fundsTxs,
-				configTxs,
-				stakeTxs,
-				aggTxs,
-				aggregatedFundsTxSlice,
-				deleteTxSlice,
-				block,
-			}
-			if err := validateState(blockDataMap[block.Hash], initialSetup); err != nil {
-				return err
-			}
-
-			postValidate(blockDataMap[block.Hash], initialSetup)
-			if i != len(blocksToValidate)-1 {
-				logger.Printf("Validated block (During Validation of other block %v): %vState:\n%v", b.Hash[0:8], block, getState())
-			}
+			fundsTxs,
+			configTxs,
+			stakeTxs,
+			aggTxs,
+			aggregatedFundsTxs,
+			deleteTxs,
+			block,
 		}
-	} else {
-
-		//Rollback
-		for _, block := range blocksToRollback {
-			if err := rollback(block); err != nil {
-				return err
-			}
+		if err := validateState(blockDataMap[block.Hash], initialSetup); err != nil {
+			return err
 		}
 
-		//Validation of new chain
-		for _, block := range blocksToValidate {
-			//Fetching payload data from the txs (if necessary, ask other miners).
-			accTxs, fundsTxs, configTxs, stakeTxs, aggTxs, aggregatedFundsTxSlice, deleteTxSlice, err := preValidate(block, initialSetup)
+		postValidate(blockDataMap[block.Hash], initialSetup)
 
-			//Check if the validator that added the block has previously voted on different competing chains (find slashing proof).
-			//The proof will be stored in the global slashing dictionary.
-			if block.Height > 0 {
-				seekSlashingProof(block)
-			}
-
-			if err != nil {
-				return err
-			}
-
-			blockDataMap[block.Hash] = blockData{
-				accTxs,
-				fundsTxs,
-				configTxs,
-				stakeTxs,
-				aggTxs,
-				aggregatedFundsTxSlice,
-				deleteTxSlice,
-				block,
-			}
-			if err := validateState(blockDataMap[block.Hash], initialSetup); err != nil {
-				return err
-			}
-
-			postValidate(blockDataMap[block.Hash], initialSetup)
-			//logger.Printf("Validated block (after rollback): %x", block.Hash[0:8])
-			logger.Printf("Validated block (after rollback for block %v): %vState:\n%v", b.Hash[0:8], block, getState())
+		logString := "After rollback for"
+		if len(blocksToRollback) == 0 {
+			logString = "During Validation of other"
 		}
+
+		logger.Printf("Validated block (%s block %v): %vState:\n%v", logString, b.Hash[0:8], block, getState())
 	}
 
 	return nil
 }
 
 //Doesn't involve any state changes.
-func preValidate(block *protocol.Block, initialSetup bool) (
-	accTxSlice []*protocol.AccTx,
-	fundsTxSlice []*protocol.FundsTx,
-	configTxSlice []*protocol.ConfigTx,
-	stakeTxSlice []*protocol.StakeTx,
-	aggTxSlice []*protocol.AggTx,
-	aggregatedFundsTxSlice []*protocol.FundsTx,
-	deleteTxSlice []*protocol.DeleteTx,
-	err error) {
+func preValidate(block *protocol.Block, initialSetup bool) error {
+
+	//Check state contains beneficiary.
+	acc, err := storage.GetAccount(block.Beneficiary)
+	if err != nil {
+		return err
+	}
+
+	// Check if node is part of the validator set.
+	if !acc.IsStaking {
+		return errors.New("Validator is not part of the validator set.")
+	}
 
 	//This dynamic check is only done if we're up-to-date with syncing, otherwise timestamp is not checked.
 	//Other miners (which are up-to-date) made sure that this is correct.
 	if !initialSetup && uptodate {
 		if err := timestampCheck(block.Timestamp); err != nil {
-			return nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				err
+			return err
 		}
 	}
 
 	//Check block size.
 	if block.GetSize() > activeParameters.BlockSize {
-		return nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			errors.New("Block size too large.")
+		return errors.New("Block size too large.")
 	}
 
-	//Duplicates are not allowed, use tx hash hashmap to easily check for duplicates.
-	duplicates := make(map[[32]byte]bool)
-	for _, txHash := range block.AccTxData {
-		if _, exists := duplicates[txHash]; exists {
-			return nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				errors.New("Duplicate Account Transaction Hash detected.")
-		}
-		duplicates[txHash] = true
-	}
-	for _, txHash := range block.FundsTxData {
-		if _, exists := duplicates[txHash]; exists {
-			return nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				errors.New("Duplicate Funds Transaction Hash detected.")
-		}
-		duplicates[txHash] = true
-	}
-	for _, txHash := range block.ConfigTxData {
-		if _, exists := duplicates[txHash]; exists {
-			return nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				errors.New("Duplicate Config Transaction Hash detected.")
-		}
-		duplicates[txHash] = true
-	}
-	for _, txHash := range block.StakeTxData {
-		if _, exists := duplicates[txHash]; exists {
-			return nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				errors.New("Duplicate Stake Transaction Hash detected.")
-		}
-		duplicates[txHash] = true
-	}
-	for _, txHash := range block.AggTxData {
-		if _, exists := duplicates[txHash]; exists {
-			return nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				errors.New("Duplicate Aggregation Transaction Hash detected.")
-		}
-		duplicates[txHash] = true
-	}
-	for _, txHash := range block.DeleteTxData {
-		if _, exists := duplicates[txHash]; exists {
-			return nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				errors.New("Duplicate Delete Transaction Hash detected.")
-		}
-		duplicates[txHash] = true
-	}
-
-	//We fetch tx data for each type in parallel -> performance boost.
-	nrOfChannels := 6
-	errChan := make(chan error, nrOfChannels)
-	aggregatedFundsChan := make(chan []*protocol.FundsTx, 10000)
-
-	//We need to allocate slice space for the underlying array when we pass them as reference.
-	accTxSlice = make([]*protocol.AccTx, block.NrAccTx)
-	fundsTxSlice = make([]*protocol.FundsTx, block.NrFundsTx)
-	configTxSlice = make([]*protocol.ConfigTx, block.NrConfigTx)
-	stakeTxSlice = make([]*protocol.StakeTx, block.NrStakeTx)
-	aggTxSlice = make([]*protocol.AggTx, block.NrAggTx)
-	deleteTxSlice = make([]*protocol.DeleteTx, block.NrDeleteTx)
-
-	go fetchAccTxData(block, accTxSlice, initialSetup, errChan)
-	go fetchFundsTxData(block, fundsTxSlice, initialSetup, errChan)
-	go fetchConfigTxData(block, configTxSlice, initialSetup, errChan)
-	go fetchStakeTxData(block, stakeTxSlice, initialSetup, errChan)
-	go fetchDeleteTxData(block, deleteTxSlice, initialSetup, errChan)
-	go fetchAggTxData(block, aggTxSlice, initialSetup, errChan, aggregatedFundsChan)
-
-	//Wait for all goroutines to finish.
-	for cnt := 0; cnt < nrOfChannels; cnt++ {
-		err = <-errChan
-		if err != nil {
-			return nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				err
-		}
-	}
-
-	if len(aggTxSlice) > 0 {
-		logger.Printf("-- Fetch AggTxData - Start")
-		select {
-		case aggregatedFundsTxSlice = <-aggregatedFundsChan:
-		case <-time.After(10 * time.Minute):
-			return nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				errors.New("Fetching FundsTx aggregated in AggTx failed.")
-		}
-		logger.Printf("-- Fetch AggTxData - End")
-	}
-
-	//Check state contains beneficiary.
-	acc, err := storage.GetAccount(block.Beneficiary)
+	err = validateNoDuplicateTx(block)
 	if err != nil {
-		return nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			err
-	}
-
-	//Check if node is part of the validator set.
-	if !acc.IsStaking {
-		return nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			errors.New("Validator is not part of the validator set.")
+		return err
 	}
 
 	//First, initialize an RSA Public Key instance with the modulus of the proposer of the block (acc)
@@ -350,26 +170,12 @@ func preValidate(block *protocol.Block, initialSetup bool) (
 	//Invalid if the commitment proof can not be verified with the public key of the proposer
 	commitmentPubKey, err := crypto.CreateRSAPubKeyFromBytes(acc.CommitmentKey)
 	if err != nil {
-		return nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			errors.New("Invalid commitment key in account.")
+		return errors.New("Invalid commitment key in account.")
 	}
 
 	err = crypto.VerifyMessageWithRSAKey(commitmentPubKey, fmt.Sprint(block.Height), block.CommitmentProof)
 	if err != nil {
-		return nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			errors.New("The submitted commitment proof can not be verified.")
+		return errors.New("The submitted commitment proof can not be verified.")
 	}
 
 	//Invalid if PoS calculation is not correct.
@@ -381,42 +187,21 @@ func preValidate(block *protocol.Block, initialSetup bool) (
 		logger.Printf("|  block.Height: %d, acc.Address %x, acc.txCount %v, acc.Balance %v, block.CommitmentProf: %x, block.Timestamp %v ", block.Height, acc.Address[0:8], acc.TxCnt, acc.Balance, block.CommitmentProof[0:8], block.Timestamp)
 		logger.Printf("|_____________________________________________________")
 
-		return nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			errors.New("The nonce is incorrect.")
+		return errors.New("The nonce is incorrect.")
 	}
 
 	//Invalid if PoS is too far in the future.
 	now := time.Now()
 	if block.Timestamp > now.Unix()+int64(activeParameters.AcceptedTimeDiff) {
-		return nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			errors.New("The timestamp is too far in the future. " + string(block.Timestamp) + " vs " + string(now.Unix()))
+		return errors.New("The timestamp is too far in the future. " + string(block.Timestamp) + " vs " + string(now.Unix()))
 	}
 
 	//Check for minimum waiting time.
 	if block.Height-acc.StakingBlockHeight < uint32(activeParameters.WaitingMinimum) {
-		return nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			errors.New(
-				"The miner must wait a minimum amount of blocks before start validating. " +
-					"Block Height:" + fmt.Sprint(block.Height) + " - Height when started validating " +
-					string(acc.StakingBlockHeight) + " MinWaitingTime: " + string(activeParameters.WaitingMinimum))
+		return errors.New(
+			"The miner must wait a minimum amount of blocks before start validating. " +
+				"Block Height:" + fmt.Sprint(block.Height) + " - Height when started validating " +
+				string(acc.StakingBlockHeight) + " MinWaitingTime: " + string(activeParameters.WaitingMinimum))
 	}
 
 	//Check if block contains a proof for two conflicting block hashes, else no proof provided.
@@ -427,37 +212,16 @@ func preValidate(block *protocol.Block, initialSetup bool) (
 			block.ConflictingBlockHash2,
 			block.ConflictingBlockHashWithoutTx1,
 			block.ConflictingBlockHashWithoutTx2); err != nil {
-			return nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				err
+			return err
 		}
 	}
 
 	//Merkle Tree validation
 	if block.Aggregated == false && protocol.BuildMerkleTree(block).MerkleRoot() != block.MerkleRoot {
-		return nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			errors.New("Merkle Root is incorrect.")
+		return errors.New("Merkle Root is incorrect.")
 	}
 
-	return accTxSlice,
-		fundsTxSlice,
-		configTxSlice,
-		stakeTxSlice,
-		aggTxSlice,
-		aggregatedFundsTxSlice,
-		deleteTxSlice,
-		err
+	return nil
 }
 
 //Dynamic state check.
@@ -781,4 +545,48 @@ func slashingCheck(slashedAddress, conflictingBlockHash1, conflictingBlockHash2,
 	delete(slashingDict, slashedAddress)
 
 	return true, nil
+}
+
+// Validate whether the given block doesn't contain duplicate txs.
+// Duplicate txs are not allowed and result in a failed validation.
+func validateNoDuplicateTx(block *protocol.Block) error {
+	seenTxs := make(map[[32]byte]bool)
+	for _, txHash := range block.AccTxData {
+		if _, exists := seenTxs[txHash]; exists {
+			return errors.New("Duplicate Account Transaction Hash detected.")
+		}
+		seenTxs[txHash] = true
+	}
+	for _, txHash := range block.FundsTxData {
+		if _, exists := seenTxs[txHash]; exists {
+			return errors.New("Duplicate Funds Transaction Hash detected.")
+		}
+		seenTxs[txHash] = true
+	}
+	for _, txHash := range block.ConfigTxData {
+		if _, exists := seenTxs[txHash]; exists {
+			return errors.New("Duplicate Config Transaction Hash detected.")
+		}
+		seenTxs[txHash] = true
+	}
+	for _, txHash := range block.StakeTxData {
+		if _, exists := seenTxs[txHash]; exists {
+			return errors.New("Duplicate Stake Transaction Hash detected.")
+		}
+		seenTxs[txHash] = true
+	}
+	for _, txHash := range block.AggTxData {
+		if _, exists := seenTxs[txHash]; exists {
+			return errors.New("Duplicate Aggregation Transaction Hash detected.")
+		}
+		seenTxs[txHash] = true
+	}
+	for _, txHash := range block.DeleteTxData {
+		if _, exists := seenTxs[txHash]; exists {
+			return errors.New("Duplicate Delete Transaction Hash detected.")
+		}
+		seenTxs[txHash] = true
+	}
+
+	return nil
 }

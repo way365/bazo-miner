@@ -159,7 +159,7 @@ func verifyDeleteTx(tx *protocol.DeleteTx) bool {
 		return false
 	}
 
-	// Next we check if the tx to delete actually exists
+	// Next we check if the tx to delete actually exists.
 	var txToDelete protocol.Transaction
 
 	switch true {
