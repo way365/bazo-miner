@@ -8,17 +8,14 @@ import (
 	"fmt"
 )
 
-const (
-	DELETE_TX_SIZE = 42 //TODO: Define size here
-)
+const DELETE_TX_SIZE = 42
 
 type DeleteTx struct {
 	Header         byte
 	Fee            uint64
-	TxToDeleteHash [32]byte // The hash of the tx to be deleted
+	TxToDeleteHash [32]byte // The hash of the tx to be deleted.
 	Issuer         [32]byte // The address of the issuer of the deletion request.
 	Sig            [64]byte // The signature of the issuer of the deletion request.
-	TxCnt          uint32
 }
 
 func ConstrDeleteTx(
@@ -27,14 +24,12 @@ func ConstrDeleteTx(
 	txToDeleteHash [32]byte,
 	issuer [32]byte,
 	privateKey *ecdsa.PrivateKey,
-	txCnt uint32,
 ) (tx *DeleteTx, err error) {
 	tx = new(DeleteTx)
 	tx.Header = header
 	tx.Fee = fee
 	tx.TxToDeleteHash = txToDeleteHash
 	tx.Issuer = issuer
-	tx.TxCnt = txCnt
 
 	// Generate the hash of the new Tx
 	txHash := tx.Hash()
@@ -61,13 +56,11 @@ func (tx *DeleteTx) Hash() (hash [32]byte) {
 		Fee            uint64
 		TxToDeleteHash [32]byte
 		Issuer         [32]byte
-		TxCnt          uint32
 	}{
 		tx.Header,
 		tx.Fee,
 		tx.TxToDeleteHash,
 		tx.Issuer,
-		tx.TxCnt,
 	}
 
 	return SerializeHashContent(txHash)
@@ -80,7 +73,6 @@ func (tx *DeleteTx) Encode() (encodedTx []byte) {
 		TxToDeleteHash: tx.TxToDeleteHash,
 		Issuer:         tx.Issuer,
 		Sig:            tx.Sig,
-		TxCnt:          tx.TxCnt,
 	}
 	buffer := new(bytes.Buffer)
 	gob.NewEncoder(buffer).Encode(encodeData)
@@ -112,13 +104,11 @@ func (tx DeleteTx) String() string {
 			"Fee: %v\n"+
 			"TxToDelete: %x\n"+
 			"Issuer: %x\n"+
-			"Sig: %x\n"+
-			"TxCnt: %v\n",
+			"Sig: %x\n",
 		tx.Header,
 		tx.Fee,
 		tx.TxToDeleteHash,
 		tx.Issuer[0:8],
 		tx.Sig[0:8],
-		tx.TxCnt,
 	)
 }
