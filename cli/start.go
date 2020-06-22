@@ -21,6 +21,7 @@ type startArgs struct {
 	commitmentFile       string
 	rootKeyFile          string
 	rootCommitmentFile   string
+	chamHashParamsFile   string
 }
 
 func GetStartCommand(logger *log.Logger) cli.Command {
@@ -37,6 +38,7 @@ func GetStartCommand(logger *log.Logger) cli.Command {
 				commitmentFile:       c.String("commitment"),
 				rootKeyFile:          c.String("rootwallet"),
 				rootCommitmentFile:   c.String("rootcommitment"),
+				chamHashParamsFile:   c.String("chamHashParams"),
 			}
 
 			if !c.IsSet("bootstrap") {
@@ -96,6 +98,10 @@ func GetStartCommand(logger *log.Logger) cli.Command {
 				Usage: "load root's RSA public-private key from `FILE`",
 				Value: "commitment.txt",
 			},
+			cli.StringFlag{
+				Name:  "chamHashParams, ch",
+				Usage: "load the chameleon hash parameters from `FILE`",
+			},
 			cli.BoolFlag{
 				Name:  "confirm",
 				Usage: "user must press enter before starting the miner",
@@ -142,8 +148,10 @@ func Start(args *startArgs, logger *log.Logger) error {
 		logger.Printf("%v\n", err)
 		return err
 	}
+	logger.Printf("ChamHashParams: %v %v", args.chamHashParamsFile)
+	chamHashParams, err := crypto.GetOrCreateChamHashParamsFromFile(args.chamHashParamsFile)
 
-	miner.Init(validatorPubKey, multisigPubKey, &rootPrivKey.PublicKey, commPrivKey, rootCommPrivKey)
+	miner.Init(validatorPubKey, multisigPubKey, &rootPrivKey.PublicKey, commPrivKey, rootCommPrivKey, chamHashParams)
 	return nil
 }
 
@@ -174,6 +182,10 @@ func (args startArgs) ValidateInput() error {
 
 	if len(args.rootCommitmentFile) == 0 {
 		return errors.New("argument missing: rootCommitmentFile")
+	}
+
+	if len(args.chamHashParamsFile) == 0 {
+		return errors.New("argument missing: chamHashParamsFile")
 	}
 
 	return nil

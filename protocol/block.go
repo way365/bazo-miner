@@ -29,8 +29,8 @@ type Block struct {
 	BloomFilter       *bloom.BloomFilter //8 byte
 	Height            uint32
 	Beneficiary       [32]byte
-	Aggregated        bool //Indicates if All transactions are aggregated with a boolean.
-	// ==> 177 bytes
+	Aggregated        bool   //Indicates if All transactions are aggregated with a boolean.
+	NrUpdates         uint16 // Indicates how many txs of this block were updated (deleted / replaced)
 
 	//Body
 	Nonce                          [8]byte
@@ -79,6 +79,7 @@ func (block *Block) HashBlock() [32]byte {
 		prevHash                       [32]byte
 		prevHashWithoutTx              [32]byte
 		timestamp                      int64
+		nonce                          [8]byte
 		merkleRoot                     [32]byte
 		beneficiary                    [32]byte
 		commitmentProof                [crypto.COMM_PROOF_LENGTH]byte
@@ -92,6 +93,7 @@ func (block *Block) HashBlock() [32]byte {
 		block.PrevHash,
 		block.PrevHashWithoutTx,
 		block.Timestamp,
+		block.Nonce,
 		block.MerkleRoot,
 		block.Beneficiary,
 		block.CommitmentProof,
@@ -235,6 +237,7 @@ func (block *Block) Encode() []byte {
 		HashWithoutTx:                  block.HashWithoutTx,
 		PrevHashWithoutTx:              block.PrevHashWithoutTx,
 		Aggregated:                     block.Aggregated,
+		NrUpdates:                      block.NrUpdates,
 		Nonce:                          block.Nonce,
 		Timestamp:                      block.Timestamp,
 		MerkleRoot:                     block.MerkleRoot,
@@ -285,6 +288,7 @@ func (block *Block) EncodeHeader() []byte {
 		Height:            block.Height,
 		Beneficiary:       block.Beneficiary,
 		Aggregated:        block.Aggregated,
+		NrUpdates:         block.NrUpdates,
 	}
 
 	buffer := new(bytes.Buffer)
@@ -313,6 +317,7 @@ func (block Block) String() string {
 		"Timestamp: %v\n"+
 		"MerkleRoot: %x\n"+
 		"Beneficiary: %x\n"+
+		"Number of updates: %v\n"+
 		"Amount of fundsTx: %v --> %x\n"+
 		"Amount of accTx: %v --> %x\n"+
 		"Amount of configTx: %v --> %x\n"+
@@ -332,6 +337,7 @@ func (block Block) String() string {
 		block.Timestamp,
 		block.MerkleRoot[0:8],
 		block.Beneficiary[0:8],
+		block.NrUpdates,
 		block.NrFundsTx, block.FundsTxData,
 		block.NrAccTx, block.AccTxData,
 		block.NrConfigTx, block.ConfigTxData,

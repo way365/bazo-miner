@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"github.com/julwil/bazo-miner/crypto"
 )
 
 const (
@@ -54,12 +55,14 @@ const (
 )
 
 type ConfigTx struct {
-	Header  byte
-	Id      uint8
-	Payload uint64
-	Fee     uint64
-	TxCnt   uint8
-	Sig     [64]byte
+	Header              byte
+	Id                  uint8
+	Payload             uint64
+	Fee                 uint64
+	TxCnt               uint8
+	Sig                 [64]byte
+	ChamHashCheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
+	Data                []byte
 }
 
 func ConstrConfigTx(header byte, id uint8, payload uint64, fee uint64, txCnt uint8, rootPrivKey *ecdsa.PrivateKey) (tx *ConfigTx, err error) {
@@ -169,4 +172,8 @@ func (tx ConfigTx) String() string {
 		tx.Fee,
 		tx.TxCnt,
 	)
+}
+
+func (tx *ConfigTx) SetData(data []byte) {
+	tx.Data = data
 }

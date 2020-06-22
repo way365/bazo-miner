@@ -16,12 +16,15 @@ const (
 //when we broadcast transactions we need a way to distinguish with a type
 
 type StakeTx struct {
-	Header        byte                         // 1 Byte
-	Fee           uint64                       // 8 Byte
-	IsStaking     bool                         // 1 Byte
-	Account       [32]byte                     // 32 Byte
-	Sig           [64]byte                     // 64 Byte
-	CommitmentKey [crypto.COMM_KEY_LENGTH]byte // the modulus N of the RSA public key
+	Header              byte                             // 1 Byte
+	Fee                 uint64                           // 8 Byte
+	IsStaking           bool                             // 1 Byte
+	Account             [32]byte                         // 32 Byte
+	Sig                 [64]byte                         // 64 Byte
+	CommitmentKey       [crypto.COMM_KEY_LENGTH]byte     // the modulus N of the RSA public key
+	ChamHashCheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
+
+	Data []byte
 }
 
 func ConstrStakeTx(header byte, fee uint64, isStaking bool, account [32]byte, signKey *ecdsa.PrivateKey, commPubKey *rsa.PublicKey) (tx *StakeTx, err error) {
@@ -146,4 +149,8 @@ func (tx StakeTx) String() string {
 		tx.Sig[0:8],
 		tx.CommitmentKey[0:8],
 	)
+}
+
+func (tx *StakeTx) SetData(data []byte) {
+	tx.Data = data
 }

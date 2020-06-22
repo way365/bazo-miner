@@ -6,16 +6,20 @@ import (
 	"crypto/rand"
 	"encoding/gob"
 	"fmt"
+	"github.com/julwil/bazo-miner/crypto"
 )
 
 const DELETE_TX_SIZE = 42
 
 type DeleteTx struct {
-	Header         byte
-	Fee            uint64
-	TxToDeleteHash [32]byte // The hash of the tx to be deleted.
-	Issuer         [32]byte // The address of the issuer of the deletion request.
-	Sig            [64]byte // The signature of the issuer of the deletion request.
+	Header              byte
+	Fee                 uint64
+	TxToDeleteHash      [32]byte                         // The hash of the tx to be deleted.
+	Issuer              [32]byte                         // The address of the issuer of the deletion request.
+	Sig                 [64]byte                         // The signature of the issuer of the deletion request.
+	ChamHashCheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
+
+	Data []byte // Data field for user-related data.
 }
 
 func ConstrDeleteTx(
@@ -111,4 +115,8 @@ func (tx DeleteTx) String() string {
 		tx.Issuer[0:8],
 		tx.Sig[0:8],
 	)
+}
+
+func (tx *DeleteTx) SetData(data []byte) {
+	tx.Data = data
 }

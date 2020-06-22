@@ -16,4 +16,5 @@ type Transaction interface {
 	Sender() [TRANSACTION_SENDER_SIZE]byte
 	Receiver() [TRANSACTION_RECEIVER_SIZE]byte
 	String() string
+	SetData(data []byte) // Set the data field to the new value
 }

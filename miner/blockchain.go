@@ -25,7 +25,14 @@ var (
 )
 
 //Miner entry point
-func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validatorCommitment, rootCommitment *rsa.PrivateKey) {
+func Init(
+	validatorWallet,
+	multisigWallet,
+	rootWallet *ecdsa.PublicKey,
+	validatorCommitment,
+	rootCommitment *rsa.PrivateKey,
+	chamHashParams *crypto.ChameleonHashParameters,
+) {
 	var err error
 
 	validatorAccAddress = crypto.GetAddressFromPubKey(validatorWallet)
@@ -60,7 +67,7 @@ func Init(validatorWallet, multisigWallet, rootWallet *ecdsa.PublicKey, validato
 	activeParameters = &parameterSlice[0]
 
 	//Initialize root key.
-	initRootKey(rootWallet)
+	initRootKey(rootWallet, chamHashParams)
 	if err != nil {
 		logger.Printf("Could not create a root account.\n")
 	}
@@ -133,15 +140,24 @@ func mining(initialBlock *protocol.Block) {
 	}
 }
 
-//At least one root key needs to be set which is allowed to create new accounts.
-func initRootKey(rootKey *ecdsa.PublicKey) error {
+// At least one root key needs to be set which is allowed to create new accounts.
+func initRootKey(rootKey *ecdsa.PublicKey, chamHashParams *crypto.ChameleonHashParameters) error {
 	address := crypto.GetAddressFromPubKey(rootKey)
 	addressHash := protocol.SerializeHashContent(address)
 
 	var commPubKey [crypto.COMM_KEY_LENGTH]byte
 	copy(commPubKey[:], rootCommPrivKey.N.Bytes())
 
-	rootAcc := protocol.NewAccount(address, [32]byte{}, activeParameters.StakingMinimum, true, commPubKey, nil, nil)
+	rootAcc := protocol.NewAccount(
+		address,
+		[32]byte{},
+		activeParameters.StakingMinimum,
+		true,
+		commPubKey,
+		nil,
+		nil,
+		chamHashParams,
+	)
 	storage.State[addressHash] = &rootAcc
 	storage.RootKeys[addressHash] = &rootAcc
 

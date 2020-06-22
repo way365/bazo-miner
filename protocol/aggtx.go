@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"github.com/julwil/bazo-miner/crypto"
 )
 
 const (
@@ -13,14 +14,16 @@ const (
 //when we broadcast transactions we need a way to distinguish with a type
 
 type AggTx struct {
-	Amount 				uint64
-	Fee    				uint64
-	From   				[][32]byte
-	To    				[][32]byte
-	AggregatedTxSlice 	[][32]byte
-	Aggregated			bool
-	Block				[32]byte //This saves the blockHashWithoutTransactions into which the transaction was usually validated. Needed for rollback.
+	Amount              uint64
+	Fee                 uint64
+	From                [][32]byte
+	To                  [][32]byte
+	AggregatedTxSlice   [][32]byte
+	Aggregated          bool
+	Block               [32]byte //This saves the blockHashWithoutTransactions into which the transaction was usually validated. Needed for rollback.
 	MerkleRoot          [32]byte
+	ChamHashCheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
+	Data                []byte
 }
 
 func ConstrAggTx(amount uint64, fee uint64, from [][32]byte, to [][32]byte, transactions [][32]byte) (tx *AggTx, err error) {
@@ -35,10 +38,8 @@ func ConstrAggTx(amount uint64, fee uint64, from [][32]byte, to [][32]byte, tran
 	tx.Block = [32]byte{}
 	tx.MerkleRoot = BuildAggTxMerkleTree(transactions).MerkleRoot()
 
-
 	return tx, nil
 }
-
 
 func (tx *AggTx) Hash() (hash [32]byte) {
 	if tx == nil {
@@ -47,11 +48,11 @@ func (tx *AggTx) Hash() (hash [32]byte) {
 	}
 
 	txHash := struct {
-		Amount			 	uint64
-		Fee    				uint64
-		From   				[][32]byte
-		To     				[][32]byte
-		MerkleRoot 			[32]byte
+		Amount     uint64
+		Fee        uint64
+		From       [][32]byte
+		To         [][32]byte
+		MerkleRoot [32]byte
 	}{
 		tx.Amount,
 		tx.Fee,
@@ -68,14 +69,14 @@ func (tx *AggTx) Hash() (hash [32]byte) {
 func (tx *AggTx) Encode() (encodedTx []byte) {
 	// Encode
 	encodeData := AggTx{
-		Amount: 				tx.Amount,
-		Fee:    				tx.Fee,
-		From:					tx.From,
-		To:    					tx.To,
-		AggregatedTxSlice: 		tx.AggregatedTxSlice,
-		Aggregated:				tx.Aggregated,
-		Block: 					tx.Block,
-		MerkleRoot:				tx.MerkleRoot,
+		Amount:            tx.Amount,
+		Fee:               tx.Fee,
+		From:              tx.From,
+		To:                tx.To,
+		AggregatedTxSlice: tx.AggregatedTxSlice,
+		Aggregated:        tx.Aggregated,
+		Block:             tx.Block,
+		MerkleRoot:        tx.MerkleRoot,
 	}
 	buffer := new(bytes.Buffer)
 	gob.NewEncoder(buffer).Encode(encodeData)
@@ -93,14 +94,13 @@ func (*AggTx) Decode(encodedTx []byte) *AggTx {
 func (tx *AggTx) TxFee() uint64 { return tx.Fee }
 func (tx *AggTx) Size() uint64  { return AGGTX_SIZE }
 
-func (tx *AggTx) Sender() [32]byte { return [32]byte{} }
+func (tx *AggTx) Sender() [32]byte   { return [32]byte{} }
 func (tx *AggTx) Receiver() [32]byte { return [32]byte{} }
-
 
 func (tx AggTx) String() string {
 	return fmt.Sprintf(
-		"\n ________\n| AGGTX: |____________________________________________________________________\n" +
-			"|  Hash: %x\n" +
+		"\n ________\n| AGGTX: |____________________________________________________________________\n"+
+			"|  Hash: %x\n"+
 			"|  Amount: %v\n"+
 			"|  Fee: %v\n"+
 			"|  From: %x\n"+
@@ -108,7 +108,7 @@ func (tx AggTx) String() string {
 			"|  Transactions: %x\n"+
 			"|  Merkle Root: %x\n"+
 			"|  #Tx: %v\n"+
-			"|  Aggregated: %t\n" +
+			"|  Aggregated: %t\n"+
 			"|_________________________________________________________________________________",
 		tx.Hash(),
 		tx.Amount,
@@ -122,3 +122,6 @@ func (tx AggTx) String() string {
 	)
 }
 
+func (tx *AggTx) SetData(data []byte) {
+	tx.Data = data
+}
