@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/julwil/bazo-miner/crypto"
+	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -88,6 +89,25 @@ func ConstrConfigTx(header byte, id uint8, payload uint64, fee uint64, txCnt uin
 	return tx, nil
 }
 
+// Returns SHA3 hash over the tx content
+func (tx *ConfigTx) SHA3() [32]byte {
+	toHash := struct {
+		Header  byte
+		Id      uint8
+		Payload uint64
+		Fee     uint64
+		TxCnt   uint8
+	}{
+		tx.Header,
+		tx.Id,
+		tx.Payload,
+		tx.Fee,
+		tx.TxCnt,
+	}
+
+	return sha3.Sum256([]byte(fmt.Sprintf("%v", toHash)))
+}
+
 func (tx *ConfigTx) Hash() (hash [32]byte) {
 
 	if tx == nil {
@@ -108,6 +128,16 @@ func (tx *ConfigTx) Hash() (hash [32]byte) {
 		tx.TxCnt,
 	}
 	return SerializeHashContent(txHash)
+}
+
+// Returns the chameleon hash but takes the chameleon hash parameters as input.
+// This method should be called in the context of bazo-client as the client doesn't maintain
+// a state holding the chameleon hash parameters of each account.
+func (tx *ConfigTx) HashWithChamHashParams(chamHashParams *crypto.ChameleonHashParameters) [32]byte {
+	sha3Hash := tx.SHA3()
+	hashInput := sha3Hash[:]
+
+	return crypto.ChameleonHash(chamHashParams, tx.ChamHashCheckString, &hashInput)
 }
 
 func (tx *ConfigTx) Encode() (encodedTx []byte) {
@@ -176,4 +206,12 @@ func (tx ConfigTx) String() string {
 
 func (tx *ConfigTx) SetData(data []byte) {
 	tx.Data = data
+}
+
+func (tx *ConfigTx) SetChamHashCheckString(checkString *crypto.ChameleonHashCheckString) {
+	tx.ChamHashCheckString = checkString
+}
+
+func (tx *ConfigTx) GetChamHashCheckString() *crypto.ChameleonHashCheckString {
+	return tx.ChamHashCheckString
 }

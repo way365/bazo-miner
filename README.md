@@ -54,6 +54,7 @@ Miner A (Root)
 * Commitment: `CommitmentA.txt`
 * Root Wallet: `WalletA.txt`
 * Root Commitment: `CommitmentA.txt`
+* Chameleon Hash Parameters: `ChamHashParamsA.txt`
 
 
 Miner B
@@ -62,6 +63,7 @@ Miner B
 * Bootstrap Address: `localhost:8000`
 * Wallet: `WalletB.txt`
 * Commitment: `CommitmentB.txt`
+* Chameleon Hash Parameters: `ChamHashParamsB.txt`
 
 Commands
 
@@ -74,7 +76,7 @@ Note that we could have omitted these two options since they are passed by defau
 Wallet and commitment keys are automatically created. Using this command, we define miner A as the root.
 
 Starting miner B requires more work since new accounts have to be registered by a root account.
-In our case, we can use miner's A `WalletA.txt` (e.g. copy the file to the Bazo client directory) to create and add a new account to the network.
+In our case, we can use miner's A `WalletA.txt` and `ChamHashParamsA.txt` (e.g. copy the files to the Bazo client directory) to create and add a new account to the network.
 Using the [Bazo client](https://github.com/julwil/bazo-client), we create a new account:
 
 ```bash
@@ -85,7 +87,7 @@ The minimum amount of coins required for staking is defined in the configuration
 Thus, miner B first needs Bazo coins to start mining and we must first send coins to miner B's account.
 
 ```bash
-./bazo-client funds --from WalletA.txt --to WalletB.txt --txcount 0 --amount 2000 --multisig WalletA.txt
+./bazo-client funds --from WalletA.txt --to WalletB.txt --txcount 0 --amount 2000 --multisig WalletA.txt --chamHashParams ChamHashParamsA.txt
 ```
 
 Then, miner B has to join the pool of validators (enable staking):

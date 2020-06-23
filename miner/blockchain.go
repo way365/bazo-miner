@@ -62,7 +62,7 @@ func Init(
 
 	logger.Printf("\n\n\n-------------------- START MINER ---------------------")
 	logger.Printf("This Miners IP-Address: %v\n\n", p2p.Ipport)
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 	parameterSlice = append(parameterSlice, NewDefaultParameters())
 	activeParameters = &parameterSlice[0]
 
@@ -160,6 +160,7 @@ func initRootKey(rootKey *ecdsa.PublicKey, chamHashParams *crypto.ChameleonHashP
 	)
 	storage.State[addressHash] = &rootAcc
 	storage.RootKeys[addressHash] = &rootAcc
+	crypto.ChamHashParamsMap[addressHash] = rootAcc.ChamHashParams
 
 	return nil
 }

@@ -3,6 +3,7 @@ package miner
 import (
 	"errors"
 	"fmt"
+	"github.com/julwil/bazo-miner/crypto"
 	"github.com/julwil/bazo-miner/p2p"
 	"github.com/julwil/bazo-miner/protocol"
 	"github.com/julwil/bazo-miner/storage"
@@ -33,7 +34,7 @@ func handleTxDeletion(deleteTx *protocol.DeleteTx) error {
 	// At this point we already verified that the transaction we want to delete actually exists
 	// either in the open or closed transaction storage. Thus we can safely assume it exists and
 	// delete it from our local storage.
-	removeDataFromLocalTx(txToDeleteHash)
+	updateLocalTx(txToDeleteHash, deleteTx.TxToDeleteChamHashCheckString, deleteTx.TxToDeleteData)
 
 	blockToUpdate := storage.ReadBlockByTxHash(txToDeleteHash) // TODO implement a linear scan on blocks to locate the blockToUpdate. The ReadBlockByTxHash method is only here for convenience and will be removed in the future.
 	if blockToUpdate == nil {
@@ -55,18 +56,20 @@ func handleTxDeletion(deleteTx *protocol.DeleteTx) error {
 }
 
 // Clears the data field of a local tx identified by txHash
-func removeDataFromLocalTx(txHash [32]byte) error {
+func updateLocalTx(txHash [32]byte, newCheckString *crypto.ChameleonHashCheckString, newData []byte) error {
 	var txToUpdate protocol.Transaction
 
 	switch true {
 	case storage.ReadOpenTx(txHash) != nil:
 		txToUpdate = storage.ReadOpenTx(txHash)
-		txToUpdate.SetData([]byte{}) // Set the data field to an empty slice.
+		txToUpdate.SetData(newData)
+		txToUpdate.SetChamHashCheckString(newCheckString)
 		storage.WriteOpenTx(txToUpdate)
 
 	case storage.ReadClosedTx(txHash) != nil:
 		txToUpdate = storage.ReadClosedTx(txHash)
-		txToUpdate.SetData([]byte{}) // Set the data field to an empty slice.
+		txToUpdate.SetData(newData)
+		txToUpdate.SetChamHashCheckString(newCheckString)
 		storage.WriteClosedTx(txToUpdate)
 
 	default: // If we don't find the tx to delete in the storage, we also can't delete it.
@@ -74,7 +77,7 @@ func removeDataFromLocalTx(txHash [32]byte) error {
 		return errors.New(fmt.Sprintf("Can't find TxToDelete: %x", txHash))
 	}
 
-	logger.Printf("Removed data from %s. Cleaned tx:%s", txToUpdate.Hash(), txToUpdate.String())
+	logger.Printf("Removed data from %x. Cleaned tx:%s", txToUpdate.Hash(), txToUpdate.String())
 
 	return nil
 }

@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/julwil/bazo-miner/crypto"
+	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -51,6 +52,25 @@ func ConstrStakeTx(header byte, fee uint64, isStaking bool, account [32]byte, si
 	return tx, nil
 }
 
+// Returns SHA3 hash over the tx content
+func (tx *StakeTx) SHA3() [32]byte {
+	toHash := struct {
+		Header    byte
+		Fee       uint64
+		IsStaking bool
+		Account   [32]byte
+		CommKey   [crypto.COMM_KEY_LENGTH]byte
+	}{
+		tx.Header,
+		tx.Fee,
+		tx.IsStaking,
+		tx.Account,
+		tx.CommitmentKey,
+	}
+
+	return sha3.Sum256([]byte(fmt.Sprintf("%v", toHash)))
+}
+
 func (tx *StakeTx) Hash() (hash [32]byte) {
 	if tx == nil {
 		//is returning nil better?
@@ -72,6 +92,16 @@ func (tx *StakeTx) Hash() (hash [32]byte) {
 	}
 
 	return SerializeHashContent(txHash)
+}
+
+// Returns the chameleon hash but takes the chameleon hash parameters as input.
+// This method should be called in the context of bazo-client as the client doesn't maintain
+// a state holding the chameleon hash parameters of each account.
+func (tx *StakeTx) HashWithChamHashParams(chamHashParams *crypto.ChameleonHashParameters) [32]byte {
+	sha3Hash := tx.SHA3()
+	hashInput := sha3Hash[:]
+
+	return crypto.ChameleonHash(chamHashParams, tx.ChamHashCheckString, &hashInput)
 }
 
 //when we serialize the struct with binary.Write, unexported field get serialized as well, undesired
@@ -153,4 +183,12 @@ func (tx StakeTx) String() string {
 
 func (tx *StakeTx) SetData(data []byte) {
 	tx.Data = data
+}
+
+func (tx *StakeTx) SetChamHashCheckString(checkString *crypto.ChameleonHashCheckString) {
+	tx.ChamHashCheckString = checkString
+}
+
+func (tx *StakeTx) GetChamHashCheckString() *crypto.ChameleonHashCheckString {
+	return tx.ChamHashCheckString
 }

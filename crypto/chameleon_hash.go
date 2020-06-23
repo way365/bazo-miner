@@ -13,6 +13,10 @@ import (
 const HEX_BASE = 16
 const LENGTH = 256 // Length of a single parameter in bits.
 
+var (
+	ChamHashParamsMap = make(map[[32]byte]*ChameleonHashParameters)
+)
+
 type ChameleonHashParameters struct {
 	G  []byte // Prime
 	P  []byte // Prime
@@ -36,12 +40,11 @@ func newChameleonHashParameters() ChameleonHashParameters {
 	}
 }
 
-// Generates a new CheckString from the provided Q.
-// Q is a parameter of a ChameleonHashParameters.
-func NewChameleonHashCheckString(Q []byte) *ChameleonHashCheckString {
+// Generates a new CheckString from the provided parameters.
+func NewChameleonHashCheckString(parameters *ChameleonHashParameters) *ChameleonHashCheckString {
 	var R, S []byte
-	R = randgen(&Q)
-	S = randgen(&Q)
+	R = randgen(&parameters.Q)
+	S = randgen(&parameters.Q)
 
 	return &ChameleonHashCheckString{
 		R: R,

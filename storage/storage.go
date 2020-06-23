@@ -2,12 +2,12 @@ package storage
 
 import (
 	"fmt"
+	"github.com/julwil/bazo-miner/protocol"
 	"log"
 	"sync"
 	"time"
 
 	"github.com/boltdb/bolt"
-	"github.com/julwil/bazo-miner/protocol"
 )
 
 var (
@@ -49,26 +49,6 @@ func Init(dbname string, bootstrapIpport string) {
 	if err != nil {
 		logger.Fatal(ERROR_MSG, err)
 	}
-
-	//Check if db file is empty for all non-bootstraping miners
-	//if ipport != BOOTSTRAP_SERVER_PORT {
-	//	err := db.View(func(tx *bolt.Tx) error {
-	//		err := tx.ForEach(func(name []byte, bkt *bolt.Bucket) error {
-	//			err := bkt.ForEach(func(k, v []byte) error {
-	//				if k != nil && v != nil {
-	//					return errors.New("Non-empty database given.")
-	//				}
-	//				return nil
-	//			})
-	//			return err
-	//		})
-	//		return err
-	//	})
-	//
-	//	if err != nil {
-	//		logger.Fatal(ERROR_MSG, err)
-	//	}
-	//}
 
 	db.Update(func(tx *bolt.Tx) error {
 		_, err = tx.CreateBucket([]byte("openblocks"))

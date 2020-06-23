@@ -71,6 +71,7 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 	}
 
 	// Tx already in mempool of open tx
+
 	if storage.ReadOpenTx(tx.Hash()) != nil {
 		return
 	}

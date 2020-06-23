@@ -71,6 +71,7 @@ func verifyFundsTx(tx *protocol.FundsTx) bool {
 		validSig1 = true
 	} else {
 		logger.Printf("Sig1 invalid. FromHash: %x\nToHash: %x\n", accFromHash[0:8], accToHash[0:8])
+		logger.Printf("Invalid TX:\n%s", tx.String())
 		return false
 	}
 
