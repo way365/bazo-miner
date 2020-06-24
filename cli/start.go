@@ -17,11 +17,12 @@ type startArgs struct {
 	myNodeAddress        string
 	bootstrapNodeAddress string
 	walletFile           string
-	multisigFile         string
-	commitmentFile       string
-	rootKeyFile          string
-	rootCommitmentFile   string
-	chamHashParamsFile   string
+	//chamHashParams       string
+	multisigFile       string
+	commitmentFile     string
+	rootWalletFile     string
+	rootCommitmentFile string
+	rootChamHashParams string
 }
 
 func GetStartCommand(logger *log.Logger) cli.Command {
@@ -34,11 +35,12 @@ func GetStartCommand(logger *log.Logger) cli.Command {
 				myNodeAddress:        c.String("address"),
 				bootstrapNodeAddress: c.String("bootstrap"),
 				walletFile:           c.String("wallet"),
-				multisigFile:         c.String("multisig"),
-				commitmentFile:       c.String("commitment"),
-				rootKeyFile:          c.String("rootwallet"),
-				rootCommitmentFile:   c.String("rootcommitment"),
-				chamHashParamsFile:   c.String("chamHashParams"),
+				//chamHashParams:       c.String("chamHashParams"),
+				multisigFile:       c.String("multisig"),
+				commitmentFile:     c.String("commitment"),
+				rootWalletFile:     c.String("rootwallet"),
+				rootCommitmentFile: c.String("rootcommitment"),
+				rootChamHashParams: c.String("rootChamHashParams"),
 			}
 
 			if !c.IsSet("bootstrap") {
@@ -79,6 +81,10 @@ func GetStartCommand(logger *log.Logger) cli.Command {
 				Usage: "load validator's public key from `FILE`",
 				Value: "wallet.txt",
 			},
+			//cli.StringFlag{
+			//	Name:  "chamHashParams",
+			//	Usage: "load the chameleon hash parameters `FILE`",
+			//},
 			cli.StringFlag{
 				Name:  "multisig, m",
 				Usage: "load multi-signature server’s public key from `FILE`",
@@ -99,8 +105,8 @@ func GetStartCommand(logger *log.Logger) cli.Command {
 				Value: "commitment.txt",
 			},
 			cli.StringFlag{
-				Name:  "chamHashParams, ch",
-				Usage: "load the chameleon hash parameters from `FILE`",
+				Name:  "rootChamHashParams, ch",
+				Usage: "load the root chameleon hash parameters from `FILE`",
 			},
 			cli.BoolFlag{
 				Name:  "confirm",
@@ -120,7 +126,13 @@ func Start(args *startArgs, logger *log.Logger) error {
 		return err
 	}
 
-	rootPrivKey, err := crypto.ExtractECDSAKeyFromFile(args.rootKeyFile)
+	//chamHashParams, err := crypto.GetOrCreateChamHashParamsFromFile(args.chamHashParams)
+	//if err != nil {
+	//	logger.Printf("%v\n", err)
+	//	return err
+	//}
+
+	rootPrivKey, err := crypto.ExtractECDSAKeyFromFile(args.rootWalletFile)
 	if err != nil {
 		logger.Printf("%v\n", err)
 		return err
@@ -148,10 +160,14 @@ func Start(args *startArgs, logger *log.Logger) error {
 		logger.Printf("%v\n", err)
 		return err
 	}
-	logger.Printf("ChamHashParams: %v %v", args.chamHashParamsFile)
-	chamHashParams, err := crypto.GetOrCreateChamHashParamsFromFile(args.chamHashParamsFile)
 
-	miner.Init(validatorPubKey, multisigPubKey, &rootPrivKey.PublicKey, commPrivKey, rootCommPrivKey, chamHashParams)
+	rootChamHashParams, err := crypto.GetOrCreateChamHashParamsFromFile(args.rootChamHashParams)
+	if err != nil {
+		logger.Printf("%v\n", err)
+		return err
+	}
+
+	miner.Init(validatorPubKey, multisigPubKey, &rootPrivKey.PublicKey, commPrivKey, rootCommPrivKey, rootChamHashParams)
 	return nil
 }
 
@@ -176,16 +192,16 @@ func (args startArgs) ValidateInput() error {
 		return errors.New("argument missing: commitmentFile")
 	}
 
-	if len(args.rootKeyFile) == 0 {
-		return errors.New("argument missing: rootKeyFile")
+	if len(args.rootWalletFile) == 0 {
+		return errors.New("argument missing: rootWalletFile")
 	}
 
 	if len(args.rootCommitmentFile) == 0 {
 		return errors.New("argument missing: rootCommitmentFile")
 	}
 
-	if len(args.chamHashParamsFile) == 0 {
-		return errors.New("argument missing: chamHashParamsFile")
+	if len(args.rootChamHashParams) == 0 {
+		return errors.New("argument missing: rootChamHashParams")
 	}
 
 	return nil
@@ -207,6 +223,6 @@ func (args startArgs) String() string {
 		args.walletFile,
 		args.multisigFile,
 		args.commitmentFile,
-		args.rootKeyFile,
+		args.rootWalletFile,
 		args.rootCommitmentFile)
 }

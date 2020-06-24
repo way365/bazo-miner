@@ -72,7 +72,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 		configTxs := make([]*protocol.ConfigTx, block.NrConfigTx)
 		stakeTxs := make([]*protocol.StakeTx, block.NrStakeTx)
 		aggTxs := make([]*protocol.AggTx, block.NrAggTx)
-		deleteTxs := make([]*protocol.DeleteTx, block.NrDeleteTx)
+		updateTxs := make([]*protocol.UpdateTx, block.NrUpdateTx)
 		var aggregatedFundsTxs []*protocol.FundsTx // TODO: Duplicate?
 
 		err = preValidate(block, initialSetup)
@@ -90,7 +90,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 			&stakeTxs,
 			&aggTxs,
 			&aggregatedFundsTxs,
-			&deleteTxs,
+			&updateTxs,
 		)
 		if err != nil {
 			return err
@@ -113,7 +113,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 			stakeTxs,
 			aggTxs,
 			aggregatedFundsTxs,
-			deleteTxs,
+			updateTxs,
 			block,
 		}
 		if err := validateState(blockDataMap[block.Hash], initialSetup); err != nil {
@@ -330,7 +330,7 @@ func postValidate(data blockData, initialSetup bool) {
 			storage.DeleteOpenTx(tx)
 		}
 
-		for _, tx := range data.deleteTxSlice {
+		for _, tx := range data.updateTxSlice {
 			storage.WriteClosedTx(tx)
 			storage.DeleteOpenTx(tx)
 		}
@@ -581,7 +581,7 @@ func validateNoDuplicateTx(block *protocol.Block) error {
 		}
 		seenTxs[txHash] = true
 	}
-	for _, txHash := range block.DeleteTxData {
+	for _, txHash := range block.UpdateTxData {
 		if _, exists := seenTxs[txHash]; exists {
 			return errors.New("Duplicate Delete Transaction Hash detected.")
 		}

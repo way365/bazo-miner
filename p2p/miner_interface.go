@@ -23,7 +23,7 @@ var (
 	ConfigTxChan = make(chan *protocol.ConfigTx)
 	StakeTxChan  = make(chan *protocol.StakeTx)
 	AggTxChan    = make(chan *protocol.AggTx)
-	DeleteTxChan = make(chan *protocol.DeleteTx)
+	UpdateTxChan = make(chan *protocol.UpdateTx)
 
 	BlockReqChan = make(chan []byte)
 
@@ -31,14 +31,14 @@ var (
 	ReceivedAggTxStash    = make([]*protocol.AggTx, 0)
 	ReceivedStakeTxStash  = make([]*protocol.StakeTx, 0)
 	ReceivedAccTxStash    = make([]*protocol.AccTx, 0)
-	ReceivedDeleteTxStash = make([]*protocol.DeleteTx, 0)
+	ReceivedUpdateTxStash = make([]*protocol.UpdateTx, 0)
 
 	fundsTxSashMutex   = &sync.Mutex{}
 	aggTxStashMutex    = &sync.Mutex{}
 	blockStashMutex    = &sync.Mutex{}
 	stakeTxStashMutex  = &sync.Mutex{}
 	accTxStashMutex    = &sync.Mutex{}
-	deleteTxStashMutex = &sync.Mutex{}
+	updateTxStashMutex = &sync.Mutex{}
 )
 
 //This is for blocks and txs that the miner successfully validated.
@@ -121,7 +121,7 @@ func AccTxAlreadyInStash(slice []*protocol.AccTx, newTXHash [32]byte) bool {
 	return false
 }
 
-func DeleteTxAlreadyInStash(slice []*protocol.DeleteTx, newTXHash [32]byte) bool {
+func UpdateTxAlreadyInStash(slice []*protocol.UpdateTx, newTXHash [32]byte) bool {
 	for _, txInStash := range slice {
 		if txInStash.Hash() == newTXHash {
 			return true
@@ -223,21 +223,21 @@ func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 		}
 		aggTxStashMutex.Unlock()
 
-	case DELTX_RES:
-		var deleteTx *protocol.DeleteTx
-		deleteTx = deleteTx.Decode(payload)
-		if deleteTx == nil {
+	case UPDATETX_RES:
+		var updateTx *protocol.UpdateTx
+		updateTx = updateTx.Decode(payload)
+		if updateTx == nil {
 			return
 		}
-		deleteTxStashMutex.Lock()
-		if !DeleteTxAlreadyInStash(ReceivedDeleteTxStash, deleteTx.Hash()) {
-			ReceivedDeleteTxStash = append(ReceivedDeleteTxStash, deleteTx)
-			DeleteTxChan <- deleteTx
-			if len(ReceivedDeleteTxStash) > 100 {
-				ReceivedDeleteTxStash = append(ReceivedDeleteTxStash[:0], ReceivedDeleteTxStash[1:]...)
+		updateTxStashMutex.Lock()
+		if !UpdateTxAlreadyInStash(ReceivedUpdateTxStash, updateTx.Hash()) {
+			ReceivedUpdateTxStash = append(ReceivedUpdateTxStash, updateTx)
+			UpdateTxChan <- updateTx
+			if len(ReceivedUpdateTxStash) > 100 {
+				ReceivedUpdateTxStash = append(ReceivedUpdateTxStash[:0], ReceivedUpdateTxStash[1:]...)
 			}
 		}
-		deleteTxStashMutex.Unlock()
+		updateTxStashMutex.Unlock()
 	}
 }
 

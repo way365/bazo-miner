@@ -63,12 +63,11 @@ Miner B
 * Bootstrap Address: `localhost:8000`
 * Wallet: `WalletB.txt`
 * Commitment: `CommitmentB.txt`
-* Chameleon Hash Parameters: `ChamHashParamsB.txt`
 
 Commands
 
 ```bash
-./bazo-miner start --database StoreA.db --address localhost:8000 --bootstrap localhost:8000 --wallet WalletA.txt --commitment CommitmentA.txt --multisig WalletA.txt --rootwallet WalletA.txt --rootcommitment CommitmentA.txt --chamHashParams ChamHashParamsA.txt
+./bazo-miner start --database StoreA.db --address localhost:8000 --bootstrap localhost:8000 --wallet WalletA.txt --commitment CommitmentA.txt --multisig WalletA.txt --rootwallet WalletA.txt --rootcommitment CommitmentA.txt --rootChamHashParams ChamHashParamsA.txt
 ```
 
 We start miner A at address and port `localhost:8000` and connect to itself by setting the bootstrap address to the same address.
@@ -87,7 +86,12 @@ The minimum amount of coins required for staking is defined in the configuration
 Thus, miner B first needs Bazo coins to start mining and we must first send coins to miner B's account.
 
 ```bash
-./bazo-client funds --from WalletA.txt --to WalletB.txt --txcount 0 --amount 2000 --multisig WalletA.txt --chamHashParams ChamHashParamsA.txt
+./bazo-client funds --from WalletA.txt --to WalletB.txt --txcount 0 --amount 2000 --multisig WalletA.txt --chamHashParams ChamHashParamsA.txt --data "specify purpose of payment"
+```
+
+(Optional) The client can update the `data` field of any transaction by using the chameleon hash parameter generated in the account generation step above.
+```bash
+./bazo-client update --tx-hash <hash-of-the-tx-to-update> --tx-issuer WalletA.txt --update-data "New data goes here." --cham-hash-params ChamHashParamsA.txt
 ```
 
 Then, miner B has to join the pool of validators (enable staking):
@@ -95,10 +99,10 @@ Then, miner B has to join the pool of validators (enable staking):
 ./bazo-client staking enable --wallet WalletB.txt --commitment CommitmentB.txt
 ```
 
-Start miner B, using the generated `WalletB.txt`, `CommitmentB.txt` and `ChamHashParamsB.txt` (e.g. copy the files to the Bazo miner directory):
+Start miner B, using the generated `WalletB.txt` and `CommitmentB.txt` (e.g. copy the files to the Bazo miner directory):
 
 ```bash
-./bazo-miner start --database StoreB.db --address localhost:8001 --bootstrap localhost:8000 --wallet WalletB.txt --commitment CommitmentB.txt --rootwallet WalletA.txt --rootcommitment CommitmentA.txt --chamHashParams ChamHashParamsB.txt
+./bazo-miner start --database StoreB.db --address localhost:8001 --bootstrap localhost:8000 --wallet WalletB.txt --commitment CommitmentB.txt --rootwallet WalletA.txt --rootcommitment CommitmentA.txt --rootChamHashParams ChamHashParamsA.txt
 ```
 
 Note that both files specified for `--rootwallet` and `--rootcommitment` only require to contain the wallet and commitemt public key respectively.

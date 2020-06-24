@@ -197,7 +197,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 			configTxs := make([]*protocol.ConfigTx, blockToValidate.NrConfigTx)
 			stakeTxs := make([]*protocol.StakeTx, blockToValidate.NrStakeTx)
 			aggTxs := make([]*protocol.AggTx, blockToValidate.NrAggTx)
-			deleteTxs := make([]*protocol.DeleteTx, blockToValidate.NrDeleteTx)
+			updateTxs := make([]*protocol.UpdateTx, blockToValidate.NrUpdateTx)
 			var aggregatedFundsTxs []*protocol.FundsTx // TODO: Duplicate?
 
 			err = preValidate(blockToValidate, true)
@@ -214,7 +214,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 				&stakeTxs,
 				&aggTxs,
 				&aggregatedFundsTxs,
-				&deleteTxs,
+				&updateTxs,
 			)
 			if err != nil {
 				return nil, errors.New(fmt.Sprintf("Block (%x) could not be prevalidated: %v\n", blockToValidate.Hash[0:8], err))
@@ -227,7 +227,7 @@ func initState() (initialBlock *protocol.Block, err error) {
 				stakeTxs,
 				aggTxs,
 				aggregatedFundsTxs,
-				deleteTxs,
+				updateTxs,
 				blockToValidate,
 			}
 

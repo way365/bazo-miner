@@ -156,6 +156,10 @@ func (tx *AggTx) SetData(data []byte) {
 	tx.Data = data
 }
 
+func (tx *AggTx) GetData() []byte {
+	return tx.Data
+}
+
 func (tx *AggTx) SetChamHashCheckString(checkString *crypto.ChameleonHashCheckString) {
 	tx.ChamHashCheckString = checkString
 }

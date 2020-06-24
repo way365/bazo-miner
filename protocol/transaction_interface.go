@@ -22,6 +22,7 @@ type Transaction interface {
 	Receiver() [TRANSACTION_RECEIVER_SIZE]byte
 	String() string
 	SetData(data []byte) // Set the data field to the new value
+	GetData() []byte
 	SetChamHashCheckString(checkString *crypto.ChameleonHashCheckString)
 	GetChamHashCheckString() *crypto.ChameleonHashCheckString
 }

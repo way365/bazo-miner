@@ -121,7 +121,7 @@ func WriteClosedTx(transaction protocol.Transaction) (err error) {
 		bucket = "closedstakes"
 	case *protocol.AggTx:
 		bucket = "closedaggregations"
-	case *protocol.DeleteTx:
+	case *protocol.UpdateTx:
 		bucket = "closeddeletes"
 	}
 

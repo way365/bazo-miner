@@ -12,7 +12,7 @@ import (
 )
 
 //In-memory, k/v storage is tested with the test below
-func TestReadWriteDeleteTx(t *testing.T) {
+func TestReadWriteUpdateTx(t *testing.T) {
 
 	rand := rand.New(rand.NewSource(time.Now().Unix()))
 

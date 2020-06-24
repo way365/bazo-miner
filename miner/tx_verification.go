@@ -31,8 +31,8 @@ func verify(tx protocol.Transaction) bool {
 	case *protocol.AggTx:
 		return verifyAggTx(tx.(*protocol.AggTx))
 
-	case *protocol.DeleteTx:
-		return verifyDeleteTx(tx.(*protocol.DeleteTx))
+	case *protocol.UpdateTx:
+		return verifyUpdateTx(tx.(*protocol.UpdateTx))
 
 	default: // In case tx is nil or we encounter an unhandled transaction type
 		return false
@@ -151,7 +151,7 @@ func verifyAggTx(tx *protocol.AggTx) bool {
 	return true
 }
 
-func verifyDeleteTx(tx *protocol.DeleteTx) bool {
+func verifyUpdateTx(tx *protocol.UpdateTx) bool {
 
 	// First we make sure that the account of the tx issuer exists.
 	issuerAccount := storage.State[tx.Issuer]
@@ -160,18 +160,18 @@ func verifyDeleteTx(tx *protocol.DeleteTx) bool {
 		return false
 	}
 
-	// Next we check if the tx to delete actually exists.
+	// Next we check if the tx to update actually exists.
 	var txToDelete protocol.Transaction
 
 	switch true {
-	case storage.ReadOpenTx(tx.TxToDeleteHash) != nil:
-		txToDelete = storage.ReadOpenTx(tx.TxToDeleteHash)
+	case storage.ReadOpenTx(tx.TxToUpdateHash) != nil:
+		txToDelete = storage.ReadOpenTx(tx.TxToUpdateHash)
 
-	case storage.ReadClosedTx(tx.TxToDeleteHash) != nil:
-		txToDelete = storage.ReadClosedTx(tx.TxToDeleteHash)
+	case storage.ReadClosedTx(tx.TxToUpdateHash) != nil:
+		txToDelete = storage.ReadClosedTx(tx.TxToUpdateHash)
 
-	default: // If we don't find the tx to delete in the storage, we also can't delete it.
-		logger.Printf("Can't find TxToDelete: %x", tx.TxToDeleteHash)
+	default: // If we don't find the tx to update in the storage, we also can't update it.
+		logger.Printf("Can't find TxToDelete: %x", tx.TxToUpdateHash)
 		return false
 	}
 
@@ -183,49 +183,49 @@ func verifyDeleteTx(tx *protocol.DeleteTx) bool {
 		return false
 	}
 
-	// Lastly we check if the issuer of the delete-tx also signed the tx to delete.
-	// This makes sure that you only delete your own txs.
+	// Lastly we check if the issuer of the update-tx also signed the tx to update.
+	// This makes sure that you only update your own txs.
 	// Get the hash
-	txToDeleteHash := txToDelete.Hash()
-	var txToDeleteSig [64]byte
+	txToUpdateHash := txToDelete.Hash()
+	var txToUpdateSig [64]byte
 
 	// Now we validate the txToDelete and retrieve its signature.
 	switch txToDelete.(type) {
 	case *protocol.FundsTx:
-		txToDeleteSig = txToDelete.(*protocol.FundsTx).Sig1
+		txToUpdateSig = txToDelete.(*protocol.FundsTx).Sig1
 
 	case *protocol.AccTx:
-		logger.Printf("\nCan't delete account tx")
-		return false
+		txToUpdateSig = txToDelete.(*protocol.AccTx).Sig
 
 	case *protocol.ConfigTx:
-		logger.Printf("\nCan't delete config tx")
+		logger.Printf("\nCan't update config tx")
 		return false
 
 	case *protocol.StakeTx:
-		logger.Printf("\nCan't delete stake tx")
+		logger.Printf("\nCan't update stake tx")
 		return false
 
 	case *protocol.AggTx:
-		logger.Printf("\nCan't delete aggregate tx")
+		logger.Printf("\nCan't update aggregate tx")
 		return false
 
-	case *protocol.DeleteTx:
-		logger.Printf("\nCan't delete delete tx")
+	case *protocol.UpdateTx:
+		logger.Printf("\nCan't update update-tx")
 		return false
 
 	default: // In case we can't cast the tx to a known type, abort
 		return false
 	}
 
-	isAuthorized := isSigned(txToDeleteHash, txToDeleteSig, issuerAccount.Address)
+	isAuthorized := isSigned(txToUpdateHash, txToUpdateSig, issuerAccount.Address)
 
 	if !isAuthorized {
-		logger.Printf("\nISSUER NOT ALLOWED TO DELETE TX."+
-			"\nTxToDelete was not signed by Issuer. (You can only delete your own tx)"+
+		logger.Printf("\nISSUER NOT ALLOWED TO UPDATE TX."+
+			"\nTxToUpdate was not signed by Issuer. (You can only update your own tx)"+
 			"\nIssuer: %x"+
-			"\nTxToDelete: %x"+
-			"\nAbort deletion.", tx.Issuer, txToDeleteHash)
+			"\nTxToUpdate: %x"+
+			"\nAbort update.", tx.Issuer, txToUpdateHash)
+
 		return false
 	}
 

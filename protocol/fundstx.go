@@ -28,8 +28,7 @@ type FundsTx struct {
 	Aggregated          bool
 	Block               [32]byte                         // This saves the blockHashWithoutTransactions into which the transaction was usually validated. Needed for rollback.
 	ChamHashCheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
-
-	Data []byte
+	Data                []byte
 }
 
 func ConstrFundsTx(
@@ -82,12 +81,10 @@ func ConstrFundsTx(
 
 // Returns the chameleon hash but takes the chameleon hash parameters as input.
 // This method should be called in the context of bazo-client as the client doesn't maintain
-// a state holding the chameleon hash parameters of each account.
+// a copy of the chameleon hash parameters of each account.
 func (tx *FundsTx) HashWithChamHashParams(chamHashParams *crypto.ChameleonHashParameters) [32]byte {
 	sha3Hash := tx.SHA3()
 	hashInput := sha3Hash[:]
-	fmt.Printf("ChamHash Parameters: %x", chamHashParams.HK[0:8])
-	fmt.Printf("ChamHash Check String: %x", tx.ChamHashCheckString.R[0:8])
 
 	return crypto.ChameleonHash(chamHashParams, tx.ChamHashCheckString, &hashInput)
 }
@@ -96,6 +93,10 @@ func (tx *FundsTx) HashWithChamHashParams(chamHashParams *crypto.ChameleonHashPa
 // This can be called in the context of bazo-miner as the miner keeps a state
 // with the chameleon hash parameters of all accounts.
 func (tx *FundsTx) Hash() (hash [32]byte) {
+	if tx == nil {
+		return [32]byte{}
+	}
+
 	chamHashParams := crypto.ChamHashParamsMap[tx.From]
 
 	return tx.HashWithChamHashParams(chamHashParams)
@@ -190,6 +191,10 @@ func (tx FundsTx) String() string {
 
 func (tx *FundsTx) SetData(data []byte) {
 	tx.Data = data
+}
+
+func (tx *FundsTx) GetData() []byte {
+	return tx.Data
 }
 
 func (tx *FundsTx) SetChamHashCheckString(checkString *crypto.ChameleonHashCheckString) {

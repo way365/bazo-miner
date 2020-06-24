@@ -9,8 +9,8 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 		processTxBrdcst(p, payload, FUNDSTX_BRDCST)
 	case ACCTX_BRDCST:
 		processTxBrdcst(p, payload, ACCTX_BRDCST)
-	case DELTX_BRDCST:
-		processTxBrdcst(p, payload, DELTX_BRDCST)
+	case UPDATETX_BRDCST:
+		processTxBrdcst(p, payload, UPDATETX_BRDCST)
 	case CONFIGTX_BRDCST:
 		processTxBrdcst(p, payload, CONFIGTX_BRDCST)
 	case STAKETX_BRDCST:
@@ -33,8 +33,8 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 		txRes(p, payload, STAKETX_REQ)
 	case AGGTX_REQ:
 		txRes(p, payload, AGGTX_REQ)
-	case DELTX_REQ:
-		txRes(p, payload, DELTX_REQ)
+	case UPDATETX_REQ:
+		txRes(p, payload, UPDATETX_REQ)
 	case UNKNOWNTX_REQ:
 		txRes(p, payload, UNKNOWNTX_REQ)
 	case SPECIALTX_REQ:
@@ -77,7 +77,7 @@ func processIncomingMsg(p *peer, header *Header, payload []byte) {
 		forwardTxReqToMiner(p, payload, STAKETX_RES)
 	case AGGTX_RES:
 		forwardTxReqToMiner(p, payload, AGGTX_RES)
-	case DELTX_RES:
-		forwardTxReqToMiner(p, payload, DELTX_RES)
+	case UPDATETX_RES:
+		forwardTxReqToMiner(p, payload, UPDATETX_RES)
 	}
 }

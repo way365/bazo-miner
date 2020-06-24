@@ -33,8 +33,8 @@ func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 			return
 		}
 		tx = aTx
-	case DELTX_BRDCST:
-		var dTx *protocol.DeleteTx
+	case UPDATETX_BRDCST:
+		var dTx *protocol.UpdateTx
 		dTx = dTx.Decode(payload)
 		if dTx == nil {
 			return

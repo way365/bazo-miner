@@ -208,6 +208,10 @@ func (tx *ConfigTx) SetData(data []byte) {
 	tx.Data = data
 }
 
+func (tx *ConfigTx) GetData() []byte {
+	return tx.Data
+}
+
 func (tx *ConfigTx) SetChamHashCheckString(checkString *crypto.ChameleonHashCheckString) {
 	tx.ChamHashCheckString = checkString
 }

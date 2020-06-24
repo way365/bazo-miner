@@ -16,7 +16,7 @@ func fetchTransactions(
 	stakeTxSlice *[]*protocol.StakeTx,
 	aggTxSlice *[]*protocol.AggTx,
 	aggregatedFundsTxSlice *[]*protocol.FundsTx,
-	deleteTxSlice *[]*protocol.DeleteTx,
+	updateTxSlice *[]*protocol.UpdateTx,
 ) error {
 
 	//We fetch tx data for each type in parallel -> performance boost.
@@ -28,7 +28,7 @@ func fetchTransactions(
 	go fetchFundsTxData(block, *fundsTxSlice, initialSetup, errChan)
 	go fetchConfigTxData(block, *configTxSlice, initialSetup, errChan)
 	go fetchStakeTxData(block, *stakeTxSlice, initialSetup, errChan)
-	go fetchDeleteTxData(block, *deleteTxSlice, initialSetup, errChan)
+	go fetchUpdateTxData(block, *updateTxSlice, initialSetup, errChan)
 	go fetchAggTxData(block, *aggTxSlice, initialSetup, errChan, aggregatedFundsChan)
 
 	//Wait for all goroutines to finish.

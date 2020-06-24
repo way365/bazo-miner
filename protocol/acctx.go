@@ -36,6 +36,8 @@ func ConstrAccTx(
 	contract []byte,
 	contractVariables []ByteArray,
 	chamHashParams *crypto.ChameleonHashParameters,
+	chamHashCheckString *crypto.ChameleonHashCheckString,
+	data []byte,
 ) (tx *AccTx, newAccAddress *ecdsa.PrivateKey, err error) {
 	tx = new(AccTx)
 	tx.Header = header
@@ -43,6 +45,8 @@ func ConstrAccTx(
 	tx.Contract = contract
 	tx.ContractVariables = contractVariables
 	tx.ChamHashParams = chamHashParams
+	tx.ChamHashCheckString = chamHashCheckString
+	tx.Data = data
 
 	if address != [64]byte{} {
 		copy(tx.PubKey[:], address[:])
@@ -67,7 +71,7 @@ func ConstrAccTx(
 	issuer := SerializeHashContent(rootPublicKey)
 	copy(tx.Issuer[:], issuer[:])
 
-	txHash := tx.Hash()
+	txHash := tx.HashWithChamHashParams(chamHashParams)
 
 	r, s, err := ecdsa.Sign(rand.Reader, rootPrivKey, txHash[:])
 	if err != nil {
@@ -89,6 +93,7 @@ func (tx *AccTx) SHA3() [32]byte {
 		PubKey            [64]byte
 		Contract          []byte
 		ContractVariables []ByteArray
+		Data              []byte
 	}{
 		tx.Header,
 		tx.Issuer,
@@ -96,6 +101,7 @@ func (tx *AccTx) SHA3() [32]byte {
 		tx.PubKey,
 		tx.Contract,
 		tx.ContractVariables,
+		tx.Data,
 	}
 
 	return sha3.Sum256([]byte(fmt.Sprintf("%v", toHash)))
@@ -105,23 +111,8 @@ func (tx *AccTx) Hash() [32]byte {
 	if tx == nil {
 		return [32]byte{}
 	}
-	txHash := struct {
-		Header            byte
-		Issuer            [32]byte
-		Fee               uint64
-		PubKey            [64]byte
-		Contract          []byte
-		ContractVariables []ByteArray
-	}{
-		tx.Header,
-		tx.Issuer,
-		tx.Fee,
-		tx.PubKey,
-		tx.Contract,
-		tx.ContractVariables,
-	}
 
-	return SerializeHashContent(txHash)
+	return tx.HashWithChamHashParams(tx.ChamHashParams)
 }
 
 // Returns the chameleon hash but takes the chameleon hash parameters as input.
@@ -140,12 +131,14 @@ func (tx *AccTx) Encode() []byte {
 	}
 
 	encoded := AccTx{
-		Header:         tx.Header,
-		Issuer:         tx.Issuer,
-		Fee:            tx.Fee,
-		PubKey:         tx.PubKey,
-		Sig:            tx.Sig,
-		ChamHashParams: tx.ChamHashParams,
+		Header:              tx.Header,
+		Issuer:              tx.Issuer,
+		Fee:                 tx.Fee,
+		PubKey:              tx.PubKey,
+		Sig:                 tx.Sig,
+		ChamHashParams:      tx.ChamHashParams,
+		ChamHashCheckString: tx.ChamHashCheckString,
+		Data:                tx.Data,
 	}
 
 	buffer := new(bytes.Buffer)
@@ -190,6 +183,10 @@ func (tx AccTx) String() string {
 
 func (tx *AccTx) SetData(data []byte) {
 	tx.Data = data
+}
+
+func (tx *AccTx) GetData() []byte {
+	return tx.Data
 }
 
 func (tx *AccTx) SetChamHashCheckString(checkString *crypto.ChameleonHashCheckString) {

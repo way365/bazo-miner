@@ -14,7 +14,7 @@ func rollback(b *protocol.Block) error {
 		configTxSlice,
 		stakeTxSlice,
 		aggTxSlice,
-		deleteTxSlice,
+		updateTxSlice,
 		err := preValidateRollback(b)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func rollback(b *protocol.Block) error {
 		stakeTxSlice,
 		aggTxSlice,
 		nil,
-		deleteTxSlice,
+		updateTxSlice,
 		b,
 	}
 
@@ -47,7 +47,7 @@ func preValidateRollback(b *protocol.Block) (
 	configTxSlice []*protocol.ConfigTx,
 	stakeTxSlice []*protocol.StakeTx,
 	aggTxSlice []*protocol.AggTx,
-	deleteTxSlice []*protocol.DeleteTx,
+	updateTxSlice []*protocol.UpdateTx,
 	err error) {
 
 	//Fetch all transactions from closed storage.
@@ -145,7 +145,7 @@ func preValidateRollback(b *protocol.Block) (
 		configTxSlice,
 		stakeTxSlice,
 		aggTxSlice,
-		deleteTxSlice,
+		updateTxSlice,
 		nil
 }
 

@@ -261,14 +261,14 @@ func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
 		return acctx.Decode(encodedTx)
 	}
 
-	var deleteTx *protocol.DeleteTx
+	var updateTx *protocol.UpdateTx
 	db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("closeddeletes"))
 		encodedTx = b.Get(hash[:])
 		return nil
 	})
 	if encodedTx != nil {
-		return deleteTx.Decode(encodedTx)
+		return updateTx.Decode(encodedTx)
 	}
 
 	var configtx *protocol.ConfigTx

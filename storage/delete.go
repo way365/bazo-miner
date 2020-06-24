@@ -78,7 +78,7 @@ func DeleteClosedTx(transaction protocol.Transaction) {
 		bucket = "closedstakes"
 	case *protocol.AggTx:
 		bucket = "closedaggregations"
-	case *protocol.DeleteTx:
+	case *protocol.UpdateTx:
 		bucket = "closeddeletes"
 	}
 

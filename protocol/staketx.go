@@ -185,6 +185,10 @@ func (tx *StakeTx) SetData(data []byte) {
 	tx.Data = data
 }
 
+func (tx *StakeTx) GetData() []byte {
+	return tx.Data
+}
+
 func (tx *StakeTx) SetChamHashCheckString(checkString *crypto.ChameleonHashCheckString) {
 	tx.ChamHashCheckString = checkString
 }
