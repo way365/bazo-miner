@@ -32,7 +32,7 @@ func handleTxUpdate(updateTx *protocol.UpdateTx) error {
 	// At this point we already verified that the transaction we want to update actually exists
 	// either in the open or closed transaction storage. Thus we can safely assume it exists and
 	// update it in our local storage.
-	updateLocalTx(txToUpdateHash, updateTx.TxToUpdateChamHashCheckString, updateTx.TxToUpdateData)
+	updateLocalTx(txToUpdateHash, updateTx.TxToUpdateChamHashCheckString, updateTx.TxToUpdateData, updateTx.Data)
 
 	blockToUpdate := storage.ReadBlockByTxHash(txToUpdateHash)
 	if blockToUpdate == nil {
@@ -53,7 +53,12 @@ func handleTxUpdate(updateTx *protocol.UpdateTx) error {
 }
 
 // Updates the data field of a local tx identified by txHash
-func updateLocalTx(txHash [32]byte, newCheckString *crypto.ChameleonHashCheckString, newData []byte) error {
+func updateLocalTx(
+	txHash [32]byte,
+	newCheckString *crypto.ChameleonHashCheckString,
+	newData []byte,
+	updateReason []byte, // This is the data field from update tx.
+) error {
 	var txToUpdate protocol.Transaction
 	var oldData []byte
 
@@ -62,14 +67,14 @@ func updateLocalTx(txHash [32]byte, newCheckString *crypto.ChameleonHashCheckStr
 		txToUpdate = storage.ReadOpenTx(txHash)
 		oldData = txToUpdate.GetData()
 		txToUpdate.SetData(newData)
-		txToUpdate.SetChamHashCheckString(newCheckString)
+		txToUpdate.SetChCheckString(newCheckString)
 		storage.WriteOpenTx(txToUpdate)
 
 	case storage.ReadClosedTx(txHash) != nil:
 		txToUpdate = storage.ReadClosedTx(txHash)
 		oldData = txToUpdate.GetData()
 		txToUpdate.SetData(newData)
-		txToUpdate.SetChamHashCheckString(newCheckString)
+		txToUpdate.SetChCheckString(newCheckString)
 		storage.WriteClosedTx(txToUpdate)
 
 	default: // If we don't find the tx to update in the storage, we also can't update it.
@@ -79,11 +84,12 @@ func updateLocalTx(txHash [32]byte, newCheckString *crypto.ChameleonHashCheckStr
 
 	logger.Printf("\n"+
 		"=====================================================================================\n"+
-		"      UPDATE TX: %x\n"+
-		"         OLD:  %s\n"+
-		"         NEW:  %s\n"+
+		"      Updated TX: %x\n"+
+		"         Old:  %s\n"+
+		"         New:  %s\n\n"+
+		"         Reason:  %s\n"+
 		"=====================================================================================",
-		txToUpdate.Hash(), oldData, txToUpdate.GetData(),
+		txToUpdate.Hash(), oldData, txToUpdate.GetData(), updateReason,
 	)
 
 	return nil

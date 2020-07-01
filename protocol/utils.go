@@ -11,7 +11,7 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-//Serializes the input and returns the sha3 hash function applied on ths input
+//Serializes the input and returns the SHA3 hash function applied on ths input
 func SerializeHashContent(data interface{}) (hash [32]byte) {
 	return sha3.Sum256([]byte(fmt.Sprintf("%v", data)))
 }

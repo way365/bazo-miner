@@ -32,6 +32,9 @@ func ConstrUpdateTx(
 	txToUpdateData []byte,
 	issuer [32]byte,
 	privateKey *ecdsa.PrivateKey,
+	chCheckString *crypto.ChameleonHashCheckString,
+	chParams *crypto.ChameleonHashParameters,
+	data []byte,
 ) (tx *UpdateTx, err error) {
 	tx = new(UpdateTx)
 	tx.Header = header
@@ -40,9 +43,11 @@ func ConstrUpdateTx(
 	tx.TxToUpdateChamHashCheckString = txToUpdateChamHashCheckString
 	tx.TxToUpdateData = txToUpdateData
 	tx.Issuer = issuer
+	tx.ChamHashCheckString = chCheckString
+	tx.Data = data
 
 	// Generate the hash of the new Tx
-	txHash := tx.Hash()
+	txHash := tx.ChameleonHash(chParams)
 
 	// Sign the Tx
 	r, s, err := ecdsa.Sign(rand.Reader, privateKey, txHash[:])
@@ -61,16 +66,20 @@ func (tx *UpdateTx) SHA3() [32]byte {
 		Header                        byte
 		Fee                           uint64
 		TxToUpdateHash                [32]byte
-		TxToUpdateChamHashCheckString *crypto.ChameleonHashCheckString
+		TxToUpdateChamHashCheckString crypto.ChameleonHashCheckString
 		TxToUpdateData                []byte
 		Issuer                        [32]byte
+		ChamHashCheckString           crypto.ChameleonHashCheckString
+		Data                          []byte
 	}{
 		tx.Header,
 		tx.Fee,
 		tx.TxToUpdateHash,
-		tx.TxToUpdateChamHashCheckString,
+		*tx.TxToUpdateChamHashCheckString,
 		tx.TxToUpdateData,
 		tx.Issuer,
+		*tx.ChamHashCheckString,
+		tx.Data,
 	}
 
 	return sha3.Sum256([]byte(fmt.Sprintf("%v", toHash)))
@@ -78,37 +87,22 @@ func (tx *UpdateTx) SHA3() [32]byte {
 
 func (tx *UpdateTx) Hash() (hash [32]byte) {
 	if tx == nil {
-
 		return [32]byte{}
 	}
 
-	txHash := struct {
-		Header                        byte
-		Fee                           uint64
-		TxToUpdateHash                [32]byte
-		TxToUpdateChamHashCheckString crypto.ChameleonHashCheckString
-		TxToUpdateData                []byte
-		Issuer                        [32]byte
-	}{
-		tx.Header,
-		tx.Fee,
-		tx.TxToUpdateHash,
-		*tx.TxToUpdateChamHashCheckString, // Important: We need the value, not the pointer here!
-		tx.TxToUpdateData,
-		tx.Issuer,
-	}
+	chParams := crypto.ChParamsMap[tx.Issuer]
 
-	return SerializeHashContent(txHash)
+	return tx.ChameleonHash(chParams)
 }
 
 // Returns the chameleon hash but takes the chameleon hash parameters as input.
 // This method should be called in the context of bazo-client as the client doesn't maintain
 // a state holding the chameleon hash parameters of each account.
-func (tx *UpdateTx) HashWithChamHashParams(chamHashParams *crypto.ChameleonHashParameters) [32]byte {
+func (tx *UpdateTx) ChameleonHash(chParams *crypto.ChameleonHashParameters) [32]byte {
 	sha3Hash := tx.SHA3()
 	hashInput := sha3Hash[:]
 
-	return crypto.ChameleonHash(chamHashParams, tx.ChamHashCheckString, &hashInput)
+	return crypto.ChameleonHash(chParams, tx.ChamHashCheckString, &hashInput)
 }
 
 func (tx *UpdateTx) Encode() (encodedTx []byte) {
@@ -120,6 +114,8 @@ func (tx *UpdateTx) Encode() (encodedTx []byte) {
 		TxToUpdateData:                tx.TxToUpdateData,
 		Issuer:                        tx.Issuer,
 		Sig:                           tx.Sig,
+		ChamHashCheckString:           tx.ChamHashCheckString,
+		Data:                          tx.Data,
 	}
 	buffer := new(bytes.Buffer)
 	gob.NewEncoder(buffer).Encode(encodeData)
@@ -153,7 +149,9 @@ func (tx UpdateTx) String() string {
 			"TxToUpdateChamHashCheckString: %x\n"+
 			"TxToUpdateData: %s\n"+
 			"Issuer: %x\n"+
-			"Sig: %x\n",
+			"Sig: %x\n"+
+			"ChCheckString: %x\n"+
+			"Data: %s",
 		tx.Header,
 		tx.Fee,
 		tx.TxToUpdateHash,
@@ -161,6 +159,8 @@ func (tx UpdateTx) String() string {
 		tx.TxToUpdateData,
 		tx.Issuer[0:8],
 		tx.Sig[0:8],
+		tx.ChamHashCheckString.R[0:8],
+		tx.Data,
 	)
 }
 
@@ -172,10 +172,10 @@ func (tx *UpdateTx) GetData() []byte {
 	return tx.Data
 }
 
-func (tx *UpdateTx) SetChamHashCheckString(checkString *crypto.ChameleonHashCheckString) {
+func (tx *UpdateTx) SetChCheckString(checkString *crypto.ChameleonHashCheckString) {
 	tx.ChamHashCheckString = checkString
 }
 
-func (tx *UpdateTx) GetChamHashCheckString() *crypto.ChameleonHashCheckString {
+func (tx *UpdateTx) GetChCheckString() *crypto.ChameleonHashCheckString {
 	return tx.ChamHashCheckString
 }

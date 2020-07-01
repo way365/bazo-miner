@@ -54,7 +54,7 @@ Miner A (Root)
 * Commitment: `CommitmentA.txt`
 * Root Wallet: `WalletA.txt`
 * Root Commitment: `CommitmentA.txt`
-* Chameleon Hash Parameters: `ChamHashParamsA.txt`
+* Chameleon Hash Parameters: `ChParamsA.txt`
 
 
 Miner B
@@ -67,7 +67,7 @@ Miner B
 Commands
 
 ```bash
-./bazo-miner start --database StoreA.db --address localhost:8000 --bootstrap localhost:8000 --wallet WalletA.txt --commitment CommitmentA.txt --multisig WalletA.txt --rootwallet WalletA.txt --rootcommitment CommitmentA.txt --rootChamHashParams ChamHashParamsA.txt
+./bazo-miner start --database StoreA.db --address localhost:8000 --bootstrap localhost:8000 --wallet WalletA.txt --commitment CommitmentA.txt --multisig WalletA.txt --rootwallet WalletA.txt --rootcommitment CommitmentA.txt --root-chparams ChParamsA.txt
 ```
 
 We start miner A at address and port `localhost:8000` and connect to itself by setting the bootstrap address to the same address.
@@ -75,23 +75,23 @@ Note that we could have omitted these two options since they are passed by defau
 Wallet and commitment keys are automatically created. Using this command, we define miner A as the root.
 
 Starting miner B requires more work since new accounts have to be registered by a root account.
-In our case, we can use miner's A `WalletA.txt` and `ChamHashParamsA.txt` (e.g. copy the files to the Bazo client directory) to create and add a new account to the network.
+In our case, we can use miner's A `WalletA.txt` and `ChParamsA.txt` (e.g. copy the files to the Bazo client directory) to create and add a new account to the network.
 Using the [Bazo client](https://github.com/julwil/bazo-client), we create a new account:
 
 ```bash
-./bazo-client account create --rootwallet WalletA.txt --wallet WalletB.txt --chamHashParams ChamHashParamsB.txt
+./bazo-client account create --rootwallet WalletA.txt --wallet WalletB.txt --chparams ChParamsB.txt --data "John Doe"
 ```
 
 The minimum amount of coins required for staking is defined in the configuration of Bazo.
 Thus, miner B first needs Bazo coins to start mining and we must first send coins to miner B's account.
 
 ```bash
-./bazo-client funds --from WalletA.txt --to WalletB.txt --txcount 0 --amount 2000 --multisig WalletA.txt --chamHashParams ChamHashParamsA.txt --data "specify purpose of payment"
+./bazo-client funds --from WalletA.txt --to WalletB.txt --txcount 0 --amount 2000 --multisig WalletA.txt --chparams ChParamsA.txt --data "X"
 ```
 
-(Optional) The client can update the `data` field of any transaction by using the chameleon hash parameter generated in the account generation step above.
+(Optional) The client can update the `data` field of the previous funds transaction.
 ```bash
-./bazo-client update --tx-hash <hash-of-the-tx-to-update> --tx-issuer WalletA.txt --update-data "New data goes here." --cham-hash-params ChamHashParamsA.txt
+./bazo-client update --tx-hash <hash-of-the-funds-tx-goes-here> --tx-issuer WalletA.txt --update-data "Y" --chparams ChParamsA.txt --data "Fixed a typo in the payment purpose"
 ```
 
 Then, miner B has to join the pool of validators (enable staking):
@@ -102,7 +102,7 @@ Then, miner B has to join the pool of validators (enable staking):
 Start miner B, using the generated `WalletB.txt` and `CommitmentB.txt` (e.g. copy the files to the Bazo miner directory):
 
 ```bash
-./bazo-miner start --database StoreB.db --address localhost:8001 --bootstrap localhost:8000 --wallet WalletB.txt --commitment CommitmentB.txt --rootwallet WalletA.txt --rootcommitment CommitmentA.txt --rootChamHashParams ChamHashParamsA.txt
+./bazo-miner start --database StoreB.db --address localhost:8001 --bootstrap localhost:8000 --wallet WalletB.txt --commitment CommitmentB.txt --rootwallet WalletA.txt --rootcommitment CommitmentA.txt --root-chparams ChParamsA.txt
 ```
 
 Note that both files specified for `--rootwallet` and `--rootcommitment` only require to contain the wallet and commitemt public key respectively.
@@ -144,4 +144,26 @@ Example
 ```bash
 ./bazo-miner generate-commitment --file commitment.txt
 ```
+
+### Update a transaction
+A client can update the content of the data field of specific transactions. 
+He does so by purposely generating a hash collision between the hash with the old and new data. 
+
+The following transactions can be updated:
+* Account-Tx
+* Funds-Tx
+* Update-Tx
+
+Arguments
+* `--tx-hash` Hash of the transaction to be updated
+* `--tx-issuer` Wallet file of the client. Ensures clients are only allowed to update their own transactions.
+* `--update-data` Data that shall be updated on the tx
+* `--chparams` Chameleon hash parameters of the client
+
+Example
+
+```
+./bazo-client update --tx-hash d07a963769a3a23eec6c25cc81612cf3269399cb2db84e38040951131c7e6200 --tx-issuer WalletA.txt --update-data "New data goes here." --chparams ChParamsA.txt
+```
+
 

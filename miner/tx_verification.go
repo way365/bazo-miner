@@ -197,6 +197,9 @@ func verifyUpdateTx(tx *protocol.UpdateTx) bool {
 	case *protocol.AccTx:
 		txToUpdateSig = txToDelete.(*protocol.AccTx).Sig
 
+	case *protocol.UpdateTx:
+		txToUpdateSig = txToDelete.(*protocol.UpdateTx).Sig
+
 	case *protocol.ConfigTx:
 		logger.Printf("\nCan't update config tx")
 		return false
@@ -207,10 +210,6 @@ func verifyUpdateTx(tx *protocol.UpdateTx) bool {
 
 	case *protocol.AggTx:
 		logger.Printf("\nCan't update aggregate tx")
-		return false
-
-	case *protocol.UpdateTx:
-		logger.Printf("\nCan't update update-tx")
 		return false
 
 	default: // In case we can't cast the tx to a known type, abort

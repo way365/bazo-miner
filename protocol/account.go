@@ -17,7 +17,7 @@ type Account struct {
 	StakingBlockHeight uint32                          // 4 Byte
 	Contract           []byte                          // Arbitrary length
 	ContractVariables  []ByteArray                     // Arbitrary length
-	ChamHashParams     *crypto.ChameleonHashParameters // Parameter set for chameleon hashing
+	ChParams           *crypto.ChameleonHashParameters // Parameter set for chameleon hashing
 }
 
 func NewAccount(
@@ -28,7 +28,7 @@ func NewAccount(
 	commitmentKey [crypto.COMM_KEY_LENGTH]byte,
 	contract []byte,
 	contractVariables []ByteArray,
-	chamHashParams *crypto.ChameleonHashParameters,
+	chParams *crypto.ChameleonHashParameters,
 ) Account {
 
 	newAcc := Account{
@@ -41,7 +41,7 @@ func NewAccount(
 		0,
 		contract,
 		contractVariables,
-		chamHashParams,
+		chParams,
 	}
 
 	return newAcc
@@ -70,7 +70,7 @@ func (acc *Account) Encode() []byte {
 		StakingBlockHeight: acc.StakingBlockHeight,
 		Contract:           acc.Contract,
 		ContractVariables:  acc.ContractVariables,
-		ChamHashParams:     acc.ChamHashParams,
+		ChParams:           acc.ChParams,
 	}
 
 	buffer := new(bytes.Buffer)

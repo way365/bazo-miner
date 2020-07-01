@@ -5,7 +5,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/julwil/bazo-miner/crypto"
-	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -15,16 +14,16 @@ const (
 //when we broadcast transactions we need a way to distinguish with a type
 
 type AggTx struct {
-	Amount              uint64
-	Fee                 uint64
-	From                [][32]byte
-	To                  [][32]byte
-	AggregatedTxSlice   [][32]byte
-	Aggregated          bool
-	Block               [32]byte //This saves the blockHashWithoutTransactions into which the transaction was usually validated. Needed for rollback.
-	MerkleRoot          [32]byte
-	ChamHashCheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
-	Data                []byte
+	Amount            uint64
+	Fee               uint64
+	From              [][32]byte
+	To                [][32]byte
+	AggregatedTxSlice [][32]byte
+	Aggregated        bool
+	Block             [32]byte //This saves the blockHashWithoutTransactions into which the transaction was usually validated. Needed for rollback.
+	MerkleRoot        [32]byte
+	ChCheckString     *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
+	Data              []byte
 }
 
 func ConstrAggTx(amount uint64, fee uint64, from [][32]byte, to [][32]byte, transactions [][32]byte) (tx *AggTx, err error) {
@@ -65,33 +64,16 @@ func (tx *AggTx) Hash() (hash [32]byte) {
 	return SerializeHashContent(txHash)
 }
 
-// Returns the chameleon hash but takes the chameleon hash parameters as input.
-// This method should be called in the context of bazo-client as the client doesn't maintain
-// a state holding the chameleon hash parameters of each account.
-func (tx *AggTx) HashWithChamHashParams(chamHashParams *crypto.ChameleonHashParameters) [32]byte {
-	sha3Hash := tx.SHA3()
-	hashInput := sha3Hash[:]
+// As we don't use chameleon hashing on config tx, we simply return an SHA3 hash
+func (tx *AggTx) ChameleonHash(chParams *crypto.ChameleonHashParameters) [32]byte {
 
-	return crypto.ChameleonHash(chamHashParams, tx.ChamHashCheckString, &hashInput)
+	return tx.Hash()
 }
 
 // Returns SHA3 hash over the tx content
 func (tx *AggTx) SHA3() [32]byte {
-	toHash := struct {
-		Amount     uint64
-		Fee        uint64
-		From       [][32]byte
-		To         [][32]byte
-		MerkleRoot [32]byte
-	}{
-		tx.Amount,
-		tx.Fee,
-		tx.From,
-		tx.To,
-		tx.MerkleRoot,
-	}
 
-	return sha3.Sum256([]byte(fmt.Sprintf("%v", toHash)))
+	return tx.Hash()
 }
 
 //when we serialize the struct with binary.Write, unexported field get serialized as well, undesired
@@ -160,10 +142,10 @@ func (tx *AggTx) GetData() []byte {
 	return tx.Data
 }
 
-func (tx *AggTx) SetChamHashCheckString(checkString *crypto.ChameleonHashCheckString) {
-	tx.ChamHashCheckString = checkString
+func (tx *AggTx) SetChCheckString(checkString *crypto.ChameleonHashCheckString) {
+	tx.ChCheckString = checkString
 }
 
-func (tx *AggTx) GetChamHashCheckString() *crypto.ChameleonHashCheckString {
-	return tx.ChamHashCheckString
+func (tx *AggTx) GetChCheckString() *crypto.ChameleonHashCheckString {
+	return tx.ChCheckString
 }

@@ -27,7 +27,6 @@ var (
 //Miner entry point
 func Init(
 	validatorWallet *ecdsa.PublicKey,
-	//chamHashParams *crypto.ChameleonHashParameters,
 	multisigWallet,
 	rootWallet *ecdsa.PublicKey,
 	validatorCommitment,
@@ -161,7 +160,7 @@ func initRootKey(rootKey *ecdsa.PublicKey, rootChamHashParams *crypto.ChameleonH
 	)
 	storage.State[rootAddressHash] = &rootAcc
 	storage.RootKeys[rootAddressHash] = &rootAcc
-	crypto.ChamHashParamsMap[rootAddressHash] = rootAcc.ChamHashParams
+	crypto.ChParamsMap[rootAddressHash] = rootAcc.ChParams
 
 	return nil
 }

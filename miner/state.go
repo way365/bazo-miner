@@ -279,7 +279,7 @@ func accStateChange(txSlice []*protocol.AccTx) error {
 				[crypto.COMM_KEY_LENGTH]byte{},
 				tx.Contract,
 				tx.ContractVariables,
-				tx.ChamHashParams,
+				tx.ChParams,
 			)
 			newAccHash := newAcc.Hash()
 
@@ -291,7 +291,7 @@ func accStateChange(txSlice []*protocol.AccTx) error {
 
 			//If acc does not exist, write to state
 			storage.State[newAccHash] = &newAcc
-			crypto.ChamHashParamsMap[newAccHash] = newAcc.ChamHashParams
+			crypto.ChParamsMap[newAccHash] = newAcc.ChParams
 
 			if tx.Header == 1 {
 				//First bit set, given account will be a new root account

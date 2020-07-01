@@ -522,7 +522,7 @@ func (vm *VM) Exec(trace bool) bool {
 
 		case CALLEXT:
 			transactionAddress, errArg1 := vm.fetchMany(opCode.Name, 32) // Addresses are 32 bytes (var name: transactionAddress)
-			functionHash, errArg2 := vm.fetchMany(opCode.Name, 4)        // Function hash identifies function in external smart contract, first 4 byte of SHA3 hash (var name: functionHash)
+			functionHash, errArg2 := vm.fetchMany(opCode.Name, 4)        // Function hash identifies function in external smart contract, first 4 byte of sha3 hash (var name: functionHash)
 			argsToLoad, errArg3 := vm.fetch(opCode.Name)                 // Shows how many arguments to pop from stack and pass to external function (var name: argsToLoad)
 
 			if !vm.checkErrors(opCode.Name, errArg1, errArg2, errArg3) {

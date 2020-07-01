@@ -16,16 +16,16 @@ const (
 )
 
 type AccTx struct {
-	Header              byte
-	Issuer              [32]byte
-	Fee                 uint64
-	PubKey              [64]byte
-	Sig                 [64]byte
-	Contract            []byte
-	ContractVariables   []ByteArray
-	ChamHashParams      *crypto.ChameleonHashParameters  // Chameleon hash parameters associated with this account.
-	ChamHashCheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
-	Data                []byte
+	Header            byte
+	Issuer            [32]byte
+	Fee               uint64
+	PubKey            [64]byte
+	Sig               [64]byte
+	Contract          []byte
+	ContractVariables []ByteArray
+	ChParams          *crypto.ChameleonHashParameters  // Chameleon hash parameters associated with this account.
+	ChCheckString     *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
+	Data              []byte
 }
 
 func ConstrAccTx(
@@ -35,8 +35,8 @@ func ConstrAccTx(
 	rootPrivKey *ecdsa.PrivateKey,
 	contract []byte,
 	contractVariables []ByteArray,
-	chamHashParams *crypto.ChameleonHashParameters,
-	chamHashCheckString *crypto.ChameleonHashCheckString,
+	chParams *crypto.ChameleonHashParameters,
+	chCheckString *crypto.ChameleonHashCheckString,
 	data []byte,
 ) (tx *AccTx, newAccAddress *ecdsa.PrivateKey, err error) {
 	tx = new(AccTx)
@@ -44,8 +44,8 @@ func ConstrAccTx(
 	tx.Fee = fee
 	tx.Contract = contract
 	tx.ContractVariables = contractVariables
-	tx.ChamHashParams = chamHashParams
-	tx.ChamHashCheckString = chamHashCheckString
+	tx.ChParams = chParams
+	tx.ChCheckString = chCheckString
 	tx.Data = data
 
 	if address != [64]byte{} {
@@ -71,7 +71,7 @@ func ConstrAccTx(
 	issuer := SerializeHashContent(rootPublicKey)
 	copy(tx.Issuer[:], issuer[:])
 
-	txHash := tx.HashWithChamHashParams(chamHashParams)
+	txHash := tx.ChameleonHash(chParams)
 
 	r, s, err := ecdsa.Sign(rand.Reader, rootPrivKey, txHash[:])
 	if err != nil {
@@ -112,17 +112,17 @@ func (tx *AccTx) Hash() [32]byte {
 		return [32]byte{}
 	}
 
-	return tx.HashWithChamHashParams(tx.ChamHashParams)
+	return tx.ChameleonHash(tx.ChParams)
 }
 
 // Returns the chameleon hash but takes the chameleon hash parameters as input.
 // This method should be called in the context of bazo-client as the client doesn't maintain
 // a state holding the chameleon hash parameters of each account.
-func (tx *AccTx) HashWithChamHashParams(chamHashParams *crypto.ChameleonHashParameters) [32]byte {
+func (tx *AccTx) ChameleonHash(chParams *crypto.ChameleonHashParameters) [32]byte {
 	sha3Hash := tx.SHA3()
 	hashInput := sha3Hash[:]
 
-	return crypto.ChameleonHash(chamHashParams, tx.ChamHashCheckString, &hashInput)
+	return crypto.ChameleonHash(chParams, tx.ChCheckString, &hashInput)
 }
 
 func (tx *AccTx) Encode() []byte {
@@ -131,14 +131,14 @@ func (tx *AccTx) Encode() []byte {
 	}
 
 	encoded := AccTx{
-		Header:              tx.Header,
-		Issuer:              tx.Issuer,
-		Fee:                 tx.Fee,
-		PubKey:              tx.PubKey,
-		Sig:                 tx.Sig,
-		ChamHashParams:      tx.ChamHashParams,
-		ChamHashCheckString: tx.ChamHashCheckString,
-		Data:                tx.Data,
+		Header:        tx.Header,
+		Issuer:        tx.Issuer,
+		Fee:           tx.Fee,
+		PubKey:        tx.PubKey,
+		Sig:           tx.Sig,
+		ChParams:      tx.ChParams,
+		ChCheckString: tx.ChCheckString,
+		Data:          tx.Data,
 	}
 
 	buffer := new(bytes.Buffer)
@@ -170,7 +170,8 @@ func (tx AccTx) String() string {
 			"PubKey: %x\n"+
 			"Sig: %x\n"+
 			"Contract: %v\n"+
-			"ContractVariables: %v\n",
+			"ContractVariables: %v\n"+
+			"Data: %s",
 		tx.Header,
 		tx.Issuer[0:8],
 		tx.Fee,
@@ -178,6 +179,7 @@ func (tx AccTx) String() string {
 		tx.Sig[0:8],
 		tx.Contract[:],
 		tx.ContractVariables[:],
+		tx.Data,
 	)
 }
 
@@ -189,10 +191,10 @@ func (tx *AccTx) GetData() []byte {
 	return tx.Data
 }
 
-func (tx *AccTx) SetChamHashCheckString(checkString *crypto.ChameleonHashCheckString) {
-	tx.ChamHashCheckString = checkString
+func (tx *AccTx) SetChCheckString(checkString *crypto.ChameleonHashCheckString) {
+	tx.ChCheckString = checkString
 }
 
-func (tx *AccTx) GetChamHashCheckString() *crypto.ChameleonHashCheckString {
-	return tx.ChamHashCheckString
+func (tx *AccTx) GetChCheckString() *crypto.ChameleonHashCheckString {
+	return tx.ChCheckString
 }

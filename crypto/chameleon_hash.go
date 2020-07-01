@@ -14,7 +14,7 @@ const HEX_BASE = 16
 const LENGTH = 256 // Length of a single parameter in bits.
 
 var (
-	ChamHashParamsMap = make(map[[32]byte]*ChameleonHashParameters)
+	ChParamsMap = make(map[[32]byte]*ChameleonHashParameters)
 )
 
 type ChameleonHashParameters struct {
@@ -22,7 +22,7 @@ type ChameleonHashParameters struct {
 	P  []byte // Prime
 	Q  []byte // Prime
 	HK []byte // Public Hash Key
-	TK []byte // Secret Trapdoor Key
+	TK []byte // Secret Trapdoor Key. Never share this key with others.
 }
 
 type ChameleonHashCheckString struct {
@@ -41,7 +41,7 @@ func newChameleonHashParameters() ChameleonHashParameters {
 }
 
 // Generates a new CheckString from the provided parameters.
-func NewChameleonHashCheckString(parameters *ChameleonHashParameters) *ChameleonHashCheckString {
+func NewChCheckString(parameters *ChameleonHashParameters) *ChameleonHashCheckString {
 	var R, S []byte
 	R = randgen(&parameters.Q)
 	S = randgen(&parameters.Q)
@@ -53,8 +53,8 @@ func NewChameleonHashCheckString(parameters *ChameleonHashParameters) *Chameleon
 }
 
 // Retrieve a set of chameleon hash parameters from file.
-// Create if not exist.
-func GetOrCreateChamHashParamsFromFile(filename string) (params *ChameleonHashParameters, err error) {
+// Creates a new set of parameters if the file not exists.
+func GetOrCreateChParamsFromFile(filename string) (params *ChameleonHashParameters, err error) {
 
 	// Create if not exists.
 	if _, err = os.Stat(filename); os.IsNotExist(err) {
@@ -202,7 +202,7 @@ func ChameleonHash(params *ChameleonHashParameters, checkString *ChameleonHashCh
 // ===== USAGE =====
 // newCheckString := GenerateChamHashCollision(params, oldCheckString, oldMessage, newMessage)
 // ChameleonHash(params, oldCheckString, oldMessage) == ChameleonHash(params, newCheckString, newMessage)
-func GenerateChamHashCollision(
+func GenerateChCollision(
 	params *ChameleonHashParameters,
 	checkString *ChameleonHashCheckString,
 	oldMessage *[]byte,
@@ -270,6 +270,6 @@ func (params ChameleonHashParameters) String() string {
 		"Q:   %s\n"+
 		"HK:  %s\n"+
 		"TK:  %s\n",
-		params.G, params.P, params.Q, params.HK, params.TK,
+		params.G[0:8], params.P[0:8], params.Q[0:8], params.HK[0:8], params.TK,
 	)
 }

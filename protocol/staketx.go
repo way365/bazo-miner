@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/julwil/bazo-miner/crypto"
-	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -17,15 +16,14 @@ const (
 //when we broadcast transactions we need a way to distinguish with a type
 
 type StakeTx struct {
-	Header              byte                             // 1 Byte
-	Fee                 uint64                           // 8 Byte
-	IsStaking           bool                             // 1 Byte
-	Account             [32]byte                         // 32 Byte
-	Sig                 [64]byte                         // 64 Byte
-	CommitmentKey       [crypto.COMM_KEY_LENGTH]byte     // the modulus N of the RSA public key
-	ChamHashCheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
-
-	Data []byte
+	Header        byte                             // 1 Byte
+	Fee           uint64                           // 8 Byte
+	IsStaking     bool                             // 1 Byte
+	Account       [32]byte                         // 32 Byte
+	Sig           [64]byte                         // 64 Byte
+	CommitmentKey [crypto.COMM_KEY_LENGTH]byte     // the modulus N of the RSA public key
+	ChCheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
+	Data          []byte
 }
 
 func ConstrStakeTx(header byte, fee uint64, isStaking bool, account [32]byte, signKey *ecdsa.PrivateKey, commPubKey *rsa.PublicKey) (tx *StakeTx, err error) {
@@ -54,21 +52,8 @@ func ConstrStakeTx(header byte, fee uint64, isStaking bool, account [32]byte, si
 
 // Returns SHA3 hash over the tx content
 func (tx *StakeTx) SHA3() [32]byte {
-	toHash := struct {
-		Header    byte
-		Fee       uint64
-		IsStaking bool
-		Account   [32]byte
-		CommKey   [crypto.COMM_KEY_LENGTH]byte
-	}{
-		tx.Header,
-		tx.Fee,
-		tx.IsStaking,
-		tx.Account,
-		tx.CommitmentKey,
-	}
 
-	return sha3.Sum256([]byte(fmt.Sprintf("%v", toHash)))
+	return tx.Hash()
 }
 
 func (tx *StakeTx) Hash() (hash [32]byte) {
@@ -94,14 +79,10 @@ func (tx *StakeTx) Hash() (hash [32]byte) {
 	return SerializeHashContent(txHash)
 }
 
-// Returns the chameleon hash but takes the chameleon hash parameters as input.
-// This method should be called in the context of bazo-client as the client doesn't maintain
-// a state holding the chameleon hash parameters of each account.
-func (tx *StakeTx) HashWithChamHashParams(chamHashParams *crypto.ChameleonHashParameters) [32]byte {
-	sha3Hash := tx.SHA3()
-	hashInput := sha3Hash[:]
+// As we don't use chameleon hashing on config tx, we simply return an SHA3 hash
+func (tx *StakeTx) ChameleonHash(chParams *crypto.ChameleonHashParameters) [32]byte {
 
-	return crypto.ChameleonHash(chamHashParams, tx.ChamHashCheckString, &hashInput)
+	return tx.Hash()
 }
 
 //when we serialize the struct with binary.Write, unexported field get serialized as well, undesired
@@ -189,10 +170,10 @@ func (tx *StakeTx) GetData() []byte {
 	return tx.Data
 }
 
-func (tx *StakeTx) SetChamHashCheckString(checkString *crypto.ChameleonHashCheckString) {
-	tx.ChamHashCheckString = checkString
+func (tx *StakeTx) SetChCheckString(checkString *crypto.ChameleonHashCheckString) {
+	tx.ChCheckString = checkString
 }
 
-func (tx *StakeTx) GetChamHashCheckString() *crypto.ChameleonHashCheckString {
-	return tx.ChamHashCheckString
+func (tx *StakeTx) GetChCheckString() *crypto.ChameleonHashCheckString {
+	return tx.ChCheckString
 }

@@ -17,12 +17,11 @@ type startArgs struct {
 	myNodeAddress        string
 	bootstrapNodeAddress string
 	walletFile           string
-	//chamHashParams       string
-	multisigFile       string
-	commitmentFile     string
-	rootWalletFile     string
-	rootCommitmentFile string
-	rootChamHashParams string
+	multisigFile         string
+	commitmentFile       string
+	rootWalletFile       string
+	rootCommitmentFile   string
+	rootChParamsFile     string
 }
 
 func GetStartCommand(logger *log.Logger) cli.Command {
@@ -35,12 +34,11 @@ func GetStartCommand(logger *log.Logger) cli.Command {
 				myNodeAddress:        c.String("address"),
 				bootstrapNodeAddress: c.String("bootstrap"),
 				walletFile:           c.String("wallet"),
-				//chamHashParams:       c.String("chamHashParams"),
-				multisigFile:       c.String("multisig"),
-				commitmentFile:     c.String("commitment"),
-				rootWalletFile:     c.String("rootwallet"),
-				rootCommitmentFile: c.String("rootcommitment"),
-				rootChamHashParams: c.String("rootChamHashParams"),
+				multisigFile:         c.String("multisig"),
+				commitmentFile:       c.String("commitment"),
+				rootWalletFile:       c.String("rootwallet"),
+				rootCommitmentFile:   c.String("rootcommitment"),
+				rootChParamsFile:     c.String("root-chparams"),
 			}
 
 			if !c.IsSet("bootstrap") {
@@ -81,10 +79,6 @@ func GetStartCommand(logger *log.Logger) cli.Command {
 				Usage: "load validator's public key from `FILE`",
 				Value: "wallet.txt",
 			},
-			//cli.StringFlag{
-			//	Name:  "chamHashParams",
-			//	Usage: "load the chameleon hash parameters `FILE`",
-			//},
 			cli.StringFlag{
 				Name:  "multisig, m",
 				Usage: "load multi-signature server’s public key from `FILE`",
@@ -105,7 +99,7 @@ func GetStartCommand(logger *log.Logger) cli.Command {
 				Value: "commitment.txt",
 			},
 			cli.StringFlag{
-				Name:  "rootChamHashParams, ch",
+				Name:  "root-chparams, ch",
 				Usage: "load the root chameleon hash parameters from `FILE`",
 			},
 			cli.BoolFlag{
@@ -125,12 +119,6 @@ func Start(args *startArgs, logger *log.Logger) error {
 		logger.Printf("%v\n", err)
 		return err
 	}
-
-	//chamHashParams, err := crypto.GetOrCreateChamHashParamsFromFile(args.chamHashParams)
-	//if err != nil {
-	//	logger.Printf("%v\n", err)
-	//	return err
-	//}
 
 	rootPrivKey, err := crypto.ExtractECDSAKeyFromFile(args.rootWalletFile)
 	if err != nil {
@@ -161,13 +149,13 @@ func Start(args *startArgs, logger *log.Logger) error {
 		return err
 	}
 
-	rootChamHashParams, err := crypto.GetOrCreateChamHashParamsFromFile(args.rootChamHashParams)
+	rootChParams, err := crypto.GetOrCreateChParamsFromFile(args.rootChParamsFile)
 	if err != nil {
 		logger.Printf("%v\n", err)
 		return err
 	}
 
-	miner.Init(validatorPubKey, multisigPubKey, &rootPrivKey.PublicKey, commPrivKey, rootCommPrivKey, rootChamHashParams)
+	miner.Init(validatorPubKey, multisigPubKey, &rootPrivKey.PublicKey, commPrivKey, rootCommPrivKey, rootChParams)
 	return nil
 }
 
@@ -200,8 +188,8 @@ func (args startArgs) ValidateInput() error {
 		return errors.New("argument missing: rootCommitmentFile")
 	}
 
-	if len(args.rootChamHashParams) == 0 {
-		return errors.New("argument missing: rootChamHashParams")
+	if len(args.rootChParamsFile) == 0 {
+		return errors.New("argument missing: rootChParamsFile")
 	}
 
 	return nil
@@ -216,7 +204,8 @@ func (args startArgs) String() string {
 		"- Multisig File:\t\t %v\n"+
 		"- Commitment File:\t\t %v\n"+
 		"- Root Wallet File:\t\t %v\n"+
-		"- Root Commitment File:\t\t %v\n",
+		"- Root Commitment File:\t\t %v\n"+
+		"- Root ChParams File:\t\t %v\n",
 		args.dbname,
 		args.myNodeAddress,
 		args.bootstrapNodeAddress,
@@ -224,5 +213,7 @@ func (args startArgs) String() string {
 		args.multisigFile,
 		args.commitmentFile,
 		args.rootWalletFile,
-		args.rootCommitmentFile)
+		args.rootCommitmentFile,
+		args.rootChParamsFile,
+	)
 }

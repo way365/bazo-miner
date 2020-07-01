@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/julwil/bazo-miner/crypto"
-	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -56,14 +55,14 @@ const (
 )
 
 type ConfigTx struct {
-	Header              byte
-	Id                  uint8
-	Payload             uint64
-	Fee                 uint64
-	TxCnt               uint8
-	Sig                 [64]byte
-	ChamHashCheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
-	Data                []byte
+	Header        byte
+	Id            uint8
+	Payload       uint64
+	Fee           uint64
+	TxCnt         uint8
+	Sig           [64]byte
+	ChCheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
+	Data          []byte
 }
 
 func ConstrConfigTx(header byte, id uint8, payload uint64, fee uint64, txCnt uint8, rootPrivKey *ecdsa.PrivateKey) (tx *ConfigTx, err error) {
@@ -91,25 +90,11 @@ func ConstrConfigTx(header byte, id uint8, payload uint64, fee uint64, txCnt uin
 
 // Returns SHA3 hash over the tx content
 func (tx *ConfigTx) SHA3() [32]byte {
-	toHash := struct {
-		Header  byte
-		Id      uint8
-		Payload uint64
-		Fee     uint64
-		TxCnt   uint8
-	}{
-		tx.Header,
-		tx.Id,
-		tx.Payload,
-		tx.Fee,
-		tx.TxCnt,
-	}
 
-	return sha3.Sum256([]byte(fmt.Sprintf("%v", toHash)))
+	return tx.Hash()
 }
 
 func (tx *ConfigTx) Hash() (hash [32]byte) {
-
 	if tx == nil {
 		return [32]byte{}
 	}
@@ -130,14 +115,10 @@ func (tx *ConfigTx) Hash() (hash [32]byte) {
 	return SerializeHashContent(txHash)
 }
 
-// Returns the chameleon hash but takes the chameleon hash parameters as input.
-// This method should be called in the context of bazo-client as the client doesn't maintain
-// a state holding the chameleon hash parameters of each account.
-func (tx *ConfigTx) HashWithChamHashParams(chamHashParams *crypto.ChameleonHashParameters) [32]byte {
-	sha3Hash := tx.SHA3()
-	hashInput := sha3Hash[:]
+// As we don't use chameleon hashing on config tx, we simply return an SHA3 hash
+func (tx *ConfigTx) ChameleonHash(chParams *crypto.ChameleonHashParameters) [32]byte {
 
-	return crypto.ChameleonHash(chamHashParams, tx.ChamHashCheckString, &hashInput)
+	return tx.Hash()
 }
 
 func (tx *ConfigTx) Encode() (encodedTx []byte) {
@@ -212,10 +193,10 @@ func (tx *ConfigTx) GetData() []byte {
 	return tx.Data
 }
 
-func (tx *ConfigTx) SetChamHashCheckString(checkString *crypto.ChameleonHashCheckString) {
-	tx.ChamHashCheckString = checkString
+func (tx *ConfigTx) SetChCheckString(checkString *crypto.ChameleonHashCheckString) {
+	tx.ChCheckString = checkString
 }
 
-func (tx *ConfigTx) GetChamHashCheckString() *crypto.ChameleonHashCheckString {
-	return tx.ChamHashCheckString
+func (tx *ConfigTx) GetChCheckString() *crypto.ChameleonHashCheckString {
+	return tx.ChCheckString
 }

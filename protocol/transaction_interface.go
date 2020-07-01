@@ -10,7 +10,7 @@ const (
 
 type Transaction interface {
 	Hash() [TRANSACTION_HASH_SIZE]byte
-	HashWithChamHashParams(chamHashParams *crypto.ChameleonHashParameters) [32]byte
+	ChameleonHash(chParams *crypto.ChameleonHashParameters) [32]byte
 	SHA3() [32]byte
 
 	Encode() []byte
@@ -23,6 +23,6 @@ type Transaction interface {
 	String() string
 	SetData(data []byte) // Set the data field to the new value
 	GetData() []byte
-	SetChamHashCheckString(checkString *crypto.ChameleonHashCheckString)
-	GetChamHashCheckString() *crypto.ChameleonHashCheckString
+	SetChCheckString(chCheckString *crypto.ChameleonHashCheckString)
+	GetChCheckString() *crypto.ChameleonHashCheckString
 }
