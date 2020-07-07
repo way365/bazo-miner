@@ -6,63 +6,60 @@ import (
 )
 
 var (
-	LogMapping map[uint8]string
 	logger     *log.Logger
+	LogMapping = map[uint8]string{
+		1:  "FUNDSTX_BRDCST",
+		2:  "ACCTX_BRDCST",
+		3:  "CONFIGTX_BRDCST",
+		4:  "STAKETX_BRDCST",
+		5:  "VERIFIEDTX_BRDCST",
+		6:  "BLOCK_BRDCST",
+		7:  "BLOCK_HEADER_BRDCST",
+		8:  "TX_BRDCST_ACK",
+		9:  "AGGTX_BRDCST",
+		10: "UPDATETX_BRDCST",
+
+		20: "FUNDSTX_REQ",
+		21: "ACCTX_REQ",
+		22: "CONFIGTX_REQ",
+		23: "STAKETX_REQ",
+		24: "BLOCK_REQ",
+		25: "BLOCK_HEADER_REQ",
+		26: "ACC_REQ",
+		27: "ROOTACC_REQ",
+		28: "INTERMEDIATE_NODES_REQ",
+		29: "AGGTX_REQ",
+		30: "UNKNOWNTX_REQ",
+		31: "SPECIALTX_REQ",
+		32: "NOT_FOUND_TX_REQ",
+		33: "UPDATETX_REQ",
+
+		40: "FUNDSTX_RES",
+		41: "ACCTX_RES",
+		42: "CONFIGTX_RES",
+		43: "STAKETX_RES",
+		44: "BlOCK_RES",
+		45: "BlOCK_HEADER_RES",
+		46: "ACC_RES",
+		47: "ROOTACC_RES",
+		48: "INTERMEDIATE_NODES_RES",
+		49: "AGGTX_RES",
+		50: "UPDATETX_RES",
+
+		130: "NEIGHBOR_REQ",
+		140: "NEIGHBOR_RES",
+
+		150: "TIME_BRDCST",
+
+		100: "MINER_PING",
+		101: "MINER_PONG",
+		102: "CLIENT_PING",
+		103: "CLIENT_PONG",
+
+		110: "NOT_FOUND",
+	}
 )
 
 func InitLogging() {
 	logger = storage.InitLogger()
-
-	//Instead of logging just the integer, we log the corresponding semantic meaning, makes scrolling through
-	//the log file more comfortable
-	LogMapping = make(map[uint8]string)
-	LogMapping[1] = "FUNDSTX_BRDCST"
-	LogMapping[2] = "ACCTX_BRDCST"
-	LogMapping[3] = "CONFIGTX_BRDCST"
-	LogMapping[4] = "STAKETX_BRDCST"
-	LogMapping[5] = "VERIFIEDTX_BRDCST"
-	LogMapping[6] = "BLOCK_BRDCST"
-	LogMapping[7] = "BLOCK_HEADER_BRDCST"
-	LogMapping[8] = "TX_BRDCST_ACK"
-	LogMapping[9] = "AGGTX_BRDCST"
-	LogMapping[10] = "UPDATETX_BRDCST"
-
-	LogMapping[20] = "FUNDSTX_REQ"
-	LogMapping[21] = "ACCTX_REQ"
-	LogMapping[22] = "CONFIGTX_REQ"
-	LogMapping[23] = "STAKETX_REQ"
-	LogMapping[24] = "BLOCK_REQ"
-	LogMapping[25] = "BLOCK_HEADER_REQ"
-	LogMapping[26] = "ACC_REQ"
-	LogMapping[27] = "ROOTACC_REQ"
-	LogMapping[28] = "INTERMEDIATE_NODES_REQ"
-	LogMapping[29] = "AGGTX_REQ"
-	LogMapping[30] = "UNKNOWNTX_REQ"
-	LogMapping[31] = "SPECIALTX_REQ"
-	LogMapping[32] = "NOT_FOUND_TX_REQ"
-	LogMapping[33] = "UPDATETX_REQ"
-
-	LogMapping[40] = "FUNDSTX_RES"
-	LogMapping[41] = "ACCTX_RES"
-	LogMapping[42] = "CONFIGTX_RES"
-	LogMapping[43] = "STAKETX_RES"
-	LogMapping[44] = "BlOCK_RES"
-	LogMapping[45] = "BlOCK_HEADER_RES"
-	LogMapping[46] = "ACC_RES"
-	LogMapping[47] = "ROOTACC_RES"
-	LogMapping[48] = "INTERMEDIATE_NODES_RES"
-	LogMapping[49] = "AGGTX_RES"
-	LogMapping[50] = "UPDATETX_RES"
-
-	LogMapping[130] = "NEIGHBOR_REQ"
-	LogMapping[140] = "NEIGHBOR_RES"
-
-	LogMapping[150] = "TIME_BRDCST"
-
-	LogMapping[100] = "MINER_PING"
-	LogMapping[101] = "MINER_PONG"
-	LogMapping[102] = "CLIENT_PING"
-	LogMapping[103] = "CLIENT_PONG"
-
-	LogMapping[110] = "NOT_FOUND"
 }

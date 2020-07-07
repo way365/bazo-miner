@@ -9,7 +9,6 @@ import (
 	"github.com/julwil/bazo-miner/storage"
 	"log"
 	"sync"
-	"time"
 )
 
 var (
@@ -62,7 +61,6 @@ func Init(
 
 	logger.Printf("\n\n\n-------------------- START MINER ---------------------")
 	logger.Printf("This Miners IP-Address: %v\n\n", p2p.Ipport)
-	time.Sleep(5 * time.Second)
 	parameterSlice = append(parameterSlice, NewDefaultParameters())
 	activeParameters = &parameterSlice[0]
 
