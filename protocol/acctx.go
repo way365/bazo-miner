@@ -175,7 +175,7 @@ func (tx AccTx) String() string {
 		tx.Header,
 		tx.Issuer[0:8],
 		tx.Fee,
-		tx.PubKey[0:8],
+		tx.PubKey[:],
 		tx.Sig[0:8],
 		tx.Contract[:],
 		tx.ContractVariables[:],

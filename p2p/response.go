@@ -213,24 +213,26 @@ func blockRes(p *peer, payload []byte) {
 //Response the requested block SPV header
 func blockHeaderRes(p *peer, payload []byte) {
 	var encodedHeader, packet []byte
+	var block *protocol.Block
+	var blockHash [32]byte
+	var blockHashWithoutTx [32]byte
 
 	//If no specific header is requested, send latest
-	if len(payload) > 0 {
-		if len(payload) != 32 {
-			return
-		}
-		var blockHash [32]byte
+	if len(payload) > 0 && len(payload) == 64 {
 		copy(blockHash[:], payload[:32])
-		if block := storage.ReadClosedBlock(blockHash); block != nil {
-			block.InitBloomFilter(append(storage.GetTxPubKeys(block)))
-			encodedHeader = block.EncodeHeader()
+		copy(blockHashWithoutTx[:], payload[32:])
+
+		if block = storage.ReadClosedBlock(blockHash); block == nil {
+			if block = storage.ReadClosedBlockWithoutTx(blockHashWithoutTx); block == nil {
+				block = storage.ReadOpenBlock(blockHash)
+			}
 		}
 	} else {
-		if block := storage.ReadLastClosedBlock(); block != nil {
-			block.InitBloomFilter(append(storage.GetTxPubKeys(block)))
-			encodedHeader = block.EncodeHeader()
-		}
+		block = storage.ReadLastClosedBlock()
 	}
+
+	block.InitBloomFilter(append(storage.GetTxPubKeys(block)))
+	encodedHeader = block.EncodeHeader()
 
 	if len(encodedHeader) > 0 {
 		packet = BuildPacket(BlOCK_HEADER_RES, encodedHeader)
