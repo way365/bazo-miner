@@ -25,4 +25,5 @@ type Transaction interface {
 	GetData() []byte
 	SetChCheckString(chCheckString *crypto.ChameleonHashCheckString)
 	GetChCheckString() *crypto.ChameleonHashCheckString
+	SetSignature(signature [64]byte)
 }

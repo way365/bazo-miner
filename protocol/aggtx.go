@@ -149,3 +149,7 @@ func (tx *AggTx) SetChCheckString(checkString *crypto.ChameleonHashCheckString) 
 func (tx *AggTx) GetChCheckString() *crypto.ChameleonHashCheckString {
 	return tx.ChCheckString
 }
+
+func (tx *AggTx) SetSignature(signature [64]byte) {
+	return
+}

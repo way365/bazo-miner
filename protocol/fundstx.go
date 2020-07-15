@@ -203,3 +203,7 @@ func (tx *FundsTx) SetChCheckString(checkString *crypto.ChameleonHashCheckString
 func (tx *FundsTx) GetChCheckString() *crypto.ChameleonHashCheckString {
 	return tx.ChCheckString
 }
+
+func (tx *FundsTx) SetSignature(signature [64]byte) {
+	tx.Sig1 = signature
+}
