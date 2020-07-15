@@ -3,7 +3,6 @@ package protocol
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"encoding/gob"
 	"fmt"
 	"github.com/julwil/bazo-miner/crypto"
@@ -56,25 +55,25 @@ func ConstrFundsTx(
 	tx.Block = [32]byte{}
 	tx.ChCheckString = chCheckString
 
-	txHash := tx.ChameleonHash(chParams)
-
-	r, s, err := ecdsa.Sign(rand.Reader, sig1Key, txHash[:])
-	if err != nil {
-		return nil, err
-	}
-
-	copy(tx.Sig1[32-len(r.Bytes()):32], r.Bytes())
-	copy(tx.Sig1[64-len(s.Bytes()):], s.Bytes())
-
-	if sig2Key != nil {
-		r, s, err := ecdsa.Sign(rand.Reader, sig2Key, txHash[:])
-		if err != nil {
-			return nil, err
-		}
-
-		copy(tx.Sig2[32-len(r.Bytes()):32], r.Bytes())
-		copy(tx.Sig2[64-len(s.Bytes()):], s.Bytes())
-	}
+	//txHash := tx.ChameleonHash(chParams)
+	//
+	//r, s, err := ecdsa.Sign(rand.Reader, sig1Key, txHash[:])
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//copy(tx.Sig1[32-len(r.Bytes()):32], r.Bytes())
+	//copy(tx.Sig1[64-len(s.Bytes()):], s.Bytes())
+	//
+	//if sig2Key != nil {
+	//	r, s, err := ecdsa.Sign(rand.Reader, sig2Key, txHash[:])
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	copy(tx.Sig2[32-len(r.Bytes()):32], r.Bytes())
+	//	copy(tx.Sig2[64-len(s.Bytes()):], s.Bytes())
+	//}
 
 	return tx, nil
 }
