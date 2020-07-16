@@ -180,7 +180,7 @@ func (tx FundsTx) String() string {
 		tx.TxCnt,
 		tx.From[0:8],
 		tx.To[0:8],
-		tx.Sig1[0:8],
+		tx.Sig1[:],
 		tx.Sig2[0:8],
 		tx.Aggregated,
 		tx.ChCheckString.R[0:8],
