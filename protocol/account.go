@@ -7,8 +7,12 @@ import (
 	"github.com/julwil/bazo-miner/crypto"
 )
 
+const (
+	ACCOUNT_ADDRESS_SIZE = 64
+)
+
 type Account struct {
-	Address            [64]byte                        // 64 Byte
+	Address            [ACCOUNT_ADDRESS_SIZE]byte      // 64 Byte
 	Issuer             [32]byte                        // 32 Byte
 	Balance            uint64                          // 8 Byte
 	TxCnt              uint32                          // 4 Byte
@@ -21,7 +25,7 @@ type Account struct {
 }
 
 func NewAccount(
-	address [64]byte,
+	address [ACCOUNT_ADDRESS_SIZE]byte,
 	issuer [32]byte,
 	balance uint64,
 	isStaking bool,
