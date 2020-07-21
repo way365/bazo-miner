@@ -11,7 +11,8 @@ import (
 )
 
 const HEX_BASE = 16
-const LENGTH = 256 // Length of a single parameter in bits.
+const CH_SIZE = 256 // Length of a single parameter in bytes.
+const CH_PARAM_SIZE = 64
 
 var (
 	ChParamsMap = make(map[[32]byte]*ChameleonHashParameters)
@@ -33,7 +34,7 @@ type ChameleonHashCheckString struct {
 // Generates a new set of chameleon hash parameters.
 func newChameleonHashParameters() ChameleonHashParameters {
 	var G, P, Q, HK, TK []byte
-	keygen(LENGTH, &G, &P, &Q, &HK, &TK)
+	keygen(CH_SIZE, &G, &P, &Q, &HK, &TK)
 
 	return ChameleonHashParameters{
 		G, P, Q, HK, TK,
@@ -69,7 +70,7 @@ func GetOrCreateChParamsFromFile(filename string) (params *ChameleonHashParamete
 		_, err = file.WriteString(string(params.P) + "\n")
 		_, err = file.WriteString(string(params.Q) + "\n")
 		_, err = file.WriteString(string(params.HK) + "\n")
-		_, err = file.WriteString(string(params.TK) + "\n")
+		_, err = file.WriteString(string(params.TK) + "\n") // This is the secret trapdoor key!
 	}
 
 	fileHandle, err := os.Open(filename)
@@ -99,6 +100,17 @@ func GetOrCreateChParamsFromFile(filename string) (params *ChameleonHashParamete
 	}, nil
 }
 
+// Get chameleon hash parameters from a set of hex strings
+func GetChParamsFromString(g, p, q, hk, tk string) (params *ChameleonHashParameters, err error) {
+	return &ChameleonHashParameters{
+		G:  []byte(g),
+		P:  []byte(p),
+		Q:  []byte(q),
+		HK: []byte(hk),
+		TK: []byte(tk),
+	}, nil
+}
+
 // Returns a random hex number within the bounds of 0 and upperBoundHex.
 func randgen(upperBoundHex *[]byte) []byte {
 	upperBoundBig := new(big.Int)
@@ -115,8 +127,8 @@ func randgen(upperBoundHex *[]byte) []byte {
 	return []byte(fmt.Sprintf("%x", randomBig))
 }
 
-// Generates a set of chameleon hash keys of length LENGTH
-func keygen(LENGTH int, G *[]byte, P *[]byte, Q *[]byte, HK *[]byte, TK *[]byte) {
+// Generates a set of chameleon hash keys of length CH_SIZE
+func keygen(SIZE int, G *[]byte, P *[]byte, Q *[]byte, HK *[]byte, TK *[]byte) {
 	gBig := new(big.Int)
 	qBig := new(big.Int)
 	hkBig := new(big.Int)
@@ -127,7 +139,7 @@ func keygen(LENGTH int, G *[]byte, P *[]byte, Q *[]byte, HK *[]byte, TK *[]byte)
 	oneBig.SetInt64(1) // oneBig = 1
 	twoBig.SetInt64(2) // twoBig = 2
 
-	pBig, err := rand.Prime(rand.Reader, LENGTH) // pBig is a random prime of length LENGTH
+	pBig, err := rand.Prime(rand.Reader, SIZE) // pBig is a random prime of length CH_SIZE
 	if err != nil {
 		fmt.Printf("Generation of random prime number failed.")
 	}
