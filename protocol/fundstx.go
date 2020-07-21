@@ -2,7 +2,6 @@ package protocol
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"encoding/gob"
 	"fmt"
 	"github.com/julwil/bazo-miner/crypto"
@@ -36,10 +35,7 @@ func ConstrFundsTx(
 	fee uint64,
 	txCnt uint32,
 	from, to [32]byte,
-	sig1Key *ecdsa.PrivateKey,
-	sig2Key *ecdsa.PrivateKey,
 	chCheckString *crypto.ChameleonHashCheckString,
-	chParams *crypto.ChameleonHashParameters,
 	data []byte,
 ) (tx *FundsTx, err error) {
 	tx = new(FundsTx)
@@ -54,26 +50,6 @@ func ConstrFundsTx(
 	tx.Data = data
 	tx.Block = [32]byte{}
 	tx.ChCheckString = chCheckString
-
-	//txHash := tx.ChameleonHash(chParams)
-	//
-	//r, s, err := ecdsa.Sign(rand.Reader, sig1Key, txHash[:])
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//copy(tx.Sig1[32-len(r.Bytes()):32], r.Bytes())
-	//copy(tx.Sig1[64-len(s.Bytes()):], s.Bytes())
-	//
-	//if sig2Key != nil {
-	//	r, s, err := ecdsa.Sign(rand.Reader, sig2Key, txHash[:])
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	copy(tx.Sig2[32-len(r.Bytes()):32], r.Bytes())
-	//	copy(tx.Sig2[64-len(s.Bytes()):], s.Bytes())
-	//}
 
 	return tx, nil
 }
@@ -180,7 +156,7 @@ func (tx FundsTx) String() string {
 		tx.TxCnt,
 		tx.From[0:8],
 		tx.To[0:8],
-		tx.Sig1[:],
+		tx.Sig1[0:8],
 		tx.Sig2[0:8],
 		tx.Aggregated,
 		tx.ChCheckString.R[0:8],
