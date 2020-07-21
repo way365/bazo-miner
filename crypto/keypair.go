@@ -131,9 +131,9 @@ func GetAddressFromPubKey(pubKey *ecdsa.PublicKey) (address [64]byte) {
 	return address
 }
 
-func GetPubKeyFromString(pub1, pub2 string) (pubKey *ecdsa.PublicKey, err error) {
-	pub1Int, b := new(big.Int).SetString(pub1, 16)
-	pub2Int, b := new(big.Int).SetString(pub2, 16)
+func GetPubKeyFromString(x, y string) (pubKey *ecdsa.PublicKey, err error) {
+	pub1Int, b := new(big.Int).SetString(x, 16)
+	pub2Int, b := new(big.Int).SetString(y, 16)
 	if !b {
 		return pubKey, errors.New("failed to convert the key strings to big.Int")
 	}
@@ -145,6 +145,25 @@ func GetPubKeyFromString(pub1, pub2 string) (pubKey *ecdsa.PublicKey, err error)
 	}
 
 	return pubKey, nil
+}
+
+func GetPrivKeyFromString(x, y, d string) (privateKey *ecdsa.PrivateKey, err error) {
+	publicKey, err := GetPubKeyFromString(x, y)
+	if err != nil {
+		return privateKey, err
+	}
+
+	D, b := new(big.Int).SetString(d, 16)
+	if !b {
+		return privateKey, errors.New("failed to convert the key strings to big.Int")
+	}
+
+	privateKey = &ecdsa.PrivateKey{
+		*publicKey,
+		D,
+	}
+
+	return privateKey, nil
 }
 
 func CreateECDSAKeyFile(filename string) (err error) {
