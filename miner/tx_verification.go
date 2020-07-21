@@ -3,11 +3,12 @@ package miner
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"math/big"
-	"reflect"
-
+	"fmt"
+	"github.com/julwil/bazo-miner/crypto"
 	"github.com/julwil/bazo-miner/protocol"
 	"github.com/julwil/bazo-miner/storage"
+	"math/big"
+	"reflect"
 )
 
 //We can't use polymorphism, e.g. we can't use tx.verify() because the Transaction interface doesn't declare
@@ -51,39 +52,32 @@ func verifyFundsTx(tx *protocol.FundsTx) bool {
 	accFrom := storage.State[tx.From]
 	accTo := storage.State[tx.To]
 
-	//Accounts non existent
 	if accFrom == nil || accTo == nil {
 		logger.Printf("Account non existent. From: %v\nTo: %v\n", accFrom, accTo)
 		return false
 	}
 
-	accFromHash := protocol.SerializeHashContent(accFrom.Address)
-	accToHash := protocol.SerializeHashContent(accTo.Address)
-	tx.From = accFromHash
-	tx.To = accToHash
+	// Check if From & To are different accounts
+	if reflect.DeepEqual(accFrom, accTo) {
+		logger.Printf("From account equals To account. From: %v\nTo: %v\n", accFrom, accTo)
+	}
+
 	txHash := tx.Hash()
 
 	var validSig1, validSig2 bool
 
-	if isSigned(txHash, tx.Sig1, accFrom.Address) && !reflect.DeepEqual(accFrom, accTo) {
-		tx.From = accFromHash
-		tx.To = accToHash
-		validSig1 = true
-	} else {
-		logger.Printf("Sig1 invalid. FromHash: %x\nToHash: %x\n", accFromHash[0:8], accToHash[0:8])
-		logger.Printf("Invalid TX:\n%s", tx.String())
-		return false
+	// Validate Sig1
+	validSig1 = IsSigned(txHash, tx.Sig1, accFrom.Address)
+
+	// If no Sig2 is specified, we don't validate it.
+	if tx.Sig2 == [64]byte{} {
+		validSig2 = true
 	}
 
-	r, s := new(big.Int), new(big.Int)
-	r.SetBytes(tx.Sig2[:32])
-	s.SetBytes(tx.Sig2[32:])
+	// Validate Sig2
+	if tx.Sig2 != [64]byte{} {
 
-	if ecdsa.Verify(multisigPubKey, txHash[:], r, s) {
-		validSig2 = true
-	} else {
-		logger.Printf("Sig2 invalid. FromHash: %x\nToHash: %x\n", accFromHash[0:8], accToHash[0:8])
-		return false
+		validSig2 = IsSigned(txHash, tx.Sig2, crypto.GetAddressFromPubKey(multisigPubKey))
 	}
 
 	return validSig1 && validSig2
@@ -95,7 +89,7 @@ func verifyAccTx(tx *protocol.AccTx) bool {
 		address := rootAcc.Address
 		txHash := tx.Hash()
 
-		if isSigned(txHash, signature, address) {
+		if IsSigned(txHash, signature, address) {
 			return true
 		}
 	}
@@ -111,7 +105,7 @@ func verifyConfigTx(tx *protocol.ConfigTx) bool {
 		signature := tx.Sig
 		address := rootAcc.Address
 		txHash := tx.Hash()
-		if isSigned(txHash, signature, address) {
+		if IsSigned(txHash, signature, address) {
 			return true
 		}
 	}
@@ -136,7 +130,7 @@ func verifyStakeTx(tx *protocol.StakeTx) bool {
 	tx.Account = accFromHash
 	txHash := tx.Hash()
 
-	return isSigned(txHash, tx.Sig, accFrom.Address)
+	return IsSigned(txHash, tx.Sig, accFrom.Address)
 }
 
 //TODO Update this function
@@ -176,7 +170,7 @@ func verifyUpdateTx(tx *protocol.UpdateTx) bool {
 	}
 
 	txHash := tx.Hash()
-	isTxSigned := isSigned(txHash, tx.Sig, issuerAccount.Address)
+	isTxSigned := IsSigned(txHash, tx.Sig, issuerAccount.Address)
 
 	if !isTxSigned {
 		logger.Printf("Tx: %x not signed correctly", txHash)
@@ -216,7 +210,7 @@ func verifyUpdateTx(tx *protocol.UpdateTx) bool {
 		return false
 	}
 
-	isAuthorized := isSigned(txToUpdateHash, txToUpdateSig, issuerAccount.Address)
+	isAuthorized := IsSigned(txToUpdateHash, txToUpdateSig, issuerAccount.Address)
 
 	if !isAuthorized {
 		logger.Printf("\nISSUER NOT ALLOWED TO UPDATE TX."+
@@ -281,7 +275,7 @@ func parameterBoundsChecking(id uint8, payload uint64) bool {
 }
 
 // Checks if the hash is signed by the provided signature and address
-func isSigned(hash [32]byte, signature [64]byte, address [64]byte) bool {
+func IsSigned(hash [32]byte, signature [64]byte, address [64]byte) bool {
 	pub1, pub2 := new(big.Int), new(big.Int)
 	r, s := new(big.Int), new(big.Int)
 
@@ -291,9 +285,11 @@ func isSigned(hash [32]byte, signature [64]byte, address [64]byte) bool {
 	pub2.SetBytes(address[32:])
 	publicKey := ecdsa.PublicKey{elliptic.P256(), pub1, pub2}
 
+	//fmt.Printf("\nAddress: %x\nSignature: %x\nHash:%x\n", address, signature, hash)
+
 	isSigned := ecdsa.Verify(&publicKey, hash[:], r, s)
 	if !isSigned {
-		logger.Printf("Could not verfiy signature.")
+		fmt.Printf("Could not verfiy signature.")
 	}
 
 	return isSigned
