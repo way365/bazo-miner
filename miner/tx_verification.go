@@ -42,6 +42,8 @@ func verify(tx protocol.Transaction) bool {
 
 func verifyFundsTx(tx *protocol.FundsTx) bool {
 
+	logger.Printf("Verifying: \n%s", tx.String())
+
 	//fundsTx only makes sense if amount > 0
 	if tx.Amount == 0 || tx.Amount > MAX_MONEY {
 		logger.Printf("Invalid transaction amount: %v\n", tx.Amount)
@@ -51,6 +53,9 @@ func verifyFundsTx(tx *protocol.FundsTx) bool {
 	//Check if accounts are present in the actual state
 	accFrom := storage.State[tx.From]
 	accTo := storage.State[tx.To]
+
+	logger.Printf("\nFrom:\n%s", accFrom.String())
+	logger.Printf("\nTo:\n%s", accTo.String())
 
 	if accFrom == nil || accTo == nil {
 		logger.Printf("Account non existent. From: %v\nTo: %v\n", accFrom, accTo)

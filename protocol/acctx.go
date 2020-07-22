@@ -2,9 +2,6 @@ package protocol
 
 import (
 	"bytes"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"encoding/gob"
 	"fmt"
 	"github.com/julwil/bazo-miner/crypto"
@@ -17,8 +14,8 @@ const (
 
 type AccTx struct {
 	Header            byte
-	Issuer            [32]byte
 	Fee               uint64
+	Issuer            [32]byte
 	PubKey            [64]byte
 	Sig               [64]byte
 	Contract          []byte
@@ -31,57 +28,41 @@ type AccTx struct {
 func ConstrAccTx(
 	header byte,
 	fee uint64,
+	issuer [32]byte,
 	address [64]byte,
-	rootPrivKey *ecdsa.PrivateKey,
 	contract []byte,
 	contractVariables []ByteArray,
 	chParams *crypto.ChameleonHashParameters,
 	chCheckString *crypto.ChameleonHashCheckString,
 	data []byte,
-) (tx *AccTx, newAccAddress *ecdsa.PrivateKey, err error) {
+) (tx *AccTx, err error) {
 	tx = new(AccTx)
 	tx.Header = header
 	tx.Fee = fee
+	tx.Issuer = issuer
+	tx.PubKey = address
 	tx.Contract = contract
 	tx.ContractVariables = contractVariables
 	tx.ChParams = chParams
 	tx.ChCheckString = chCheckString
 	tx.Data = data
 
-	if address != [64]byte{} {
-		copy(tx.PubKey[:], address[:])
-	} else {
-		var newAccAddressString string
-		//Check if string representation of account address is 128 long. Else there will be problems when doing REST calls.
-		for len(newAccAddressString) != 128 {
-			newAccAddress, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-			newAccPub1, newAccPub2 := newAccAddress.PublicKey.X.Bytes(), newAccAddress.PublicKey.Y.Bytes()
-			copy(tx.PubKey[32-len(newAccPub1):32], newAccPub1)
-			copy(tx.PubKey[64-len(newAccPub2):], newAccPub2)
+	//if address != [64]byte{} {
+	//	copy(tx.PubKey[:], address[:])
+	//} else {
+	//	var newAccAddressString string
+	//	//Check if string representation of account address is 128 long. Else there will be problems when doing REST calls.
+	//	for len(newAccAddressString) != 128 {
+	//		newAccAddress, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	//		newAccPub1, newAccPub2 := newAccAddress.PublicKey.X.Bytes(), newAccAddress.PublicKey.Y.Bytes()
+	//		copy(tx.PubKey[32-len(newAccPub1):32], newAccPub1)
+	//		copy(tx.PubKey[64-len(newAccPub2):], newAccPub2)
+	//
+	//		newAccAddressString = newAccAddress.X.Text(16) + newAccAddress.Y.Text(16)
+	//	}
+	//}
 
-			newAccAddressString = newAccAddress.X.Text(16) + newAccAddress.Y.Text(16)
-		}
-	}
-
-	var rootPublicKey [64]byte
-	rootPubKey1, rootPubKey2 := rootPrivKey.PublicKey.X.Bytes(), rootPrivKey.PublicKey.Y.Bytes()
-	copy(rootPublicKey[32-len(rootPubKey1):32], rootPubKey1)
-	copy(rootPublicKey[64-len(rootPubKey2):], rootPubKey2)
-
-	issuer := SerializeHashContent(rootPublicKey)
-	copy(tx.Issuer[:], issuer[:])
-
-	txHash := tx.ChameleonHash(chParams)
-
-	r, s, err := ecdsa.Sign(rand.Reader, rootPrivKey, txHash[:])
-	if err != nil {
-		return nil, nil, err
-	}
-
-	copy(tx.Sig[32-len(r.Bytes()):32], r.Bytes())
-	copy(tx.Sig[64-len(s.Bytes()):], s.Bytes())
-
-	return tx, newAccAddress, nil
+	return tx, nil
 }
 
 // Returns SHA3 hash over the tx content

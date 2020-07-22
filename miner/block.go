@@ -159,8 +159,7 @@ func addTx(b *protocol.Block, tx protocol.Transaction) error {
 	case *protocol.FundsTx:
 		err := addFundsTx(b, tx.(*protocol.FundsTx))
 		if err != nil {
-			//logger.Printf("Adding fundsTx (%x) failed (%v): %v\n",tx.Hash(), err, tx.(*protocol.FundsTx))
-			//logger.Printf("Adding fundsTx (%x) failed (%v)",tx.Hash(), err)
+			logger.Printf("Adding fundsTx (%x) failed (%v): %v\n", tx.Hash(), err, tx.(*protocol.FundsTx))
 			return err
 		}
 	case *protocol.ConfigTx:

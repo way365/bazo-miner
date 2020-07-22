@@ -116,7 +116,7 @@ func Start(args *startArgs, logger *log.Logger) error {
 	storage.Init(args.dbname, args.bootstrapNodeAddress)
 	p2p.Init(args.myNodeAddress)
 
-	validatorPubKey, err := crypto.ExtractECDSAPublicKeyFromFile(args.walletFile)
+	validatorPubKey, err := crypto.GetOrCreateECDSAPublicKeyFromFile(args.walletFile)
 	if err != nil {
 		logger.Printf("%v\n", err)
 		return err
@@ -130,7 +130,7 @@ func Start(args *startArgs, logger *log.Logger) error {
 
 	var multisigPubKey *ecdsa.PublicKey
 	if len(args.multisigFile) > 0 {
-		multisigPubKey, err = crypto.ExtractECDSAPublicKeyFromFile(args.multisigFile)
+		multisigPubKey, err = crypto.GetOrCreateECDSAPublicKeyFromFile(args.multisigFile)
 		if err != nil {
 			logger.Printf("%v\n", err)
 			return err

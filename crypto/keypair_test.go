@@ -22,7 +22,7 @@ func TestExtractAndVerifyEDSAKeyFromNonExistingFile(t *testing.T) {
 
 func TestExtractAndVerifyEDSAKeyFromExistingFile(t *testing.T) {
 	os.Remove(KEY_TEST_FILE)
-	err := CreateECDSAKeyFile(KEY_TEST_FILE)
+	err := createECDSAKeyFile(KEY_TEST_FILE)
 
 	_, err = ExtractECDSAKeyFromFile(KEY_TEST_FILE)
 	if err != nil {

@@ -15,7 +15,7 @@ import (
 
 func ExtractECDSAKeyFromFile(filename string) (privKey *ecdsa.PrivateKey, err error) {
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		err = CreateECDSAKeyFile(filename)
+		err = createECDSAKeyFile(filename)
 		if err != nil {
 			return nil, err
 		}
@@ -37,9 +37,9 @@ func ExtractECDSAKeyFromFile(filename string) (privKey *ecdsa.PrivateKey, err er
 	return privKey, VerifyECDSAKey(privKey)
 }
 
-func ExtractECDSAPublicKeyFromFile(filename string) (pubKey *ecdsa.PublicKey, err error) {
+func GetOrCreateECDSAPublicKeyFromFile(filename string) (pubKey *ecdsa.PublicKey, err error) {
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		err = CreateECDSAKeyFile(filename)
+		err = createECDSAKeyFile(filename)
 		if err != nil {
 			return nil, err
 		}
@@ -166,7 +166,7 @@ func GetPrivKeyFromString(x, y, d string) (privateKey *ecdsa.PrivateKey, err err
 	return privateKey, nil
 }
 
-func CreateECDSAKeyFile(filename string) (err error) {
+func createECDSAKeyFile(filename string) (err error) {
 	newKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 
 	//Write the public key to the given textfile
