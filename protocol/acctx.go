@@ -47,21 +47,6 @@ func ConstrAccTx(
 	tx.ChCheckString = chCheckString
 	tx.Data = data
 
-	//if address != [64]byte{} {
-	//	copy(tx.PubKey[:], address[:])
-	//} else {
-	//	var newAccAddressString string
-	//	//Check if string representation of account address is 128 long. Else there will be problems when doing REST calls.
-	//	for len(newAccAddressString) != 128 {
-	//		newAccAddress, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	//		newAccPub1, newAccPub2 := newAccAddress.PublicKey.X.Bytes(), newAccAddress.PublicKey.Y.Bytes()
-	//		copy(tx.PubKey[32-len(newAccPub1):32], newAccPub1)
-	//		copy(tx.PubKey[64-len(newAccPub2):], newAccPub2)
-	//
-	//		newAccAddressString = newAccAddress.X.Text(16) + newAccAddress.Y.Text(16)
-	//	}
-	//}
-
 	return tx, nil
 }
 

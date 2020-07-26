@@ -73,6 +73,12 @@ func BuildMerkleTree(b *Block) *MerkleTree {
 		}
 	}
 
+	if b.UpdateTxData != nil {
+		for _, txHash := range b.UpdateTxData {
+			txHashes = append(txHashes, txHash)
+		}
+	}
+
 	//Merkle root for no transactions is 0 hash
 	if len(txHashes) == 0 {
 		return nil
@@ -85,7 +91,7 @@ func BuildMerkleTree(b *Block) *MerkleTree {
 
 func BuildAggTxMerkleTree(txHashes [][32]byte) *MerkleTree {
 
-	if txHashes == nil || len(txHashes) == 0{
+	if txHashes == nil || len(txHashes) == 0 {
 		return nil
 	}
 
@@ -93,7 +99,6 @@ func BuildAggTxMerkleTree(txHashes [][32]byte) *MerkleTree {
 
 	return m
 }
-
 
 //NewTree creates a new Merkle Tree using the content cs.
 func newTree(txSlices [][32]byte) (*MerkleTree, error) {

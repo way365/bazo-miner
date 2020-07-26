@@ -2,8 +2,6 @@ package protocol
 
 import (
 	"bytes"
-	"crypto/ecdsa"
-	"crypto/rand"
 	"encoding/gob"
 	"fmt"
 	"github.com/julwil/bazo-miner/crypto"
@@ -31,9 +29,7 @@ func ConstrUpdateTx(
 	txToUpdateChamHashCheckString *crypto.ChameleonHashCheckString,
 	txToUpdateData []byte,
 	issuer [32]byte,
-	privateKey *ecdsa.PrivateKey,
 	chCheckString *crypto.ChameleonHashCheckString,
-	chParams *crypto.ChameleonHashParameters,
 	data []byte,
 ) (tx *UpdateTx, err error) {
 	tx = new(UpdateTx)
@@ -45,17 +41,6 @@ func ConstrUpdateTx(
 	tx.Issuer = issuer
 	tx.ChamHashCheckString = chCheckString
 	tx.Data = data
-
-	// Generate the hash of the new Tx
-	txHash := tx.ChameleonHash(chParams)
-
-	// Sign the Tx
-	r, s, err := ecdsa.Sign(rand.Reader, privateKey, txHash[:])
-	if err != nil {
-		return nil, err
-	}
-	copy(tx.Sig[32-len(r.Bytes()):32], r.Bytes())
-	copy(tx.Sig[64-len(s.Bytes()):], s.Bytes())
 
 	return tx, err
 }
