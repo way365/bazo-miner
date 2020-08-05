@@ -33,14 +33,13 @@ func processBlock(payload []byte) {
 			logger.Printf("Received block (%x) has already been validated.\n", block.Hash[0:8])
 
 			return
-		} else { // There has been an update on the block in the meantime. We need to replace the block.
-
-			// Then we have to replace the block in our storage.
-			storage.WriteClosedBlock(block)
-			logger.Printf("Replaced block:\n%v with:\n%v", closedBlock.String(), block.String())
-
-			return
 		}
+
+		// There has been an update on the block in the meantime. We need to replace the block.
+		storage.WriteClosedBlock(block)
+		logger.Printf("Replaced block:\n%v with:\n%v", closedBlock.String(), block.String())
+
+		return
 	}
 
 	//Append received Block to stash
