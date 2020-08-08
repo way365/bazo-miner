@@ -155,14 +155,14 @@ func verifyUpdateTx(tx *protocol.UpdateTx) bool {
 	}
 
 	// Next we check if the tx to update actually exists.
-	var txToDelete protocol.Transaction
+	var txToUpdate protocol.Transaction
 
 	switch true {
 	case storage.ReadOpenTx(tx.TxToUpdateHash) != nil:
-		txToDelete = storage.ReadOpenTx(tx.TxToUpdateHash)
+		txToUpdate = storage.ReadOpenTx(tx.TxToUpdateHash)
 
 	case storage.ReadClosedTx(tx.TxToUpdateHash) != nil:
-		txToDelete = storage.ReadClosedTx(tx.TxToUpdateHash)
+		txToUpdate = storage.ReadClosedTx(tx.TxToUpdateHash)
 
 	default: // If we don't find the tx to update in the storage, we also can't update it.
 		logger.Printf("Can't find TxToDelete: %x", tx.TxToUpdateHash)
@@ -180,19 +180,19 @@ func verifyUpdateTx(tx *protocol.UpdateTx) bool {
 	// Lastly we check if the issuer of the update-tx also signed the tx to update.
 	// This makes sure that you only update your own txs.
 	// Get the hash
-	txToUpdateHash := txToDelete.Hash()
+	txToUpdateHash := txToUpdate.Hash()
 	var txToUpdateSig [64]byte
 
-	// Now we validate the txToDelete and retrieve its signature.
-	switch txToDelete.(type) {
+	// Now we validate the txToUpdate and retrieve its signature.
+	switch txToUpdate.(type) {
 	case *protocol.FundsTx:
-		txToUpdateSig = txToDelete.(*protocol.FundsTx).Sig1
+		txToUpdateSig = txToUpdate.(*protocol.FundsTx).Sig1
 
 	case *protocol.AccTx:
-		txToUpdateSig = txToDelete.(*protocol.AccTx).Sig
+		txToUpdateSig = txToUpdate.(*protocol.AccTx).Sig
 
 	case *protocol.UpdateTx:
-		txToUpdateSig = txToDelete.(*protocol.UpdateTx).Sig
+		txToUpdateSig = txToUpdate.(*protocol.UpdateTx).Sig
 
 	case *protocol.ConfigTx:
 		logger.Printf("\nCan't update config tx")
@@ -210,9 +210,7 @@ func verifyUpdateTx(tx *protocol.UpdateTx) bool {
 		return false
 	}
 
-	isAuthorized := IsSigned(txToUpdateHash, txToUpdateSig, issuerAccount.Address)
-
-	if !isAuthorized {
+	if !IsSigned(txToUpdateHash, txToUpdateSig, issuerAccount.Address) {
 		logger.Printf("\nISSUER NOT ALLOWED TO UPDATE TX."+
 			"\nTxToUpdate was not signed by Issuer. (You can only update your own tx)"+
 			"\nIssuer: %x"+
