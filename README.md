@@ -4,7 +4,7 @@
 [![Build Status](https://travis-ci.org/bazo-blockchain/bazo-miner.svg?branch=master)](https://travis-ci.org/bazo-blockchain/bazo-miner)
 
 ## Setup Instructions
-##&#9888; BAZO was moved to [Docker](https://github.com/julwil/bazo-docker)
+## &#9888; BAZO was moved to [Docker](https://github.com/julwil/bazo-docker)
 1. Install Go (developed and tested with version >= 1.14)
 2. Set $GOROOT and $GOPATH. For more information, please check out the [official documentation](https://github.com/golang/go/wiki/SettingGOPATH).
 3. run `./scripts/fix-imports.sh`
