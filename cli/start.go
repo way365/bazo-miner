@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 	"log"
-	"time"
 )
 
 type startArgs struct {
@@ -112,7 +111,6 @@ func GetStartCommand(logger *log.Logger) cli.Command {
 }
 
 func Start(args *startArgs, logger *log.Logger) error {
-	time.Sleep(5 * time.Second)
 	storage.Init(args.dbname, args.bootstrapNodeAddress)
 	p2p.Init(args.myNodeAddress)
 

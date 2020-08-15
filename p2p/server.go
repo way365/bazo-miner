@@ -132,7 +132,7 @@ func listener(ipport string) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			//logger.Printf("%v\n", err)
+			logger.Printf("%v\n", err)
 			continue
 		}
 
