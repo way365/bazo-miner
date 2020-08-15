@@ -7,7 +7,7 @@
 
 1. Install Go (developed and tested with version >= 1.14)
 2. Set $GOROOT and $GOPATH. For more information, please check out the [official documentation](https://github.com/golang/go/wiki/SettingGOPATH).
-3. run `./scripts/build_project.sh`
+3. run `./scripts/fix-imports.sh`
 ## Getting Started
 
 The Bazo miner provides an intuitive and beginner-friendly command line interface.
@@ -37,6 +37,7 @@ Options
 * `--commitment`: The file to load the validator's commitment key from (will be created if it does not exist)
 * `--rootkey`: (default: key.txt) The file to load root's public key from this file. A new public private key is generated if it does not exist yet. Note that only the public key is required.
 * `--rootcommitment`: The file to load root's commitment key from. A new commitment key is generated if it does not exist yet.
+* `--root-chparams`: The file to load root's chameleon hash parameters from. A new set of parameters is generated if it does not exist yet.
 * `--confirm`: In order to review the miner startup options, the user must press Enter before the miner starts.
 
 Example
@@ -48,8 +49,8 @@ Further assume that we start from scratch and no key files have been created yet
 
 Miner A (Root)
 * Database: `StoreA.db`
-* Address: `localhost:8000`
-* Bootstrap Address: `localhost:8000`
+* Address: `127.0.0.1:8000`
+* Bootstrap Address: `127.0.0.1:8000`
 * Wallet: `WalletA.txt`
 * Commitment: `CommitmentA.txt`
 * Root Wallet: `WalletA.txt`
@@ -59,10 +60,11 @@ Miner A (Root)
 
 Miner B
 * Database: `StoreB.db`
-* Address: `localhost:8001`
-* Bootstrap Address: `localhost:8000`
+* Address: `127.0.0.1:8001`
+* Bootstrap Address: `127.0.0.1:8000`
 * Wallet: `WalletB.txt`
 * Commitment: `CommitmentB.txt`
+* Chameleon Hash Parameters: `ChParamsB.txt`
 
 Commands
 
@@ -70,7 +72,7 @@ Commands
 ./bazo-miner start --database StoreA.db --address 127.0.0.1:8000 --bootstrap 127.0.0.1:8000 --wallet WalletA.txt --commitment CommitmentA.txt --multisig WalletA.txt --rootwallet WalletA.txt --rootcommitment CommitmentA.txt --root-chparams ChParamsA.txt
 ```
 
-We start miner A at address and port `localhost:8000` and connect to itself by setting the bootstrap address to the same address.
+We start miner A at address and port `127.0.0.1:8000` and connect to itself by setting the bootstrap address to the same address.
 Note that we could have omitted these two options since they are passed by default with these values.
 Wallet and commitment keys are automatically created. Using this command, we define miner A as the root.
 
@@ -102,12 +104,12 @@ Then, miner B has to join the pool of validators (enable staking):
 Start miner B, using the generated `WalletB.txt` and `CommitmentB.txt` (e.g. copy the files to the Bazo miner directory):
 
 ```bash
-./bazo-miner start --database StoreB.db --address localhost:8001 --bootstrap localhost:8000 --wallet WalletB.txt --commitment CommitmentB.txt --rootwallet WalletA.txt --rootcommitment CommitmentA.txt --root-chparams ChParamsA.txt
+./bazo-miner start --database StoreB.db --address 127.0.0.1:8001 --bootstrap 127.0.0.1:8000 --wallet WalletB.txt --commitment CommitmentB.txt --rootwallet WalletA.txt --rootcommitment CommitmentA.txt --root-chparams ChParamsA.txt
 ```
 
 Note that both files specified for `--rootwallet` and `--rootcommitment` only require to contain the wallet and commitemt public key respectively.
 
-We start miner B at address and port `localhost:8001` and connect to miner A (which is the boostrap node).
+We start miner B at address and port `127.0.0.1:8001` and connect to miner A (which is the boostrap node).
 Wallet and commitment keys are automatically created.
 
 ### Generate a wallet
