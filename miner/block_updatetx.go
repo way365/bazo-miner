@@ -32,7 +32,7 @@ func handleTxUpdate(updateTx *protocol.UpdateTx) error {
 	// At this point we already verified that the transaction we want to update actually exists
 	// either in the open or closed transaction storage. Thus we can safely assume it exists and
 	// update it in our local storage.
-	updateLocalTx(txToUpdateHash, updateTx.TxToUpdateChamHashCheckString, updateTx.TxToUpdateData, updateTx.Data)
+	updateLocalTx(txToUpdateHash, updateTx.TxToUpdateCheckString, updateTx.TxToUpdateData, updateTx.Data)
 
 	blockToUpdate := storage.ReadBlockByTxHash(txToUpdateHash)
 	if blockToUpdate == nil {
@@ -67,14 +67,14 @@ func updateLocalTx(
 		txToUpdate = storage.ReadOpenTx(txHash)
 		oldData = txToUpdate.GetData()
 		txToUpdate.SetData(newData)
-		txToUpdate.SetChCheckString(newCheckString)
+		txToUpdate.SetCheckString(newCheckString)
 		storage.WriteOpenTx(txToUpdate)
 
 	case storage.ReadClosedTx(txHash) != nil:
 		txToUpdate = storage.ReadClosedTx(txHash)
 		oldData = txToUpdate.GetData()
 		txToUpdate.SetData(newData)
-		txToUpdate.SetChCheckString(newCheckString)
+		txToUpdate.SetCheckString(newCheckString)
 		storage.WriteClosedTx(txToUpdate)
 
 	default: // If we don't find the tx to update in the storage, we also can't update it.

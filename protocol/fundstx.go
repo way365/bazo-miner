@@ -15,18 +15,18 @@ const (
 //when we broadcast transactions we need a way to distinguish with a type
 
 type FundsTx struct {
-	Header        byte
-	Amount        uint64
-	Fee           uint64
-	TxCnt         uint32
-	From          [32]byte
-	To            [32]byte
-	Sig1          [64]byte
-	Sig2          [64]byte
-	Aggregated    bool
-	Block         [32]byte                         // This saves the blockHashWithoutTransactions into which the transaction was usually validated. Needed for rollback.
-	ChCheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
-	Data          []byte
+	Header      byte
+	Amount      uint64
+	Fee         uint64
+	TxCnt       uint32
+	From        [32]byte
+	To          [32]byte
+	Sig1        [64]byte
+	Sig2        [64]byte
+	Aggregated  bool
+	Block       [32]byte                         // This saves the blockHashWithoutTransactions into which the transaction was usually validated. Needed for rollback.
+	CheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
+	Data        []byte
 }
 
 func ConstrFundsTx(
@@ -35,7 +35,7 @@ func ConstrFundsTx(
 	fee uint64,
 	txCnt uint32,
 	from, to [32]byte,
-	chCheckString *crypto.ChameleonHashCheckString,
+	checkString *crypto.ChameleonHashCheckString,
 	data []byte,
 ) (tx *FundsTx, err error) {
 	tx = new(FundsTx)
@@ -49,7 +49,7 @@ func ConstrFundsTx(
 	tx.Aggregated = false
 	tx.Data = data
 	tx.Block = [32]byte{}
-	tx.ChCheckString = chCheckString
+	tx.CheckString = checkString
 
 	return tx, nil
 }
@@ -57,11 +57,11 @@ func ConstrFundsTx(
 // Returns the chameleon hash but takes the chameleon hash parameters as input.
 // This method should be called in the context of bazo-client as the client doesn't maintain
 // a copy of the chameleon hash parameters of each account.
-func (tx *FundsTx) ChameleonHash(chParams *crypto.ChameleonHashParameters) [32]byte {
+func (tx *FundsTx) ChameleonHash(parameters *crypto.ChameleonHashParameters) [32]byte {
 	sha3Hash := tx.SHA3()
 	hashInput := sha3Hash[:]
 
-	return crypto.ChameleonHash(chParams, tx.ChCheckString, &hashInput)
+	return crypto.ChameleonHash(parameters, tx.CheckString, &hashInput)
 }
 
 // Returns the chameleon hash without chameleon hash parameters as input.
@@ -72,9 +72,9 @@ func (tx *FundsTx) Hash() (hash [32]byte) {
 		return [32]byte{}
 	}
 
-	chParams := crypto.ChParamsMap[tx.From]
+	parameters := crypto.ChameleonHashParametersMap[tx.From]
 
-	return tx.ChameleonHash(chParams)
+	return tx.ChameleonHash(parameters)
 }
 
 // Returns SHA3 hash over the tx content
@@ -105,18 +105,18 @@ func (tx *FundsTx) SHA3() [32]byte {
 func (tx *FundsTx) Encode() (encodedTx []byte) {
 	// Encode
 	encodeData := FundsTx{
-		Header:        tx.Header,
-		Amount:        tx.Amount,
-		Fee:           tx.Fee,
-		TxCnt:         tx.TxCnt,
-		From:          tx.From,
-		To:            tx.To,
-		Sig1:          tx.Sig1,
-		Sig2:          tx.Sig2,
-		Data:          tx.Data,
-		Aggregated:    tx.Aggregated,
-		Block:         tx.Block,
-		ChCheckString: tx.ChCheckString,
+		Header:      tx.Header,
+		Amount:      tx.Amount,
+		Fee:         tx.Fee,
+		TxCnt:       tx.TxCnt,
+		From:        tx.From,
+		To:          tx.To,
+		Sig1:        tx.Sig1,
+		Sig2:        tx.Sig2,
+		Data:        tx.Data,
+		Aggregated:  tx.Aggregated,
+		Block:       tx.Block,
+		CheckString: tx.CheckString,
 	}
 	buffer := new(bytes.Buffer)
 	gob.NewEncoder(buffer).Encode(encodeData)
@@ -148,7 +148,7 @@ func (tx FundsTx) String() string {
 			"Sig1: %x\n"+
 			"Sig2: %x\n"+
 			"Aggregated: %t\n"+
-			"ChCheckString: %x\n"+
+			"CheckString: %x\n"+
 			"Data: %s",
 		tx.Header,
 		tx.Amount,
@@ -159,7 +159,7 @@ func (tx FundsTx) String() string {
 		tx.Sig1[0:8],
 		tx.Sig2[0:8],
 		tx.Aggregated,
-		tx.ChCheckString.R[0:8],
+		tx.CheckString.R[0:8],
 		tx.Data,
 	)
 }
@@ -172,12 +172,12 @@ func (tx *FundsTx) GetData() []byte {
 	return tx.Data
 }
 
-func (tx *FundsTx) SetChCheckString(checkString *crypto.ChameleonHashCheckString) {
-	tx.ChCheckString = checkString
+func (tx *FundsTx) SetCheckString(checkString *crypto.ChameleonHashCheckString) {
+	tx.CheckString = checkString
 }
 
-func (tx *FundsTx) GetChCheckString() *crypto.ChameleonHashCheckString {
-	return tx.ChCheckString
+func (tx *FundsTx) GetCheckString() *crypto.ChameleonHashCheckString {
+	return tx.CheckString
 }
 
 func (tx *FundsTx) SetSignature(signature [64]byte) {

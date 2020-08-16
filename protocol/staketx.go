@@ -22,7 +22,7 @@ type StakeTx struct {
 	Account       [32]byte                         // 32 Byte
 	Sig           [64]byte                         // 64 Byte
 	CommitmentKey [crypto.COMM_KEY_LENGTH]byte     // the modulus N of the RSA public key
-	ChCheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
+	CheckString   *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
 	Data          []byte
 }
 
@@ -80,7 +80,7 @@ func (tx *StakeTx) Hash() (hash [32]byte) {
 }
 
 // As we don't use chameleon hashing on config tx, we simply return an SHA3 hash
-func (tx *StakeTx) ChameleonHash(chParams *crypto.ChameleonHashParameters) [32]byte {
+func (tx *StakeTx) ChameleonHash(parameters *crypto.ChameleonHashParameters) [32]byte {
 
 	return tx.Hash()
 }
@@ -170,12 +170,12 @@ func (tx *StakeTx) GetData() []byte {
 	return tx.Data
 }
 
-func (tx *StakeTx) SetChCheckString(checkString *crypto.ChameleonHashCheckString) {
-	tx.ChCheckString = checkString
+func (tx *StakeTx) SetCheckString(checkString *crypto.ChameleonHashCheckString) {
+	tx.CheckString = checkString
 }
 
-func (tx *StakeTx) GetChCheckString() *crypto.ChameleonHashCheckString {
-	return tx.ChCheckString
+func (tx *StakeTx) GetCheckString() *crypto.ChameleonHashCheckString {
+	return tx.CheckString
 }
 
 func (tx *StakeTx) SetSignature(signature [64]byte) {

@@ -20,8 +20,8 @@ type AccTx struct {
 	Sig               [64]byte
 	Contract          []byte
 	ContractVariables []ByteArray
-	ChParams          *crypto.ChameleonHashParameters  // Chameleon hash parameters associated with this account.
-	ChCheckString     *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
+	Parameters        *crypto.ChameleonHashParameters  // Chameleon hash parameters associated with this account.
+	CheckString       *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
 	Data              []byte
 }
 
@@ -32,8 +32,8 @@ func ConstrAccTx(
 	address [64]byte,
 	contract []byte,
 	contractVariables []ByteArray,
-	chParams *crypto.ChameleonHashParameters,
-	chCheckString *crypto.ChameleonHashCheckString,
+	parameters *crypto.ChameleonHashParameters,
+	checkString *crypto.ChameleonHashCheckString,
 	data []byte,
 ) (tx *AccTx, err error) {
 	tx = new(AccTx)
@@ -43,8 +43,8 @@ func ConstrAccTx(
 	tx.PubKey = address
 	tx.Contract = contract
 	tx.ContractVariables = contractVariables
-	tx.ChParams = chParams
-	tx.ChCheckString = chCheckString
+	tx.Parameters = parameters
+	tx.CheckString = checkString
 	tx.Data = data
 
 	return tx, nil
@@ -78,17 +78,17 @@ func (tx *AccTx) Hash() [32]byte {
 		return [32]byte{}
 	}
 
-	return tx.ChameleonHash(tx.ChParams)
+	return tx.ChameleonHash(tx.Parameters)
 }
 
 // Returns the chameleon hash but takes the chameleon hash parameters as input.
 // This method should be called in the context of bazo-client as the client doesn't maintain
 // a state holding the chameleon hash parameters of each account.
-func (tx *AccTx) ChameleonHash(chParams *crypto.ChameleonHashParameters) [32]byte {
+func (tx *AccTx) ChameleonHash(parameters *crypto.ChameleonHashParameters) [32]byte {
 	sha3Hash := tx.SHA3()
 	hashInput := sha3Hash[:]
 
-	return crypto.ChameleonHash(chParams, tx.ChCheckString, &hashInput)
+	return crypto.ChameleonHash(parameters, tx.CheckString, &hashInput)
 }
 
 func (tx *AccTx) Encode() []byte {
@@ -97,14 +97,14 @@ func (tx *AccTx) Encode() []byte {
 	}
 
 	encoded := AccTx{
-		Header:        tx.Header,
-		Issuer:        tx.Issuer,
-		Fee:           tx.Fee,
-		PubKey:        tx.PubKey,
-		Sig:           tx.Sig,
-		ChParams:      tx.ChParams,
-		ChCheckString: tx.ChCheckString,
-		Data:          tx.Data,
+		Header:      tx.Header,
+		Issuer:      tx.Issuer,
+		Fee:         tx.Fee,
+		PubKey:      tx.PubKey,
+		Sig:         tx.Sig,
+		Parameters:  tx.Parameters,
+		CheckString: tx.CheckString,
+		Data:        tx.Data,
 	}
 
 	buffer := new(bytes.Buffer)
@@ -157,12 +157,12 @@ func (tx *AccTx) GetData() []byte {
 	return tx.Data
 }
 
-func (tx *AccTx) SetChCheckString(checkString *crypto.ChameleonHashCheckString) {
-	tx.ChCheckString = checkString
+func (tx *AccTx) SetCheckString(checkString *crypto.ChameleonHashCheckString) {
+	tx.CheckString = checkString
 }
 
-func (tx *AccTx) GetChCheckString() *crypto.ChameleonHashCheckString {
-	return tx.ChCheckString
+func (tx *AccTx) GetCheckString() *crypto.ChameleonHashCheckString {
+	return tx.CheckString
 }
 
 func (tx *AccTx) SetSignature(signature [64]byte) {

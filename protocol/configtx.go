@@ -55,14 +55,14 @@ const (
 )
 
 type ConfigTx struct {
-	Header        byte
-	Id            uint8
-	Payload       uint64
-	Fee           uint64
-	TxCnt         uint8
-	Sig           [64]byte
-	ChCheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
-	Data          []byte
+	Header      byte
+	Id          uint8
+	Payload     uint64
+	Fee         uint64
+	TxCnt       uint8
+	Sig         [64]byte
+	CheckString *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
+	Data        []byte
 }
 
 func ConstrConfigTx(header byte, id uint8, payload uint64, fee uint64, txCnt uint8, rootPrivKey *ecdsa.PrivateKey) (tx *ConfigTx, err error) {
@@ -116,7 +116,7 @@ func (tx *ConfigTx) Hash() (hash [32]byte) {
 }
 
 // As we don't use chameleon hashing on config tx, we simply return an SHA3 hash
-func (tx *ConfigTx) ChameleonHash(chParams *crypto.ChameleonHashParameters) [32]byte {
+func (tx *ConfigTx) ChameleonHash(parameters *crypto.ChameleonHashParameters) [32]byte {
 
 	return tx.Hash()
 }
@@ -193,12 +193,12 @@ func (tx *ConfigTx) GetData() []byte {
 	return tx.Data
 }
 
-func (tx *ConfigTx) SetChCheckString(checkString *crypto.ChameleonHashCheckString) {
-	tx.ChCheckString = checkString
+func (tx *ConfigTx) SetCheckString(checkString *crypto.ChameleonHashCheckString) {
+	tx.CheckString = checkString
 }
 
-func (tx *ConfigTx) GetChCheckString() *crypto.ChameleonHashCheckString {
-	return tx.ChCheckString
+func (tx *ConfigTx) GetCheckString() *crypto.ChameleonHashCheckString {
+	return tx.CheckString
 }
 
 func (tx *ConfigTx) SetSignature(signature [64]byte) {

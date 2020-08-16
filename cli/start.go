@@ -149,7 +149,7 @@ func Start(args *startArgs, logger *log.Logger) error {
 		return err
 	}
 
-	rootChParams, err := crypto.GetOrCreateChParamsFromFile(args.rootChParamsFile)
+	rootChParams, err := crypto.GetOrCreateParametersFromFile(args.rootChParamsFile)
 	if err != nil {
 		logger.Printf("%v\n", err)
 		return err

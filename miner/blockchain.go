@@ -158,7 +158,7 @@ func initRootKey(rootKey *ecdsa.PublicKey, rootChamHashParams *crypto.ChameleonH
 	)
 	storage.State[rootAddressHash] = &rootAcc
 	storage.RootKeys[rootAddressHash] = &rootAcc
-	crypto.ChParamsMap[rootAddressHash] = rootAcc.ChParams
+	crypto.ChameleonHashParametersMap[rootAddressHash] = rootAcc.Parameters
 
 	return nil
 }

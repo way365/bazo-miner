@@ -22,7 +22,7 @@ type AggTx struct {
 	Aggregated        bool
 	Block             [32]byte //This saves the blockHashWithoutTransactions into which the transaction was usually validated. Needed for rollback.
 	MerkleRoot        [32]byte
-	ChCheckString     *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
+	CheckString       *crypto.ChameleonHashCheckString // Chameleon hash check string associated with this tx.
 	Data              []byte
 }
 
@@ -65,7 +65,7 @@ func (tx *AggTx) Hash() (hash [32]byte) {
 }
 
 // As we don't use chameleon hashing on config tx, we simply return an SHA3 hash
-func (tx *AggTx) ChameleonHash(chParams *crypto.ChameleonHashParameters) [32]byte {
+func (tx *AggTx) ChameleonHash(parameters *crypto.ChameleonHashParameters) [32]byte {
 
 	return tx.Hash()
 }
@@ -142,12 +142,12 @@ func (tx *AggTx) GetData() []byte {
 	return tx.Data
 }
 
-func (tx *AggTx) SetChCheckString(checkString *crypto.ChameleonHashCheckString) {
-	tx.ChCheckString = checkString
+func (tx *AggTx) SetCheckString(checkString *crypto.ChameleonHashCheckString) {
+	tx.CheckString = checkString
 }
 
-func (tx *AggTx) GetChCheckString() *crypto.ChameleonHashCheckString {
-	return tx.ChCheckString
+func (tx *AggTx) GetCheckString() *crypto.ChameleonHashCheckString {
+	return tx.CheckString
 }
 
 func (tx *AggTx) SetSignature(signature [64]byte) {

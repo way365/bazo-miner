@@ -15,7 +15,7 @@ const CH_SIZE = 256 // Length of a single parameter in bytes.
 const CH_PARAM_SIZE = 64
 
 var (
-	ChParamsMap = make(map[[32]byte]*ChameleonHashParameters)
+	ChameleonHashParametersMap = make(map[[32]byte]*ChameleonHashParameters)
 )
 
 type ChameleonHashParameters struct {
@@ -42,7 +42,7 @@ func newChameleonHashParameters() ChameleonHashParameters {
 }
 
 // Generates a new CheckString from the provided parameters.
-func NewChCheckString(parameters *ChameleonHashParameters) *ChameleonHashCheckString {
+func NewCheckString(parameters *ChameleonHashParameters) *ChameleonHashCheckString {
 	var R, S []byte
 	R = randgen(&parameters.Q)
 	S = randgen(&parameters.Q)
@@ -55,7 +55,7 @@ func NewChCheckString(parameters *ChameleonHashParameters) *ChameleonHashCheckSt
 
 // Retrieve a set of chameleon hash parameters from file.
 // Creates a new set of parameters if the file not exists.
-func GetOrCreateChParamsFromFile(filename string) (params *ChameleonHashParameters, err error) {
+func GetOrCreateParametersFromFile(filename string) (parameters *ChameleonHashParameters, err error) {
 
 	// Create if not exists.
 	if _, err = os.Stat(filename); os.IsNotExist(err) {
@@ -75,7 +75,7 @@ func GetOrCreateChParamsFromFile(filename string) (params *ChameleonHashParamete
 
 	fileHandle, err := os.Open(filename)
 	if err != nil {
-		return params, errors.New(fmt.Sprintf("%v", err))
+		return parameters, errors.New(fmt.Sprintf("%v", err))
 	}
 	defer fileHandle.Close()
 
@@ -88,7 +88,7 @@ func GetOrCreateChParamsFromFile(filename string) (params *ChameleonHashParamete
 	tkString := nextLine(scanner)
 
 	if scanErr := scanner.Err(); scanErr != nil || err != nil {
-		return params, errors.New(fmt.Sprintf("Could not read key from file: %v", err))
+		return parameters, errors.New(fmt.Sprintf("Could not read key from file: %v", err))
 	}
 
 	return &ChameleonHashParameters{
@@ -101,7 +101,7 @@ func GetOrCreateChParamsFromFile(filename string) (params *ChameleonHashParamete
 }
 
 // Get chameleon hash parameters from a set of hex strings
-func GetChParamsFromString(g, p, q, hk, tk string) (params *ChameleonHashParameters, err error) {
+func GetParametersFromString(g, p, q, hk, tk string) (parameters *ChameleonHashParameters, err error) {
 	return &ChameleonHashParameters{
 		G:  []byte(g),
 		P:  []byte(p),
@@ -169,7 +169,7 @@ func keygen(SIZE int, G *[]byte, P *[]byte, Q *[]byte, HK *[]byte, TK *[]byte) {
 }
 
 // Returns the chameleon hash form a set of chameleon hash parameters, a check string and a message to hash.
-func ChameleonHash(params *ChameleonHashParameters, checkString *ChameleonHashCheckString, message *[]byte) [32]byte {
+func ChameleonHash(parameters *ChameleonHashParameters, checkString *ChameleonHashCheckString, message *[]byte) [32]byte {
 	hkeBig := new(big.Int)
 	gsBig := new(big.Int)
 	tmpBig := new(big.Int)
@@ -183,10 +183,10 @@ func ChameleonHash(params *ChameleonHashParameters, checkString *ChameleonHashCh
 	hBig := new(big.Int)
 
 	// Converting from hex to bigInt
-	gBig.SetString(string(params.G), HEX_BASE)
-	pBig.SetString(string(params.P), HEX_BASE)
-	qBig.SetString(string(params.Q), HEX_BASE)
-	hkBig.SetString(string(params.HK), HEX_BASE)
+	gBig.SetString(string(parameters.G), HEX_BASE)
+	pBig.SetString(string(parameters.P), HEX_BASE)
+	qBig.SetString(string(parameters.Q), HEX_BASE)
+	hkBig.SetString(string(parameters.HK), HEX_BASE)
 	rBig.SetString(string(checkString.R), HEX_BASE)
 	sBig.SetString(string(checkString.S), HEX_BASE)
 
@@ -215,7 +215,7 @@ func ChameleonHash(params *ChameleonHashParameters, checkString *ChameleonHashCh
 // newCheckString := GenerateChamHashCollision(params, oldCheckString, oldMessage, newMessage)
 // ChameleonHash(params, oldCheckString, oldMessage) == ChameleonHash(params, newCheckString, newMessage)
 func GenerateChCollision(
-	params *ChameleonHashParameters,
+	parameters *ChameleonHashParameters,
 	checkString *ChameleonHashCheckString,
 	oldMessage *[]byte,
 	newMessage *[]byte,
@@ -234,13 +234,13 @@ func GenerateChCollision(
 	r2Big := new(big.Int)
 	s2Big := new(big.Int)
 
-	gBig.SetString(string(params.G), HEX_BASE)
-	pBig.SetString(string(params.P), HEX_BASE)
-	qBig.SetString(string(params.Q), HEX_BASE)
+	gBig.SetString(string(parameters.G), HEX_BASE)
+	pBig.SetString(string(parameters.P), HEX_BASE)
+	qBig.SetString(string(parameters.Q), HEX_BASE)
 	r1Big.SetString(string(checkString.R), HEX_BASE)
 	s1Big.SetString(string(checkString.S), HEX_BASE)
-	hkBig.SetString(string(params.HK), HEX_BASE)
-	tkBig.SetString(string(params.TK), HEX_BASE)
+	hkBig.SetString(string(parameters.HK), HEX_BASE)
+	tkBig.SetString(string(parameters.TK), HEX_BASE)
 
 	// Generate random k
 	kBig, err := rand.Int(rand.Reader, qBig)
@@ -249,7 +249,7 @@ func GenerateChCollision(
 	}
 
 	// Get chameleon hash of the old message and old check-string
-	hash := ChameleonHash(params, checkString, oldMessage)
+	hash := ChameleonHash(parameters, checkString, oldMessage)
 	hBig.SetBytes(hash[:]) // Convert the big endian encoded hash into bigInt.
 
 	// Compute the new r1
@@ -275,13 +275,13 @@ func GenerateChCollision(
 	}
 }
 
-func (params ChameleonHashParameters) String() string {
+func (parameters ChameleonHashParameters) String() string {
 	return fmt.Sprintf("\n"+
 		"G:   %s\n"+
 		"P:   %s\n"+
 		"Q:   %s\n"+
 		"HK:  %s\n"+
 		"TK:  %s\n",
-		params.G[0:8], params.P[0:8], params.Q[0:8], params.HK[0:8], params.TK,
+		parameters.G[0:8], parameters.P[0:8], parameters.Q[0:8], parameters.HK[0:8], parameters.TK,
 	)
 }
