@@ -11,7 +11,6 @@ import (
 const UPDATE_TX_SIZE = 42
 
 type UpdateTx struct {
-	Header                        byte
 	Fee                           uint64
 	TxToUpdateHash                [32]byte                         // Hash of the tx to be updated.
 	TxToUpdateChamHashCheckString *crypto.ChameleonHashCheckString // New Chameleon hash check string for the tx to be updated.
@@ -23,7 +22,6 @@ type UpdateTx struct {
 }
 
 func ConstrUpdateTx(
-	header byte,
 	fee uint64,
 	txToUpdateHash [32]byte,
 	txToUpdateChamHashCheckString *crypto.ChameleonHashCheckString,
@@ -33,7 +31,6 @@ func ConstrUpdateTx(
 	data []byte,
 ) (tx *UpdateTx, err error) {
 	tx = new(UpdateTx)
-	tx.Header = header
 	tx.Fee = fee
 	tx.TxToUpdateHash = txToUpdateHash
 	tx.TxToUpdateChamHashCheckString = txToUpdateChamHashCheckString
@@ -48,7 +45,6 @@ func ConstrUpdateTx(
 // Returns SHA3 hash over the tx content
 func (tx *UpdateTx) SHA3() [32]byte {
 	toHash := struct {
-		Header                        byte
 		Fee                           uint64
 		TxToUpdateHash                [32]byte
 		TxToUpdateChamHashCheckString crypto.ChameleonHashCheckString
@@ -57,7 +53,6 @@ func (tx *UpdateTx) SHA3() [32]byte {
 		ChamHashCheckString           crypto.ChameleonHashCheckString
 		Data                          []byte
 	}{
-		tx.Header,
 		tx.Fee,
 		tx.TxToUpdateHash,
 		*tx.TxToUpdateChamHashCheckString,
@@ -92,7 +87,6 @@ func (tx *UpdateTx) ChameleonHash(chParams *crypto.ChameleonHashParameters) [32]
 
 func (tx *UpdateTx) Encode() (encodedTx []byte) {
 	encodeData := UpdateTx{
-		Header:                        tx.Header,
 		Fee:                           tx.Fee,
 		TxToUpdateHash:                tx.TxToUpdateHash,
 		TxToUpdateChamHashCheckString: tx.TxToUpdateChamHashCheckString,
@@ -128,8 +122,7 @@ func (tx *UpdateTx) Receiver() [32]byte { return tx.Issuer }
 func (tx UpdateTx) String() string {
 
 	return fmt.Sprintf(
-		"\nHeader: %v\n"+
-			"Fee: %v\n"+
+		"Fee: %v\n"+
 			"TxToUpdate: %x\n"+
 			"TxToUpdateChamHashCheckString: %x\n"+
 			"TxToUpdateData: %s\n"+
@@ -137,7 +130,6 @@ func (tx UpdateTx) String() string {
 			"Sig: %x\n"+
 			"ChCheckString: %x\n"+
 			"Data: %s",
-		tx.Header,
 		tx.Fee,
 		tx.TxToUpdateHash,
 		tx.TxToUpdateChamHashCheckString.R[0:8],
