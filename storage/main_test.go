@@ -4,8 +4,8 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rsa"
-	"github.com/julwil/bazo-miner/crypto"
-	"github.com/julwil/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/protocol"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -31,7 +31,7 @@ const (
 	PrivB      = "7a0a9babcc97ea7991ed67ed7f800f70c5e04e99718960ad8efab2ca052f00c7"
 )
 
-//Root account for testing
+// Root account for testing
 const (
 	RootPub1 = "6323cc034597195ae69bcfb628ecdffa5989c7503154c566bab4a87f3e9910ac"
 	RootPub2 = "f6115b77a15852764c609c6a5c1739e698ebc6e49bf14617c561b9110039cec7"

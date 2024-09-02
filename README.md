@@ -4,7 +4,7 @@
 [![Build Status](https://travis-ci.org/bazo-blockchain/bazo-miner.svg?branch=master)](https://travis-ci.org/bazo-blockchain/bazo-miner)
 
 ## Setup Instructions
-## &#9888; BAZO was moved to [Docker](https://github.com/julwil/bazo-docker)
+## &#9888; BAZO was moved to [Docker](https://github.com/way365/bazo-docker)
 1. Install Go (developed and tested with version >= 1.14)
 2. Set $GOROOT and $GOPATH. For more information, please check out the [official documentation](https://github.com/golang/go/wiki/SettingGOPATH).
 3. run `./scripts/fix-imports.sh`
@@ -78,7 +78,7 @@ Wallet and commitment keys are automatically created. Using this command, we def
 
 Starting miner B requires more work since new accounts have to be registered by a root account.
 In our case, we can use miner's A `WalletA.txt` and `ChParamsA.txt` (e.g. copy the files to the Bazo client directory) to create and add a new account to the network.
-Using the [Bazo client](https://github.com/julwil/bazo-client), we create a new account:
+Using the [Bazo client](https://github.com/way365/bazo-client), we create a new account:
 
 ```bash
 ./bazo-client account create --rootwallet WalletA.txt --wallet WalletB.txt --chparams ChParamsB.txt --data "John Doe"

@@ -6,16 +6,16 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
-	"github.com/julwil/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/crypto"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
 	"testing"
 
-	"github.com/julwil/bazo-miner/p2p"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/p2p"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 )
 
 const (
@@ -56,7 +56,7 @@ const (
 	MultiSigPriv = "b8d1fa3cc7476eafca970ea222676647da1817d1d9dc602e9446290454ffe1a4"
 )
 
-//Globally accessible values for all other tests, (root)account-related
+// Globally accessible values for all other tests, (root)account-related
 var (
 	accA, accB, validatorAcc, multiSigAcc, rootAcc         *protocol.Account
 	PrivKeyAccA, PrivKeyAccB, PrivKeyMultiSig, PrivKeyRoot *ecdsa.PrivateKey
@@ -64,7 +64,7 @@ var (
 	genesisBlock                                           *protocol.Block
 )
 
-//Create some accounts that are used by the tests
+// Create some accounts that are used by the tests
 func addTestingAccounts() {
 	accA, accB, validatorAcc, multiSigAcc = new(protocol.Account), new(protocol.Account), new(protocol.Account), new(protocol.Account)
 
@@ -145,7 +145,7 @@ func addTestingAccounts() {
 	storage.State[hashValidator] = validatorAcc
 }
 
-//Create some root accounts that are used by the tests
+// Create some root accounts that are used by the tests
 func addRootAccounts() {
 	rootAcc = new(protocol.Account)
 
@@ -182,8 +182,8 @@ func addRootAccounts() {
 	storage.RootKeys[hashRoot] = rootAcc
 }
 
-//The state changes (accounts, funds, system parameters etc.) need to be reverted before any new test starts
-//So every test has the same view on the blockchain
+// The state changes (accounts, funds, system parameters etc.) need to be reverted before any new test starts
+// So every test has the same view on the blockchain
 func cleanAndPrepare() {
 	storage.DeleteAll()
 

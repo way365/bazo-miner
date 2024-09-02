@@ -1,14 +1,14 @@
 package miner
 
 import (
-	"github.com/julwil/bazo-miner/p2p"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/p2p"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 )
 
 //The code in this source file communicates with the p2p package via channels
 
-//Constantly listen to incoming data from the network
+// Constantly listen to incoming data from the network
 func incomingData() {
 	for {
 		block := <-p2p.BlockIn
@@ -16,7 +16,7 @@ func incomingData() {
 	}
 }
 
-//ReceivedBlockStash is a stash with all Blocks received such that we can prevent forking
+// ReceivedBlockStash is a stash with all Blocks received such that we can prevent forking
 func processBlock(payload []byte) {
 
 	var block, closedBlock *protocol.Block
@@ -57,7 +57,7 @@ func processBlock(payload []byte) {
 	}
 }
 
-//p2p.BlockOut is a channel whose data get consumed by the p2p package
+// p2p.BlockOut is a channel whose data get consumed by the p2p package
 func broadcastBlock(block *protocol.Block) {
 	p2p.BlockOut <- block.Encode()
 

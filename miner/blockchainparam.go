@@ -2,8 +2,8 @@ package miner
 
 import (
 	"fmt"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"math"
 )
 
@@ -15,10 +15,10 @@ var (
 	currentTargetTime *timerange //Corresponds to the active timerange
 )
 
-//An instance of this datastructure is created whenever system parameters change.
-//The blockhash is additionally recorded to know which blocks the parameter change belongs to.
-//This is necessary, because the system records ALL config txs (even those who have no corresponding
-//code to execute [e.g., when they're running an older version of the code]).
+// An instance of this datastructure is created whenever system parameters change.
+// The blockhash is additionally recorded to know which blocks the parameter change belongs to.
+// This is necessary, because the system records ALL config txs (even those who have no corresponding
+// code to execute [e.g., when they're running an older version of the code]).
 type Parameters struct {
 	BlockHash             [BLOCKHASH_SIZE]byte
 	FeeMinimum            uint64 //Paid minimum fee for sending a tx.
@@ -57,13 +57,13 @@ func NewDefaultParameters() Parameters {
 	return newParameters
 }
 
-//Captures first and last timestamp of the intended blocks of the range.
+// Captures first and last timestamp of the intended blocks of the range.
 type timerange struct {
 	first int64
 	last  int64
 }
 
-//We need to store the history or timeranges to revert in case of rollbacks.
+// We need to store the history or timeranges to revert in case of rollbacks.
 var targetTimes []timerange
 
 func collectStatistics(b *protocol.Block) {

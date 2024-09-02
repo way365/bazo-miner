@@ -4,14 +4,14 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/julwil/bazo-miner/crypto"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"golang.org/x/crypto/sha3"
 	"sync"
 )
 
-//Datastructure to fetch the payload of all transactions, needed for state validation.
+// Datastructure to fetch the payload of all transactions, needed for state validation.
 type blockData struct {
 	accTxSlice             []*protocol.AccTx
 	fundsTxSlice           []*protocol.FundsTx
@@ -23,7 +23,7 @@ type blockData struct {
 	block                  *protocol.Block
 }
 
-//Block constructor, argument is the previous block in the blockchain.
+// Block constructor, argument is the previous block in the blockchain.
 func newBlock(prevHash [32]byte, prevHashWithoutTx [32]byte, commitmentProof [crypto.COMM_PROOF_LENGTH]byte, height uint32) *protocol.Block {
 	block := new(protocol.Block)
 	block.PrevHash = prevHash
@@ -41,7 +41,7 @@ var (
 	addFundsTxMutex  = &sync.Mutex{}
 )
 
-//This function prepares the block to broadcast into the network. No new txs are added at this point.
+// This function prepares the block to broadcast into the network. No new txs are added at this point.
 func finalizeBlock(block *protocol.Block) error {
 	//Check if we have a slashing proof that we can add to the block.
 	//The slashingDict is updated when a new block is received and when a slashing proof is provided.
@@ -119,9 +119,9 @@ func finalizeBlock(block *protocol.Block) error {
 	return nil
 }
 
-//Transaction validation operates on a copy of a tiny subset of the state (all accounts involved in transactions).
-//We do not operate global state because the work might get interrupted by receiving a block that needs validation
-//which is done on the global state.
+// Transaction validation operates on a copy of a tiny subset of the state (all accounts involved in transactions).
+// We do not operate global state because the work might get interrupted by receiving a block that needs validation
+// which is done on the global state.
 func addTx(b *protocol.Block, tx protocol.Transaction) error {
 	//ActiveParameters is a datastructure that stores the current system parameters, gets only changed when
 	//configTxs are broadcast in the network.

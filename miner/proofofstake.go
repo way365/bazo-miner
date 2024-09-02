@@ -4,18 +4,18 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"github.com/julwil/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/crypto"
 	"sync"
 	"time"
 
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"golang.org/x/crypto/sha3"
 )
 
 var validateMutex = sync.Mutex{}
 
-//Tests whether the first diff bits are zero
+// Tests whether the first diff bits are zero
 func validateProofOfStake(diff uint8,
 	prevProofs [][crypto.COMM_PROOF_LENGTH]byte,
 	height uint32,
@@ -76,8 +76,8 @@ func validateProofOfStake(diff uint8,
 	return true
 }
 
-//diff and partialHash is needed to calculate a valid PoS, prevHash is needed to check whether we should stop
-//PoS calculation because another block has been validated meanwhile
+// diff and partialHash is needed to calculate a valid PoS, prevHash is needed to check whether we should stop
+// PoS calculation because another block has been validated meanwhile
 func proofOfStake(diff uint8,
 	prevHash [32]byte,
 	prevProofs [][crypto.COMM_PROOF_LENGTH]byte,

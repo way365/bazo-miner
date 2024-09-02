@@ -1,7 +1,7 @@
 package p2p
 
 import (
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/storage"
 	"log"
 )
 

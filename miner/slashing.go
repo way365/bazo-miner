@@ -2,9 +2,9 @@ package miner
 
 import (
 	"errors"
-	"github.com/julwil/bazo-miner/p2p"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/p2p"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"sync"
 	"time"
 )
@@ -18,7 +18,7 @@ type SlashingProof struct {
 
 var SameChainMutex = sync.Mutex{}
 
-//Find a proof where a validator votes on two different chains within the slashing window
+// Find a proof where a validator votes on two different chains within the slashing window
 func seekSlashingProof(block *protocol.Block) error {
 	//check if block is being added to your chain
 	lastClosedBlock := storage.ReadLastClosedBlock()
@@ -50,7 +50,7 @@ func seekSlashingProof(block *protocol.Block) error {
 	return nil
 }
 
-//Check if two blocks are part of the same chain or if they appear in two competing chains
+// Check if two blocks are part of the same chain or if they appear in two competing chains
 func IsInSameChain(b1, b2 *protocol.Block) bool {
 
 	SameChainMutex.Lock()

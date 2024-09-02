@@ -3,10 +3,10 @@ package miner
 import (
 	"errors"
 	"fmt"
-	"github.com/julwil/bazo-miner/crypto"
-	"github.com/julwil/bazo-miner/p2p"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/p2p"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"strconv"
 	"time"
 )
@@ -133,7 +133,7 @@ func validate(b *protocol.Block, initialSetup bool) error {
 	return nil
 }
 
-//Doesn't involve any state changes.
+// Doesn't involve any state changes.
 func preValidate(block *protocol.Block, initialSetup bool) error {
 
 	//Check state contains beneficiary.
@@ -224,7 +224,7 @@ func preValidate(block *protocol.Block, initialSetup bool) error {
 	return nil
 }
 
-//Dynamic state check.
+// Dynamic state check.
 func validateState(data blockData, initialSetup bool) error {
 	//The sequence of validation matters. If we start with accs, then fund/stake transactions can be done in the same block
 	//even though the accounts did not exist before the block validation.
@@ -423,7 +423,7 @@ func postValidate(data blockData, initialSetup bool) {
 	}
 }
 
-//Only blocks with timestamp not diverging from system time (past or future) more than one hour are accepted.
+// Only blocks with timestamp not diverging from system time (past or future) more than one hour are accepted.
 func timestampCheck(timestamp int64) error {
 	systemTime := p2p.ReadSystemTime()
 

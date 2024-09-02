@@ -1,8 +1,8 @@
 package p2p
 
 import (
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"sync"
 )
 
@@ -41,7 +41,7 @@ var (
 	updateTxStashMutex = &sync.Mutex{}
 )
 
-//This is for blocks and txs that the miner successfully validated.
+// This is for blocks and txs that the miner successfully validated.
 func forwardBlockBrdcstToMiner() {
 	for {
 		block := <-BlockOut
@@ -84,7 +84,7 @@ func processBlockBrdcst(p *peer, payload []byte) {
 	BlockIn <- payload
 }
 
-//Checks if Tx Is in the received stash. If true, we received the transaction with a request already.
+// Checks if Tx Is in the received stash. If true, we received the transaction with a request already.
 func FundsTxAlreadyInStash(slice []*protocol.FundsTx, newTXHash [32]byte) bool {
 	for _, txInStash := range slice {
 		if txInStash.Hash() == newTXHash {
@@ -139,7 +139,7 @@ func BlockAlreadyReceived(slice []*protocol.Block, newBlockHash [32]byte) bool {
 	return false
 }
 
-//These are transactions the miner specifically requested.
+// These are transactions the miner specifically requested.
 func forwardTxReqToMiner(p *peer, payload []byte, txType uint8) {
 	if payload == nil {
 		return

@@ -4,10 +4,10 @@ import (
 	"log"
 	"testing"
 
-	"github.com/julwil/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/protocol"
 )
 
-// Function generates random bytes, if an exception occurs, it is catched and printed out with the random bytes,
+//  Function generates random bytes, if an exception occurs, it is catched and printed out with the random bytes,
 // so the specific failing test can be recreated
 func Fuzz() {
 	code := protocol.RandomBytes()

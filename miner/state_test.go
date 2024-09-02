@@ -1,17 +1,17 @@
 package miner
 
 import (
-	"github.com/julwil/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/crypto"
 	"math/rand"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 )
 
-//Testing state change, rollback and fee collection
+// Testing state change, rollback and fee collection
 func TestFundsTxStateChange(t *testing.T) {
 	cleanAndPrepare()
 
@@ -219,7 +219,7 @@ func TestConfigTxStateChange(t *testing.T) {
 	}
 }
 
-//If we parse configTxs which are unknown, we don't change parameter datastructure
+// If we parse configTxs which are unknown, we don't change parameter datastructure
 func TestConfigTxStateChangeUnknown(t *testing.T) {
 	cleanAndPrepare()
 
@@ -272,7 +272,7 @@ func TestConfigTxStateChangeUnknown(t *testing.T) {
 	}
 }
 
-//Testing state change, rollback and fee collection
+// Testing state change, rollback and fee collection
 func TestStakeTxStateChange(t *testing.T) {
 	cleanAndPrepare()
 

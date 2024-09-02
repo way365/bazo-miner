@@ -3,10 +3,10 @@ package miner
 import (
 	"errors"
 	"fmt"
-	"github.com/julwil/bazo-miner/p2p"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
-	"github.com/julwil/bazo-miner/vm"
+	"github.com/way365/bazo-miner/p2p"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
+	"github.com/way365/bazo-miner/vm"
 	"time"
 )
 
@@ -187,7 +187,7 @@ func fetchFundsTxData(block *protocol.Block, fundsTxSlice []*protocol.FundsTx, i
 	errChan <- nil
 }
 
-//This function fetches the funds transactions recursively --> When a aggTx is agregated in another aggTx.
+// This function fetches the funds transactions recursively --> When a aggTx is agregated in another aggTx.
 // This is mainly needed for the startup process. It is recursively searching until only funds transactions are in the list.
 func fetchFundsTxRecursively(AggregatedTxSlice [][32]byte) (aggregatedFundsTxSlice []*protocol.FundsTx, err error) {
 	for _, txHash := range AggregatedTxSlice {

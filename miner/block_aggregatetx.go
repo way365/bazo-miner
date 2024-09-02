@@ -3,9 +3,9 @@ package miner
 import (
 	"errors"
 	"fmt"
-	"github.com/julwil/bazo-miner/p2p"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/p2p"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"sort"
 	"time"
 )
@@ -261,7 +261,7 @@ func searchTransactionsInHistoricBlocks(searchAddressSender [32]byte, searchAddr
 	return historicTransactions
 }
 
-//This function fetches the AggTx's from a block. Furthermore it fetches missing transactions aggregated by these AggTx's
+// This function fetches the AggTx's from a block. Furthermore it fetches missing transactions aggregated by these AggTx's
 func fetchAggTxData(block *protocol.Block, aggTxSlice []*protocol.AggTx, initialSetup bool, errChan chan error, aggregatedFundsChan chan []*protocol.FundsTx) {
 	var transactions []*protocol.FundsTx
 

@@ -1,17 +1,17 @@
 package miner
 
 import (
-	"github.com/julwil/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/crypto"
 	"math/rand"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 )
 
-//Rollback tests for all tx types
+// Rollback tests for all tx types
 func TestFundsStateChangeRollback(t *testing.T) {
 	cleanAndPrepare()
 

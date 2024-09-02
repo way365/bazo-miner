@@ -2,8 +2,8 @@ package cli
 
 import (
 	"fmt"
-	"github.com/julwil/bazo-miner/crypto"
 	"github.com/urfave/cli"
+	"github.com/way365/bazo-miner/crypto"
 )
 
 func GetGenerateWalletCommand() cli.Command {

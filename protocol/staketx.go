@@ -6,7 +6,7 @@ import (
 	"crypto/rsa"
 	"encoding/binary"
 	"fmt"
-	"github.com/julwil/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/crypto"
 )
 
 const (
@@ -85,8 +85,8 @@ func (tx *StakeTx) ChameleonHash(parameters *crypto.ChameleonHashParameters) [32
 	return tx.Hash()
 }
 
-//when we serialize the struct with binary.Write, unexported field get serialized as well, undesired
-//behavior. Therefore, writing own encoder/decoder
+// when we serialize the struct with binary.Write, unexported field get serialized as well, undesired
+// behavior. Therefore, writing own encoder/decoder
 func (tx *StakeTx) Encode() (encodedTx []byte) {
 	if tx == nil {
 		return nil

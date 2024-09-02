@@ -8,7 +8,7 @@ import (
 
 	"fmt"
 
-	"github.com/julwil/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/protocol"
 )
 
 func TestVM_NewTestVM(t *testing.T) {

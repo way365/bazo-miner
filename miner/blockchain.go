@@ -3,10 +3,10 @@ package miner
 import (
 	"crypto/ecdsa"
 	"crypto/rsa"
-	"github.com/julwil/bazo-miner/crypto"
-	"github.com/julwil/bazo-miner/p2p"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/p2p"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"log"
 	"sync"
 )
@@ -23,7 +23,7 @@ var (
 	commPrivKey, rootCommPrivKey *rsa.PrivateKey
 )
 
-//Miner entry point
+// Miner entry point
 func Init(
 	validatorWallet *ecdsa.PublicKey,
 	multisigWallet,
@@ -95,7 +95,7 @@ func Init(
 	mining(initialBlock)
 }
 
-//Mining is a constant process, trying to come up with a successful PoW.
+// Mining is a constant process, trying to come up with a successful PoW.
 func mining(initialBlock *protocol.Block) {
 	currentBlock := newBlock(initialBlock.Hash, initialBlock.HashWithoutTx, [crypto.COMM_PROOF_LENGTH]byte{}, initialBlock.Height+1)
 

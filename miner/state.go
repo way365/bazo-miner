@@ -3,16 +3,16 @@ package miner
 import (
 	"errors"
 	"fmt"
-	"github.com/julwil/bazo-miner/crypto"
-	"github.com/julwil/bazo-miner/p2p"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/p2p"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"sort"
 	"strconv"
 	"time"
 )
 
-//Separate function to reuse mechanism in client implementation
+// Separate function to reuse mechanism in client implementation
 func CheckAndChangeParameters(parameters *Parameters, configTxSlice *[]*protocol.ConfigTx) (change bool) {
 	for _, tx := range *configTxSlice {
 		switch tx.Id {
@@ -81,7 +81,7 @@ func CheckAndChangeParameters(parameters *Parameters, configTxSlice *[]*protocol
 	return change
 }
 
-//For logging purposes
+// For logging purposes
 func getState() (state string) {
 	for _, acc := range storage.State {
 		state += fmt.Sprintf("Is root: %v, %v\n", storage.IsRootKey(acc.Hash()), acc)
@@ -314,7 +314,7 @@ func accStateChange(txSlice []*protocol.AccTx) error {
 	return nil
 }
 
-//this method does inititate the state change for aggregated Transactions.
+// this method does inititate the state change for aggregated Transactions.
 func aggTxStateChange(txSlice []*protocol.FundsTx, initialSetup bool) (err error) {
 	sort.Sort(ByTxCount(txSlice))
 
@@ -402,8 +402,8 @@ func fundsStateChange(txSlice []*protocol.FundsTx, initialSetup bool) (err error
 	return nil
 }
 
-//We accept config slices with unknown id, but don't act on the payload. This is in case we have not updated to a new
-//software with corresponding code to act on the configTx id/payload
+// We accept config slices with unknown id, but don't act on the payload. This is in case we have not updated to a new
+// software with corresponding code to act on the configTx id/payload
 func configStateChange(configTxSlice []*protocol.ConfigTx, blockHash [32]byte) {
 	var newParameters Parameters
 	//Initialize it to state right now (before validating config txs)
@@ -607,7 +607,7 @@ func collectSlashReward(reward uint64, block *protocol.Block) (err error) {
 	return nil
 }
 
-//No rollback method exists
+// No rollback method exists
 func updateStakingHeight(block *protocol.Block) error {
 	acc, err := storage.GetAccount(block.Beneficiary)
 	if err != nil {

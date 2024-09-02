@@ -3,15 +3,15 @@ package miner
 import (
 	"errors"
 	"fmt"
-	"github.com/julwil/bazo-miner/p2p"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/p2p"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"sync"
 	"time"
 )
 
-//Function to give a list of blocks to rollback (in the right order) and a list of blocks to validate.
-//Covers both cases (if block belongs to the longest chain or not).
+// Function to give a list of blocks to rollback (in the right order) and a list of blocks to validate.
+// Covers both cases (if block belongs to the longest chain or not).
 func getBlockSequences(newBlock *protocol.Block) (blocksToRollback, blocksToValidate []*protocol.Block, err error) {
 	//Fetch all blocks that are needed to validate.
 	ancestor, newChain := getNewChain(newBlock)
@@ -71,8 +71,8 @@ func getBlockSequences(newBlock *protocol.Block) (blocksToRollback, blocksToVali
 	}
 }
 
-//Returns the ancestor from which the split occurs (if a split occurred, if not it's just our last block) and a list
-//of blocks that belong to a new chain.
+// Returns the ancestor from which the split occurs (if a split occurred, if not it's just our last block) and a list
+// of blocks that belong to a new chain.
 func getNewChain(newBlock *protocol.Block) (ancestor *protocol.Block, newChain []*protocol.Block) {
 	found := false
 	for {

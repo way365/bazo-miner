@@ -2,17 +2,17 @@ package miner
 
 import (
 	"fmt"
-	"github.com/julwil/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/crypto"
 	"math/rand"
 	"reflect"
 	"testing"
 
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
-	"github.com/julwil/bazo-miner/vm"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
+	"github.com/way365/bazo-miner/vm"
 )
 
-// This test deploys a smart contract in the first block and calls the smart contract in the second block
+//  This test deploys a smart contract in the first block and calls the smart contract in the second block
 func TestMultipleBlocksWithContractTx(t *testing.T) {
 	cleanAndPrepare()
 
@@ -40,7 +40,7 @@ func TestMultipleBlocksWithContractTx(t *testing.T) {
 	}
 }
 
-// This test deploys a smart contract with a state variable in the first block and calls the smart contract in the second
+//  This test deploys a smart contract with a state variable in the first block and calls the smart contract in the second
 // block which loads the state variable, alters the local variable and stores the change
 func TestMultipleBlocksWithStateChangeContractTx(t *testing.T) {
 	cleanAndPrepare()
@@ -77,7 +77,7 @@ func TestMultipleBlocksWithStateChangeContractTx(t *testing.T) {
 	}
 }
 
-// This test is similar to the TestMultipleBlocksWithStateChangeContractTx. The difference is, that after the first state change
+//  This test is similar to the TestMultipleBlocksWithStateChangeContractTx. The difference is, that after the first state change
 // transaction, a second one is called, which changes the state again.
 func TestMultipleBlocksWithDoubleStateChangeContractTx(t *testing.T) {
 	cleanAndPrepare()
@@ -149,7 +149,7 @@ func TestMultipleBlocksWithContextContractTx(t *testing.T) {
 	}
 }
 
-// This test deploys a smart contract in the first block and calls the smart contract in the second block
+//  This test deploys a smart contract in the first block and calls the smart contract in the second block
 func TestMultipleBlocksWithTokenizationContractTx(t *testing.T) {
 	cleanAndPrepare()
 

@@ -1,7 +1,7 @@
 package p2p
 
 import (
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/storage"
 	"time"
 )
 
@@ -14,8 +14,8 @@ type delayedMessagesPerSender struct {
 	delayedMessages [][]byte
 }
 
-//This is not accessed concurrently, one single goroutine. However, the "peers" are accessed concurrently, therefore the
-//Thread-safe implementation.
+// This is not accessed concurrently, one single goroutine. However, the "peers" are accessed concurrently, therefore the
+// Thread-safe implementation.
 func peerService() {
 	for {
 		select {
@@ -61,7 +61,7 @@ func clientBroadcastService() {
 	}
 }
 
-//This function does send the current and possible previous not send messages
+// This function does send the current and possible previous not send messages
 func sendAndSearchMessages(msg []byte) {
 	sMap := sendingMap
 	for _, p := range sMap {
@@ -102,7 +102,7 @@ func sendAndSearchMessages(msg []byte) {
 	}
 }
 
-//This function checks if a connection was already established once and if the peer "behind" the IP + Port changed.
+// This function checks if a connection was already established once and if the peer "behind" the IP + Port changed.
 // This can happen all time when new connecting, because e.g a new channel (p.ch) is set up once adding a new peer
 // (even if it was added before). If the peer changes as well, it gets updated in teh sendingMap.
 func isConnectionAlreadyInSendingMap(p *peer, sendingMap map[string]*delayedMessagesPerSender) (alreadyInSenderMap bool, needsUpdate bool) {
@@ -119,7 +119,7 @@ func isConnectionAlreadyInSendingMap(p *peer, sendingMap map[string]*delayedMess
 	return false, false
 }
 
-//Belongs to the broadcast service.
+// Belongs to the broadcast service.
 func peerBroadcast(p *peer) {
 
 	for msg := range p.ch {
@@ -127,7 +127,7 @@ func peerBroadcast(p *peer) {
 	}
 }
 
-//Single goroutine that makes sure the system is well connected.
+// Single goroutine that makes sure the system is well connected.
 func checkHealthService() {
 	for {
 		//time.Sleep(HEALTH_CHECK_INTERVAL * time.Second)  Between 5 and 30 seconds check interval.
@@ -187,7 +187,7 @@ func checkHealthService() {
 	}
 }
 
-//Calculates periodically system time from available sources and broadcasts the time to all connected peers.
+// Calculates periodically system time from available sources and broadcasts the time to all connected peers.
 func timeService() {
 	//Initialize system time.
 	systemTime = time.Now().Unix()

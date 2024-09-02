@@ -2,8 +2,8 @@ package p2p
 
 import (
 	"encoding/binary"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"strconv"
 	"sync"
 )
@@ -12,8 +12,8 @@ var (
 	processTxBroadcastMutex = &sync.Mutex{}
 )
 
-//Process tx broadcasts from other miners. We can't broadcast incoming messages directly, first check if
-//the tx has already been broadcast before, whether it is a valid tx etc.
+// Process tx broadcasts from other miners. We can't broadcast incoming messages directly, first check if
+// the tx has already been broadcast before, whether it is a valid tx etc.
 func processTxBrdcst(p *peer, payload []byte, brdcstType uint8) {
 
 	var tx protocol.Transaction
@@ -113,7 +113,7 @@ func processNeighborRes(p *peer, payload []byte) {
 	}
 }
 
-//Split the processNeighborRes function in two for cleaner testing.
+// Split the processNeighborRes function in two for cleaner testing.
 func _processNeighborRes(payload []byte) (ipportList []string) {
 	index := 0
 

@@ -2,7 +2,7 @@ package storage
 
 import (
 	"fmt"
-	"github.com/julwil/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/protocol"
 	"log"
 	"sync"
 	"time"
@@ -39,7 +39,7 @@ const (
 	ERROR_MSG = "Initiate storage aborted: "
 )
 
-//Entry function for the storage package
+// Entry function for the storage package
 func Init(dbname string, bootstrapIpport string) {
 	Bootstrap_Server = bootstrapIpport
 	logger = InitLogger()

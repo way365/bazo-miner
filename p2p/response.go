@@ -3,8 +3,8 @@ package p2p
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,7 +15,7 @@ var (
 	notFoundTxMutex        = &sync.Mutex{}
 )
 
-//This file responds to incoming requests from miners in a synchronous fashion
+// This file responds to incoming requests from miners in a synchronous fashion
 func txRes(p *peer, payload []byte, txKind uint8) {
 	var txHash [32]byte
 	if len(payload) != 32 {
@@ -180,7 +180,7 @@ func specialTxRes(p *peer, payload []byte, txKind uint8) {
 	}
 }
 
-//Here as well, checking open and closed block storage
+// Here as well, checking open and closed block storage
 func blockRes(p *peer, payload []byte) {
 	var packet []byte
 	var block *protocol.Block
@@ -210,7 +210,7 @@ func blockRes(p *peer, payload []byte) {
 	sendData(p, packet)
 }
 
-//Response the requested block SPV header
+// Response the requested block SPV header
 func blockHeaderRes(p *peer, payload []byte) {
 	var encodedHeader, packet []byte
 	var block *protocol.Block
@@ -243,7 +243,7 @@ func blockHeaderRes(p *peer, payload []byte) {
 	sendData(p, packet)
 }
 
-//Responds to an account request from another miner
+// Responds to an account request from another miner
 func accRes(p *peer, payload []byte) {
 	var packet []byte
 	var hash [32]byte
@@ -272,7 +272,7 @@ func rootAccRes(p *peer, payload []byte) {
 	sendData(p, packet)
 }
 
-//Completes the handshake with another miner.
+// Completes the handshake with another miner.
 func pongRes(p *peer, payload []byte, peerType uint) {
 	//Payload consists of a 2 bytes array (port number [big endian encoded]).
 	port := _pongRes(payload)
@@ -304,7 +304,7 @@ func pongRes(p *peer, payload []byte, peerType uint) {
 	sendData(p, packet)
 }
 
-//Decouple the function for testing.
+// Decouple the function for testing.
 func _pongRes(payload []byte) string {
 	if len(payload) == PORT_SIZE {
 		return strconv.Itoa(int(binary.BigEndian.Uint16(payload[0:PORT_SIZE])))
@@ -329,7 +329,7 @@ func neighborRes(p *peer) {
 	sendData(p, packet)
 }
 
-//Decouple functionality to facilitate testing
+// Decouple functionality to facilitate testing
 func _neighborRes(ipportList []string) (payload []byte) {
 
 	payload = make([]byte, len(ipportList)*6) //6 = size of ipv4 address + port

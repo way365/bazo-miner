@@ -5,8 +5,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"net"
 	"strings"
 	"time"
@@ -96,7 +96,7 @@ func sendData(p *peer, payload []byte) {
 	p.l.Unlock()
 }
 
-//Tested in server_test.go
+// Tested in server_test.go
 func peerExists(newIpport string) bool {
 	peerList := peers.getAllPeers(PEERTYPE_MINER)
 
@@ -110,7 +110,7 @@ func peerExists(newIpport string) bool {
 	return false
 }
 
-//Tested in server_test.go
+// Tested in server_test.go
 func peerSelfConn(newIpport string) bool {
 	return newIpport == Ipport
 }
@@ -165,7 +165,7 @@ func ReadHeader(reader *bufio.Reader) (*Header, error) {
 	return header, nil
 }
 
-//Decoupled functionality for testing reasons.
+// Decoupled functionality for testing reasons.
 func extractHeader(headerData []byte) *Header {
 	header := new(Header)
 

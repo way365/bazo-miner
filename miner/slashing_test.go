@@ -1,9 +1,9 @@
 package miner
 
 import (
-	"github.com/julwil/bazo-miner/crypto"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"reflect"
 	"testing"
 )

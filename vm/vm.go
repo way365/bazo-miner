@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/julwil/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/protocol"
 
 	"golang.org/x/crypto/sha3"
 )

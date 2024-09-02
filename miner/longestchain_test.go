@@ -1,13 +1,13 @@
 package miner
 
 import (
-	"github.com/julwil/bazo-miner/crypto"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/storage"
 	"testing"
 )
 
-//Tests cases 1) when new block is received that belongs to a longer chain and 2) when new block is received
-//that is shorter than the current chain
+// Tests cases 1) when new block is received that belongs to a longer chain and 2) when new block is received
+// that is shorter than the current chain
 func TestGetBlockSequences(t *testing.T) {
 
 	cleanAndPrepare()
@@ -129,8 +129,8 @@ func TestGetBlockSequences(t *testing.T) {
 	}
 }
 
-//Test whether we get the new proper chain (we leverage the fact that open storage is checked so we don't need
-//to need network functionality for that test
+// Test whether we get the new proper chain (we leverage the fact that open storage is checked so we don't need
+// to need network functionality for that test
 func TestGetNewChain(t *testing.T) {
 
 	cleanAndPrepare()

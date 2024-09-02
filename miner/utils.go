@@ -1,7 +1,7 @@
 package miner
 
 import (
-	"github.com/julwil/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/protocol"
 	"sort"
 )
 

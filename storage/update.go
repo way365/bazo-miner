@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/julwil/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/protocol"
 )
 
 func UpdateBlocksToBlocksWithoutTx(block *protocol.Block) (err error) {

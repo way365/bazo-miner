@@ -1,12 +1,12 @@
 package miner
 
 import (
-	"github.com/julwil/bazo-miner/crypto"
-	"github.com/julwil/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/protocol"
 	"testing"
 )
 
-//Testing whether target calculation responds to block rollbacks
+// Testing whether target calculation responds to block rollbacks
 func TestTargetHistory(t *testing.T) {
 	cleanAndPrepare()
 
@@ -62,7 +62,7 @@ func TestTargetHistory(t *testing.T) {
 	}
 }
 
-//Tests whether system changes of relevant parameters influence the code
+// Tests whether system changes of relevant parameters influence the code
 func TestTimestamps(t *testing.T) {
 	cleanAndPrepare()
 
@@ -103,7 +103,7 @@ func TestTimestamps(t *testing.T) {
 	}
 }
 
-//Tests whether the diff logic respects edge cases
+// Tests whether the diff logic respects edge cases
 func TestCalculateNewDifficulty(t *testing.T) {
 	cleanAndPrepare()
 

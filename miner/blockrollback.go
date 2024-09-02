@@ -2,12 +2,12 @@ package miner
 
 import (
 	"errors"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 )
 
-//Already validated block but not part of the current longest chain.
-//No need for an additional state mutex, because this function is called while the blockValidation mutex is actively held.
+// Already validated block but not part of the current longest chain.
+// No need for an additional state mutex, because this function is called while the blockValidation mutex is actively held.
 func rollback(b *protocol.Block) error {
 	accTxSlice,
 		fundsTxSlice,

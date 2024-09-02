@@ -1,8 +1,8 @@
 package miner
 
 import (
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"sort"
 )
 
@@ -48,7 +48,7 @@ func fundsStateChangeRollback(txSlice []*protocol.FundsTx) {
 	}
 }
 
-//This method does search historic blocks which do not have any transactions inside and now have to be reactivated
+// This method does search historic blocks which do not have any transactions inside and now have to be reactivated
 // because a transaction validated in this block was aggregated later in a block which now is rolled back. Thus all the
 // transactions in this block need ot be reactivated such that they are visible in the chain.
 func reactivateHistoricBlockDueToRollback(tx protocol.Transaction) {

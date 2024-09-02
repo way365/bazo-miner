@@ -2,7 +2,7 @@ package storage
 
 import (
 	"github.com/boltdb/bolt"
-	"github.com/julwil/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/protocol"
 )
 
 func WriteOpenBlock(block *protocol.Block) (err error) {
@@ -49,7 +49,7 @@ func WriteLastClosedBlock(block *protocol.Block) (err error) {
 	return err
 }
 
-//Changing the "tx" shortcut here and using "transaction" to distinguish between bolt's transactions
+// Changing the "tx" shortcut here and using "transaction" to distinguish between bolt's transactions
 func WriteOpenTx(transaction protocol.Transaction) {
 	openTxMutex.Lock()
 	txMemPool[transaction.Hash()] = transaction

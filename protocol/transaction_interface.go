@@ -1,6 +1,6 @@
 package protocol
 
-import "github.com/julwil/bazo-miner/crypto"
+import "github.com/way365/bazo-miner/crypto"
 
 const (
 	TRANSACTION_HASH_SIZE     = 32

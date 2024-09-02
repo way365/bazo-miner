@@ -2,19 +2,19 @@ package miner
 
 import (
 	"fmt"
-	"github.com/julwil/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/crypto"
 	"math/rand"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 )
 
-//Tests block adding, verification, serialization and deserialization
-//This test goes further than protocol/block_test.go because it tests the integrity of the payloads as well
-//while protocol/block_test.go only tests serialization/deserialization and size calculation
+// Tests block adding, verification, serialization and deserialization
+// This test goes further than protocol/block_test.go because it tests the integrity of the payloads as well
+// while protocol/block_test.go only tests serialization/deserialization and size calculation
 func TestBlock(t *testing.T) {
 	cleanAndPrepare()
 
@@ -57,7 +57,7 @@ func TestBlock(t *testing.T) {
 	}
 }
 
-//Duplicate Txs are not allowed
+// Duplicate Txs are not allowed
 func TestBlockTxDuplicates(t *testing.T) {
 
 	cleanAndPrepare()
@@ -96,7 +96,7 @@ func TestBlockTxDuplicates(t *testing.T) {
 
 }
 
-//Blocks that link to the previous block and have valid txs should pass
+// Blocks that link to the previous block and have valid txs should pass
 func TestMultipleBlocks(t *testing.T) {
 	cleanAndPrepare()
 
@@ -129,7 +129,7 @@ func TestMultipleBlocks(t *testing.T) {
 	}
 }
 
-//Test the blocktimestamp check
+// Test the blocktimestamp check
 func TestTimestampCheck(t *testing.T) {
 	cleanAndPrepare()
 
@@ -150,7 +150,7 @@ func TestTimestampCheck(t *testing.T) {
 	}
 }
 
-//Helper function used by lots of test to fill the block with some random data
+// Helper function used by lots of test to fill the block with some random data
 func createBlockWithTxs(b *protocol.Block) ([][32]byte, [][32]byte, [][32]byte, [][32]byte) {
 	var testSize uint32
 	testSize = 100

@@ -4,17 +4,17 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"fmt"
-	"github.com/julwil/bazo-miner/crypto"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"math/big"
 	"reflect"
 )
 
-//We can't use polymorphism, e.g. we can't use tx.verify() because the Transaction interface doesn't declare
-//the verify method. This is because verification depends on the State (e.g., dynamic properties), which
-//should only be of concern to the miner, not to the protocol package. However, this has the disadvantage
-//that we have to do case distinction here.
+// We can't use polymorphism, e.g. we can't use tx.verify() because the Transaction interface doesn't declare
+// the verify method. This is because verification depends on the State (e.g., dynamic properties), which
+// should only be of concern to the miner, not to the protocol package. However, this has the disadvantage
+// that we have to do case distinction here.
 func verify(tx protocol.Transaction) bool {
 	switch tx.(type) {
 	case *protocol.FundsTx:
@@ -133,7 +133,7 @@ func verifyStakeTx(tx *protocol.StakeTx) bool {
 	return IsSigned(txHash, tx.Sig, accFrom.Address)
 }
 
-//TODO Update this function
+// TODO Update this function
 func verifyAggTx(tx *protocol.AggTx) bool {
 	//Check if accounts are existent
 	//accSender, err := storage.GetAccount(tx.From)
@@ -223,8 +223,8 @@ func verifyUpdateTx(tx *protocol.UpdateTx) bool {
 	return true
 }
 
-//Returns true if id is in the list of possible ids and rational value for payload parameter.
-//Some values just don't make any sense and have to be restricted accordingly
+// Returns true if id is in the list of possible ids and rational value for payload parameter.
+// Some values just don't make any sense and have to be restricted accordingly
 func parameterBoundsChecking(id uint8, payload uint64) bool {
 	switch id {
 	case protocol.BLOCK_SIZE_ID:

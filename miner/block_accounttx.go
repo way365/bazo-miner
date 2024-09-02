@@ -3,9 +3,9 @@ package miner
 import (
 	"errors"
 	"fmt"
-	"github.com/julwil/bazo-miner/p2p"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/p2p"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"golang.org/x/crypto/sha3"
 	"time"
 )
@@ -26,7 +26,7 @@ func addAccTx(b *protocol.Block, tx *protocol.AccTx) error {
 	return nil
 }
 
-//We use slices (not maps) because order is now important.
+// We use slices (not maps) because order is now important.
 func fetchAccTxData(block *protocol.Block, accTxSlice []*protocol.AccTx, initialSetup bool, errChan chan error) {
 	for cnt, txHash := range block.AccTxData {
 		var tx protocol.Transaction

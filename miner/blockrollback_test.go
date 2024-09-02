@@ -1,15 +1,15 @@
 package miner
 
 import (
-	"github.com/julwil/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/crypto"
 	"reflect"
 	"testing"
 
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 )
 
-//Tests whether state is the same before validation and after rollback of a block
+// Tests whether state is the same before validation and after rollback of a block
 func TestValidateBlockRollback(t *testing.T) {
 	cleanAndPrepare()
 
@@ -56,7 +56,7 @@ func TestValidateBlockRollback(t *testing.T) {
 	}
 }
 
-//Same test as TestValidateBlockRollback but with multiple blocks validations/rollbacks
+// Same test as TestValidateBlockRollback but with multiple blocks validations/rollbacks
 func TestMultipleBlocksRollback(t *testing.T) {
 	//Create 4 blocks after genesis, rollback 3
 	cleanAndPrepare()

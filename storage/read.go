@@ -2,11 +2,11 @@ package storage
 
 import (
 	"github.com/boltdb/bolt"
-	"github.com/julwil/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/protocol"
 	"sort"
 )
 
-//Always return nil if requested hash is not in the storage. This return value is then checked against by the caller
+// Always return nil if requested hash is not in the storage. This return value is then checked against by the caller
 func ReadOpenBlock(hash [32]byte) (block *protocol.Block) {
 
 	var encodedBlock []byte
@@ -39,7 +39,7 @@ func ReadClosedBlock(hash [32]byte) (block *protocol.Block) {
 	return block
 }
 
-//This function does read all blocks without transactions inside.
+// This function does read all blocks without transactions inside.
 func ReadClosedBlockWithoutTx(hash [32]byte) (block *protocol.Block) {
 
 	db.View(func(tx *bolt.Tx) error {
@@ -132,7 +132,7 @@ func ReadAllClosedFundsAndAggTransactions() (allClosedTransactions []protocol.Tr
 	return allClosedTransactions
 }
 
-//This method does read all blocks in closedBlocks & closedblockswithouttx.
+// This method does read all blocks in closedBlocks & closedblockswithouttx.
 func ReadAllClosedBlocks() (allClosedBlocks []*protocol.Block) {
 
 	//This does return all blocks which are either in closedblocks or closedblockswithouttx bucket of the Database.
@@ -170,8 +170,8 @@ func ReadAllClosedBlocks() (allClosedBlocks []*protocol.Block) {
 	return allClosedBlocks
 }
 
-//The three functions and the type below are used to order the gathered closed blocks from below according to
-//their block height.
+// The three functions and the type below are used to order the gathered closed blocks from below according to
+// their block height.
 type ByHeight []*protocol.Block
 
 func (a ByHeight) Len() int           { return len(a) }
@@ -227,7 +227,7 @@ func ReadAllINVALIDOpenTx() (allOpenInvalidTxs []protocol.Transaction) {
 	return allOpenInvalidTxs
 }
 
-//Needed for the miner to prepare a new block
+// Needed for the miner to prepare a new block
 func ReadAllOpenTxs() (allOpenTxs []protocol.Transaction) {
 	openTxMutex.Lock()
 	defer openTxMutex.Unlock()
@@ -238,7 +238,7 @@ func ReadAllOpenTxs() (allOpenTxs []protocol.Transaction) {
 	return
 }
 
-//Personally I like it better to test (which tx type it is) here, and get returned the interface. Simplifies the code
+// Personally I like it better to test (which tx type it is) here, and get returned the interface. Simplifies the code
 func ReadClosedTx(hash [32]byte) (transaction protocol.Transaction) {
 	var encodedTx []byte
 	var fundstx *protocol.FundsTx

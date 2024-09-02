@@ -2,10 +2,10 @@ package storage
 
 import (
 	"github.com/boltdb/bolt"
-	"github.com/julwil/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/protocol"
 )
 
-//There exist open/closed buckets and closed tx buckets for all types (open txs are in volatile storage)
+// There exist open/closed buckets and closed tx buckets for all types (open txs are in volatile storage)
 func DeleteOpenBlock(hash [32]byte) {
 	db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("openblocks"))

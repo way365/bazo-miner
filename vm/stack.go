@@ -2,7 +2,7 @@ package vm
 
 import (
 	"errors"
-	"github.com/julwil/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/protocol"
 )
 
 type Stack struct {
@@ -64,7 +64,7 @@ func (s *Stack) PeekBytes() (element []byte, err error) {
 	}
 }
 
-// Function checks, if enough memory is available to push the element
+//  Function checks, if enough memory is available to push the element
 func (s *Stack) hasEnoughMemory(elementSize int) bool {
 	return s.memoryMax >= uint32(elementSize)+s.memoryUsage
 }

@@ -2,9 +2,9 @@ package miner
 
 import (
 	"encoding/binary"
-	"github.com/julwil/bazo-miner/p2p"
-	"github.com/julwil/bazo-miner/protocol"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/p2p"
+	"github.com/way365/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/storage"
 	"sort"
 	"time"
 )
@@ -324,7 +324,7 @@ func (R *specialTxRequest) Encoding() (encodedTx []byte) {
 	return encodedTx
 }
 
-//Implement the sort interface
+// Implement the sort interface
 func (f openTxs) Len() int {
 	return len(f)
 }

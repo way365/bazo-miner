@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/julwil/bazo-miner/storage"
+	"github.com/way365/bazo-miner/storage"
 	"net"
 	"strconv"
 	"strings"
@@ -27,7 +27,7 @@ var (
 	lastTriedPeer   string
 )
 
-//Entry point for p2p package
+// Entry point for p2p package
 func Init(ipport string) {
 	Ipport = ipport
 	InitLogging()

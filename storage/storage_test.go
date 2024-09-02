@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/julwil/bazo-miner/protocol"
+	"github.com/way365/bazo-miner/protocol"
 )
 
-//In-memory, k/v storage is tested with the test below
+// In-memory, k/v storage is tested with the test below
 func TestReadWriteUpdateTx(t *testing.T) {
 
 	rand := rand.New(rand.NewSource(time.Now().Unix()))
@@ -220,7 +220,7 @@ func TestReadWriteUpdateTx(t *testing.T) {
 	}
 }
 
-//Disk-based k/v storage
+// Disk-based k/v storage
 func TestReadWriteDeleteBlock(t *testing.T) {
 
 	//No panic

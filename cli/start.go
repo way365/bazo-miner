@@ -3,12 +3,12 @@ package cli
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/julwil/bazo-miner/crypto"
-	"github.com/julwil/bazo-miner/miner"
-	"github.com/julwil/bazo-miner/p2p"
-	"github.com/julwil/bazo-miner/storage"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
+	"github.com/way365/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/miner"
+	"github.com/way365/bazo-miner/p2p"
+	"github.com/way365/bazo-miner/storage"
 	"log"
 )
 

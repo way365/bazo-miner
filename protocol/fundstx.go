@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"github.com/julwil/bazo-miner/crypto"
+	"github.com/way365/bazo-miner/crypto"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -100,8 +100,8 @@ func (tx *FundsTx) SHA3() [32]byte {
 	return sha3.Sum256([]byte(fmt.Sprintf("%v", toHash)))
 }
 
-//when we serialize the struct with binary.Write, unexported field get serialized as well, undesired
-//behavior. Therefore, writing own encoder/decoder
+// when we serialize the struct with binary.Write, unexported field get serialized as well, undesired
+// behavior. Therefore, writing own encoder/decoder
 func (tx *FundsTx) Encode() (encodedTx []byte) {
 	// Encode
 	encodeData := FundsTx{
