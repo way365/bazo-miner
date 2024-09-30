@@ -149,7 +149,7 @@ func initRootKey(rootKey *ecdsa.PublicKey, rootChamHashParams *crypto.ChameleonH
 	rootAcc := protocol.NewAccount(
 		rootAddress,
 		[32]byte{},
-		activeParameters.StakingMinimum,
+		activeParameters.StakingMinimum*10,
 		true,
 		commPubKey,
 		nil,

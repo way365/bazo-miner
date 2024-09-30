@@ -313,7 +313,7 @@ func ReadBlockByTxHash(txHash [32]byte) (block *protocol.Block) {
 		copy(blockHash[:], bucket.Get(txHash[:]))
 		return nil
 	})
-
+	logger.Printf("\nReadBlockByTxHash txHash:%x blockHash:%x \n", txHash, blockHash)
 	switch true {
 	case ReadOpenBlock(blockHash) != nil:
 		return ReadOpenBlock(blockHash)

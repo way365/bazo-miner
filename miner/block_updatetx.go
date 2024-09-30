@@ -16,8 +16,11 @@ import (
 // Adds the UpdateTx to the UpdateTxData slice of the current block.
 func addUpdateTx(b *protocol.Block, tx *protocol.UpdateTx) error {
 
-	// First we perform the update of the tx we want to update.
-	handleTxUpdate(tx)
+	// First we perform the update of the tx we want to update. 在updateTx上链前就修改了？
+	err := handleTxUpdate(tx)
+	if err != nil {
+		return err
+	}
 
 	// Then we can include the UpdateTx in the current block.
 	b.UpdateTxData = append(b.UpdateTxData, tx.Hash())
@@ -39,6 +42,7 @@ func handleTxUpdate(updateTx *protocol.UpdateTx) error {
 		return errors.New(fmt.Sprintf("Can't find block of tx: %x", txToUpdateHash))
 	}
 
+	//0000000000000000000000000000000000000000000000000000000000000000
 	blockToUpdate.NrUpdates++
 
 	logger.Printf("\nUpdated Block:\n%s", blockToUpdate.String())
@@ -47,7 +51,8 @@ func handleTxUpdate(updateTx *protocol.UpdateTx) error {
 	storage.DeleteOpenBlock(blockToUpdate.Hash)
 	storage.WriteClosedBlock(blockToUpdate)
 
-	go broadcastBlock(blockToUpdate)
+	logger.Print("\n ------------------handleTxUpdate start broadcastBlock-----------------\n")
+	go broadcastBlock(blockToUpdate) //因为Block上只保存了交易哈希，所以只需要变NrUpdates
 
 	return nil
 }
@@ -64,7 +69,7 @@ func updateLocalTx(
 
 	switch true {
 	case storage.ReadOpenTx(txHash) != nil:
-		txToUpdate = storage.ReadOpenTx(txHash)
+		txToUpdate = storage.ReadOpenTx(txHash) //OpenTx 是指还未被区块链网络确认并包含在区块中的交易。
 		oldData = txToUpdate.GetData()
 		txToUpdate.SetData(newData)
 		txToUpdate.SetCheckString(newCheckString)
@@ -75,7 +80,7 @@ func updateLocalTx(
 		oldData = txToUpdate.GetData()
 		txToUpdate.SetData(newData)
 		txToUpdate.SetCheckString(newCheckString)
-		storage.WriteClosedTx(txToUpdate)
+		storage.WriteClosedTx(txToUpdate) //ClosedTx 是指已经被区块链网络确认并写入到区块中的交易。
 
 	default: // If we don't find the tx to update in the storage, we also can't update it.
 
@@ -95,7 +100,7 @@ func updateLocalTx(
 	return nil
 }
 
-// Fetch UpdateTxData
+// Fetch UpdateTxData  没有更新本地的交易
 func fetchUpdateTxData(block *protocol.Block, updateTxSlice []*protocol.UpdateTx, initialSetup bool, errChan chan error) {
 	for i, txHash := range block.UpdateTxData {
 		var tx protocol.Transaction

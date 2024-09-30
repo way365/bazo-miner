@@ -182,8 +182,8 @@ func createECDSAKeyFile(filename string) (err error) {
 	var pubKey [64]byte
 
 	_, err1 := file.WriteString(string(newKey.X.Text(16)) + "\n")
-	_, err2 := file.WriteString(string(newKey.Y.Text(16)) + "\n")
-	_, err3 := file.WriteString(string(newKey.D.Text(16)) + "\n")
+	_, err2 := file.WriteString(string(newKey.Y.Text(16)) + "\n") //(x,y)公钥
+	_, err3 := file.WriteString(string(newKey.D.Text(16)) + "\n") //私钥
 
 	newAccPub1, newAccPub2 := newKey.PublicKey.X.Bytes(), newKey.PublicKey.Y.Bytes()
 	copy(pubKey[0:32], newAccPub1)

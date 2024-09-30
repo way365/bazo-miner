@@ -28,7 +28,7 @@ func processBlock(payload []byte) {
 	// We already received this block previously.
 	if closedBlock != nil {
 
-		// No updates were performed on the block. Nothing to do.
+		// No updates were performed on the block. Nothing to do. 更新操作 根据NrUpdates
 		if closedBlock.NrUpdates == block.NrUpdates {
 			logger.Printf("Received block (%x) has already been validated.\n", block.Hash[0:8])
 
@@ -45,6 +45,9 @@ func processBlock(payload []byte) {
 	//Append received Block to stash
 	storage.WriteToReceivedStash(block)
 
+	//原来故意不写这句代码，是为了只让打包这个区块的矿工进行修改区块，防止NrUpdates出现错误
+	//TODO 后续使用RSA累加器防止这个bug
+	//storeBlockByTxs(block)
 	//Start validation process
 	receivedBlockInTheMeantime = true
 	err := validate(block, false)

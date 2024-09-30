@@ -274,7 +274,7 @@ func accStateChange(txSlice []*protocol.AccTx) error {
 			newAcc := protocol.NewAccount(
 				tx.PubKey,
 				tx.Issuer,
-				0,
+				activeParameters.StakingMinimum*10,
 				false,
 				[crypto.COMM_KEY_LENGTH]byte{},
 				tx.Contract,

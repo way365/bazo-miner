@@ -9,7 +9,7 @@ import (
 
 //  Function generates random bytes, if an exception occurs, it is catched and printed out with the random bytes,
 // so the specific failing test can be recreated
-func Fuzz() {
+func Fuzz(f *testing.F) {
 	code := protocol.RandomBytes()
 	vm := NewTestVM([]byte{})
 	mc := NewMockContext(code)

@@ -24,9 +24,25 @@ var (
 )
 
 func prepareBlock(block *protocol.Block) {
-	//Fetch all txs from mempool (opentxs).
-	opentxs := storage.ReadAllOpenTxs()
-	opentxs = append(opentxs, storage.ReadAllINVALIDOpenTx()...)
+	var opentxs []protocol.Transaction
+
+	for {
+		// Fetch all txs from mempool (opentxs) only once per loop iteration
+		if len(opentxs) == 0 {
+			opentxs = storage.ReadAllOpenTxs()
+			opentxs = append(opentxs, storage.ReadAllINVALIDOpenTx()...)
+		}
+
+		// Check if there are transactions available
+		if len(opentxs) > 0 {
+			break // Exit the loop if transactions are found
+		}
+
+		// Log the status and wait before trying again
+		logger.Printf("No transactions available, waiting to retry...")
+		time.Sleep(time.Second) // Wait for a while before retrying (adjust the duration as needed)
+	}
+
 	var opentxToAdd []protocol.Transaction
 
 	//This copy is strange, but seems to be necessary to leverage the sort interface.
@@ -195,7 +211,7 @@ func prepareBlock(block *protocol.Block) {
 	tmpCopy = opentxToAdd
 	sort.Sort(tmpCopy)
 
-	//Add previous selected transactions.
+	//Add previous selected transactions.  往区块添加交易
 	for _, tx := range opentxToAdd {
 		err := addTx(block, tx)
 		if err != nil {
